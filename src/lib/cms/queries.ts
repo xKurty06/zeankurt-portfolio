@@ -1,6 +1,11 @@
 import { unstable_cache } from "next/cache";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createClient } from "@supabase/supabase-js";
 import { fallbackPortfolioContent } from "@/lib/cms/fallback";
+import {
+  getSupabaseAnonKey,
+  getSupabaseUrl,
+  hasSupabasePublicEnv,
+} from "@/lib/supabase/config";
 import {
   mapCertification,
   mapEvent,
@@ -19,9 +24,26 @@ import type {
 
 const REVALIDATE_SECONDS = 300;
 
+function uniqueBy<T>(items: T[], getKey: (item: T) => string) {
+  const seen = new Set<string>();
+
+  return items.filter((item) => {
+    const key = getKey(item);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 async function fetchPortfolioContent(): Promise<PortfolioContent> {
-  const supabase = await createSupabaseServerClient();
-  if (!supabase) return fallbackPortfolioContent;
+  if (!hasSupabasePublicEnv()) return fallbackPortfolioContent;
+
+  const supabase = createClient(getSupabaseUrl()!, getSupabaseAnonKey()!, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
 
   try {
     const [
@@ -81,14 +103,35 @@ async function fetchPortfolioContent(): Promise<PortfolioContent> {
       (siteRows.find((row) => row.key === "about_content")?.value as PortfolioContent["aboutContent"] | undefined) ??
       fallbackPortfolioContent.aboutContent;
 
+    const projects = uniqueBy(
+      ((projectsResult.data ?? []) as CmsProjectRow[]).map(mapProject),
+      (project) => project.slug,
+    );
+    const experience = uniqueBy(
+      ((experienceResult.data ?? []) as CmsExperienceRow[]).map(mapExperience),
+      (item) => item.id,
+    );
+    const certifications = uniqueBy(
+      ((certificationsResult.data ?? []) as CmsCertificationRow[]).map(mapCertification),
+      (cert) => cert.image ?? `${cert.issuer}-${cert.name}-${cert.issued ?? ""}`,
+    );
+    const eventHighlights = uniqueBy(
+      ((eventsResult.data ?? []) as CmsEventRow[]).map(mapEvent),
+      (event) => event.id,
+    );
+    const skillCategories = uniqueBy(
+      ((skillCategoriesResult.data ?? []) as CmsSkillCategoryRow[]).map(mapSkillCategory),
+      (category) => category.name,
+    );
+
     return {
       siteConfig,
       aboutContent,
-      projects: ((projectsResult.data ?? []) as CmsProjectRow[]).map(mapProject),
-      experience: ((experienceResult.data ?? []) as CmsExperienceRow[]).map(mapExperience),
-      certifications: ((certificationsResult.data ?? []) as CmsCertificationRow[]).map(mapCertification),
-      eventHighlights: ((eventsResult.data ?? []) as CmsEventRow[]).map(mapEvent),
-      skillCategories: ((skillCategoriesResult.data ?? []) as CmsSkillCategoryRow[]).map(mapSkillCategory),
+      projects,
+      experience,
+      certifications,
+      eventHighlights,
+      skillCategories,
     };
   } catch {
     return fallbackPortfolioContent;

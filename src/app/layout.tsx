@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Syne } from "next/font/google";
 import { Footer } from "@/components/layout/Footer";
-import { Header } from "@/components/layout/Header";
+import ConditionalHeader from "@/components/layout/ConditionalHeader";
 import { CustomCursor } from "@/components/animation/CustomCursor";
 import { ScrollProgressBar } from "@/components/animation/ScrollProgressBar";
 import { GsapInit } from "@/lib/gsap";
 import { LoaderWrapper } from "@/components/animation/LoaderWrapper";
+import { ThemeProvider } from "@/components/providers/theme-provider";
 import { siteConfig } from "@/data/site";
 import "./globals.css";
 
@@ -38,18 +39,21 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} ${syne.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        <GsapInit />
-        {/* Page loader */}
-        <LoaderWrapper />
-        {/* Global interactive overlays */}
-        <CustomCursor />
-        <ScrollProgressBar />
-        <Header />
-        <main className="flex-1">{children}</main>
-        <Footer />
+        <ThemeProvider>
+          <GsapInit />
+          {/* Page loader */}
+          <LoaderWrapper />
+          {/* Global interactive overlays */}
+          <CustomCursor />
+          <ScrollProgressBar />
+          <ConditionalHeader />
+          <main className="flex-1">{children}</main>
+          <Footer />
+        </ThemeProvider>
       </body>
     </html>
   );

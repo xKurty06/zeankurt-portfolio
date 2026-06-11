@@ -6,7 +6,7 @@ export function getSupabaseUrl() {
 
 export function getSupabaseAnonKey() {
   return (
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
   );
 }
@@ -17,8 +17,12 @@ export function hasSupabasePublicEnv() {
 
 export function hasSupabaseAdminEnv() {
   return Boolean(
-    getSupabaseUrl() && process.env.SUPABASE_SERVICE_ROLE_KEY,
+    getSupabaseUrl() && getSupabaseSecretKey(),
   );
+}
+
+export function getSupabaseSecretKey() {
+  return process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
 }
 
 export function getAdminEmails() {

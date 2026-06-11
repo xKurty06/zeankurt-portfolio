@@ -14,7 +14,9 @@ import { gsap, registerGsapPlugins } from "@/lib/gsap";
 import { AlbumCard } from "@/components/photography/AlbumCard";
 import { GalleryGrid } from "@/components/photography/GalleryGrid";
 import { Lightbox } from "@/components/photography/Lightbox";
+import { BackgroundBoxes } from "@/components/ui/BackgroundBoxes";
 import { Container } from "@/components/ui/Container";
+import FlowFieldBackground from "@/components/ui/FlowFieldBackground";
 import { SocialLinks } from "@/components/ui/SocialLinks";
 
 export function PhotographyPageContent() {
@@ -43,8 +45,19 @@ export function PhotographyPageContent() {
 
   return (
     <>
-      <div ref={heroRef} className="border-b border-white/10 pb-16 pt-28 md:pb-20 md:pt-32">
-        <Container>
+      <div
+        ref={heroRef}
+        className="relative isolate overflow-hidden border-b border-white/10 pb-16 pt-28 md:pb-20 md:pt-32"
+      >
+        <div className="absolute inset-0">
+          <div className="absolute inset-0 [mask-image:linear-gradient(180deg,transparent,white_18%,white_82%,transparent)]">
+            <BackgroundBoxes className="opacity-100" rows={24} cols={16} />
+          </div>
+          <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(3,7,18,0.7),rgba(3,7,18,0.46)_34%,rgba(3,7,18,0.78))]" />
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_24%,rgba(72,202,228,0.12),transparent_28%),radial-gradient(circle_at_78%_30%,rgba(144,224,239,0.08),transparent_24%),radial-gradient(circle_at_50%_100%,rgba(0,119,182,0.12),transparent_34%)]" />
+        </div>
+
+        <Container className="relative z-10">
           <p
             data-photo-hero="line"
             className="font-mono text-xs uppercase tracking-[0.28em] text-white/50"
@@ -71,7 +84,20 @@ export function PhotographyPageContent() {
       </div>
 
       <Container className="py-14 md:py-20">
-        <section id="albums" className="scroll-mt-28">
+        <section id="albums" className="relative isolate scroll-mt-28 overflow-hidden rounded-[2rem] border border-white/8 bg-[rgba(255,255,255,0.015)] px-6 py-8 md:px-8 md:py-10">
+          <div className="pointer-events-none absolute inset-0">
+            <FlowFieldBackground
+              className="opacity-90"
+              color="#48cae4"
+              trailOpacity={0.09}
+              particleCount={360}
+              speed={0.62}
+            />
+            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(3,7,18,0.86),rgba(3,7,18,0.68)_36%,rgba(3,7,18,0.86))]" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_14%_16%,rgba(72,202,228,0.12),transparent_22%),radial-gradient(circle_at_82%_30%,rgba(0,180,216,0.08),transparent_26%)]" />
+          </div>
+
+          <div className="relative z-10">
           <div className="mb-8 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
             <div>
               <p className="font-mono text-xs uppercase tracking-[0.22em] text-white/45">
@@ -86,6 +112,7 @@ export function PhotographyPageContent() {
             {photoAlbums.map((album) => (
               <AlbumCard key={album.slug} album={album} />
             ))}
+          </div>
           </div>
         </section>
 

@@ -2,13 +2,13 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/supabase/config";
 
-export function createSupabaseMiddlewareClient(request: NextRequest) {
+export async function createSupabaseMiddlewareClient(request: NextRequest) {
     const supabaseUrl = getSupabaseUrl();
     const supabaseKey = getSupabaseAnonKey();
 
     let response = NextResponse.next({ request });
 
-    createServerClient(supabaseUrl!, supabaseKey!, {
+    const supabase = createServerClient(supabaseUrl!, supabaseKey!, {
         cookies: {
             getAll() {
                 return request.cookies.getAll();
@@ -20,6 +20,8 @@ export function createSupabaseMiddlewareClient(request: NextRequest) {
             },
         },
     });
+
+    await supabase.auth.getClaims();
 
     return response;
 }

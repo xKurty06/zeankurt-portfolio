@@ -3,7 +3,7 @@
 import { useRef } from "react";
 import { Mail } from "lucide-react";
 import { useGSAP } from "@gsap/react";
-import { siteConfig } from "@/data/site";
+import { siteConfig as fallbackSiteConfig } from "@/data/site";
 import { socialGroups } from "@/data/social";
 import { RevealOnScroll } from "@/components/animation/RevealOnScroll";
 import { MagneticButton } from "@/components/animation/MagneticButton";
@@ -13,7 +13,11 @@ import { SocialLinkGroups } from "@/components/ui/SocialLinks";
 import { Section, Container } from "@/components/ui/Container";
 import { gsap, registerGsapPlugins } from "@/lib/gsap";
 
-export function ContactSection() {
+interface ContactSectionProps {
+  siteConfig?: typeof fallbackSiteConfig;
+}
+
+export function ContactSection({ siteConfig = fallbackSiteConfig }: ContactSectionProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 

@@ -2,8 +2,12 @@
 
 import { useRef } from "react";
 import { useGSAP } from "@gsap/react";
-import { aboutContent } from "@/data/site";
-import { skillCategories, certifications, eventHighlights } from "@/data/skills";
+import { aboutContent as fallbackAboutContent } from "@/data/site";
+import {
+  skillCategories as fallbackSkillCategories,
+  certifications as fallbackCertifications,
+  eventHighlights as fallbackEventHighlights,
+} from "@/data/skills";
 import { photos } from "@/data/photography";
 import { RevealOnScroll } from "@/components/animation/RevealOnScroll";
 import { AnimatedCounter } from "@/components/animation/AnimatedCounter";
@@ -11,6 +15,7 @@ import { GlowCard } from "@/components/animation/GlowCard";
 import { Container, Section } from "@/components/ui/Container";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { gsap, registerGsapPlugins } from "@/lib/gsap";
+import type { Certification, EventHighlight, SkillCategory } from "@/types";
 
 type CounterData = {
   to: number;
@@ -20,15 +25,26 @@ type CounterData = {
 
 type CounterLabel = "Focus" | "Events" | "Education" | "Creative";
 
-const COUNTER_MAP: Record<CounterLabel, CounterData> = {
-  Focus: { to: skillCategories.length, suffix: "+ stacks" },
-  Events: { to: eventHighlights.length, suffix: "+ events" },
-  Education: { to: certifications.length, suffix: "+ certs" },
-  Creative: { to: photos.length, suffix: "+ shoots" },
-};
+interface AboutSectionProps {
+  aboutContent?: typeof fallbackAboutContent;
+  skillCategories?: SkillCategory[];
+  certifications?: Certification[];
+  eventHighlights?: EventHighlight[];
+}
 
-export function AboutSection() {
+export function AboutSection({
+  aboutContent = fallbackAboutContent,
+  skillCategories = fallbackSkillCategories,
+  certifications = fallbackCertifications,
+  eventHighlights = fallbackEventHighlights,
+}: AboutSectionProps) {
   const sectionRef = useRef<HTMLElement>(null);
+  const counterMap: Record<CounterLabel, CounterData> = {
+    Focus: { to: skillCategories.length, suffix: "+ stacks" },
+    Events: { to: eventHighlights.length, suffix: "+ events" },
+    Education: { to: certifications.length, suffix: "+ certs" },
+    Creative: { to: photos.length, suffix: "+ shoots" },
+  };
 
   useGSAP(
     () => {
@@ -116,7 +132,7 @@ export function AboutSection() {
               <dl className="grid gap-3 sm:grid-cols-2">
                 {aboutContent.highlights.map((item) => {
                   const label = item.label as CounterLabel;
-                  const counter = COUNTER_MAP[label];
+                  const counter = counterMap[label];
                   return (
                     <GlowCard
                       key={item.label}

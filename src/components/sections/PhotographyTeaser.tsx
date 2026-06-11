@@ -10,6 +10,7 @@ import { siteConfig } from "@/data/site";
 import { RevealOnScroll } from "@/components/animation/RevealOnScroll";
 import { Button } from "@/components/ui/Button";
 import { Container, Section } from "@/components/ui/Container";
+import { DottedSurface } from "@/components/ui/DottedSurface";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { gsap, registerGsapPlugins } from "@/lib/gsap";
 
@@ -78,8 +79,19 @@ export function PhotographyTeaser() {
   );
 
   return (
-    <Section id="photography-teaser" surface="elevated" ref={sectionRef}>
-      <Container>
+    <Section
+      id="photography-teaser"
+      surface="elevated"
+      ref={sectionRef}
+      className="photography-theme relative isolate overflow-hidden bg-[var(--photo-surface)] text-[var(--photo-accent)]"
+    >
+      <DottedSurface className="opacity-100 mix-blend-screen" />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(72,202,228,0.18),transparent_24%),radial-gradient(circle_at_82%_76%,rgba(144,224,239,0.14),transparent_26%),linear-gradient(180deg,rgba(5,8,18,0.28),rgba(5,8,18,0.56)_40%,rgba(3,7,18,0.76))]"
+      />
+
+      <Container className="relative z-10">
         <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
           <RevealOnScroll>
             <SectionHeading

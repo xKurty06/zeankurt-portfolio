@@ -4,7 +4,7 @@ import { useRef, useState, useMemo } from "react";
 import Image from "next/image";
 import { ArrowUpRight, ChevronDown, ChevronUp } from "lucide-react";
 import { useGSAP } from "@gsap/react";
-import { projects, featuredProjects, nonFeaturedProjectTags } from "@/data/projects";
+import { projects as fallbackProjects } from "@/data/projects";
 import type { Project } from "@/types";
 import { RevealOnScroll } from "@/components/animation/RevealOnScroll";
 import { GlowCard } from "@/components/animation/GlowCard";
@@ -206,7 +206,11 @@ function CompactCard({ project }: { project: Project }) {
 }
 
 // ─── Section ──────────────────────────────────────────────────────────────────
-export function ProjectsSection() {
+interface ProjectsSectionProps {
+  projects?: Project[];
+}
+
+export function ProjectsSection({ projects = fallbackProjects }: ProjectsSectionProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const allProjectsGridRef = useRef<HTMLDivElement>(null);
   const [activeTag, setActiveTag] = useState("All");
@@ -233,9 +237,19 @@ export function ProjectsSection() {
   );
 
   // Non-featured projects, filtered by tag
+  const featuredProjects = useMemo(
+    () => projects.filter((project) => project.featured),
+    [projects],
+  );
+
   const nonFeatured = useMemo(
     () => projects.filter((p) => !p.featured),
-    [],
+    [projects],
+  );
+
+  const nonFeaturedProjectTags = useMemo(
+    () => Array.from(new Set(nonFeatured.flatMap((project) => project.tags))).sort(),
+    [nonFeatured],
   );
 
   const filtered = useMemo(() => {

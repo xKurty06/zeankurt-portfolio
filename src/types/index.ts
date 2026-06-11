@@ -52,6 +52,7 @@ export interface ExperienceItem {
 }
 
 export interface Certification {
+  id?: string;
   name: string;
   issuer: string;
   issued?: string;

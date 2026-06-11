@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowUpRight } from "lucide-react";
 import { useGSAP } from "@gsap/react";
-import { siteConfig } from "@/data/site";
+import { siteConfig as fallbackSiteConfig } from "@/data/site";
 import { socialGroups } from "@/data/social";
 import { gsap, registerGsapPlugins, SplitText, ScrollTrigger } from "@/lib/gsap";
 import { AnimatedBackground } from "@/components/animation/AnimatedBackground";
@@ -87,7 +87,11 @@ function ShatterName({ name }: { name: string }) {
 // }
 
 // ─── Section ──────────────────────────────────────────────────────────────────
-export function HeroSection() {
+interface HeroSectionProps {
+  siteConfig?: typeof fallbackSiteConfig;
+}
+
+export function HeroSection({ siteConfig = fallbackSiteConfig }: HeroSectionProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const [loaderComplete, setLoaderComplete] = useState(false);
 

@@ -8,6 +8,7 @@ import { siteConfig } from "@/data/site";
 import { socialGroups } from "@/data/social";
 import { gsap, registerGsapPlugins } from "@/lib/gsap";
 import { SocialLinks } from "@/components/ui/SocialLinks";
+import ShaderBackground from "@/components/ui/ShaderBackground";
 
 export function Footer() {
   const footerRef = useRef<HTMLElement>(null);
@@ -48,16 +49,22 @@ export function Footer() {
   return (
     <footer
       ref={footerRef}
-      className="relative border-t border-[var(--border)] bg-[var(--background-elevated)] overflow-hidden"
+      className="relative isolate overflow-hidden border-t border-[var(--border)] bg-[var(--background-elevated)]"
     >
+      <div aria-hidden className="absolute inset-0">
+        <ShaderBackground />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(3,7,18,0.72),rgba(10,15,26,0.9)_42%,rgba(10,15,26,0.96))]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(72,202,228,0.12),transparent_42%)] opacity-70" />
+      </div>
+
       {/* Top border traveling glow */}
       <div
         data-footer-sweep
         aria-hidden
-        className="pointer-events-none absolute top-0 -left-1/2 h-px w-1/2 bg-gradient-to-r from-transparent via-[var(--blue-400)] to-transparent opacity-60"
+        className="pointer-events-none absolute top-0 -left-1/2 z-10 h-px w-1/2 bg-gradient-to-r from-transparent via-[var(--blue-400)] to-transparent opacity-50"
       />
 
-      <div className="container-shell py-12 md:py-16">
+      <div className="container-shell relative z-10 py-12 md:py-16">
         <div className="grid gap-10 lg:grid-cols-[1.2fr_0.8fr]">
           <div>
             <Link

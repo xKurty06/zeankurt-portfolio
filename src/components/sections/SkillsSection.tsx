@@ -2,15 +2,22 @@
 
 import { useRef } from "react";
 import { useGSAP } from "@gsap/react";
-import { skillCategories } from "@/data/skills";
+import { skillCategories as fallbackSkillCategories } from "@/data/skills";
 import { RevealOnScroll } from "@/components/animation/RevealOnScroll";
 import { GlowCard } from "@/components/animation/GlowCard";
 import { Badge } from "@/components/ui/Badge";
 import { Container, Section } from "@/components/ui/Container";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { gsap, registerGsapPlugins } from "@/lib/gsap";
+import type { SkillCategory } from "@/types";
 
-export function SkillsSection() {
+interface SkillsSectionProps {
+  skillCategories?: SkillCategory[];
+}
+
+export function SkillsSection({
+  skillCategories = fallbackSkillCategories,
+}: SkillsSectionProps) {
   const sectionRef = useRef<HTMLElement>(null);
 
   useGSAP(

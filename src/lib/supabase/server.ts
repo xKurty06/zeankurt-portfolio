@@ -3,6 +3,7 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import {
   getSupabaseAnonKey,
+  getSupabaseSecretKey,
   getSupabaseUrl,
   hasSupabaseAdminEnv,
   hasSupabasePublicEnv,
@@ -42,7 +43,7 @@ export function createSupabaseAdminClient() {
 
   return createClient(
     getSupabaseUrl()!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    getSupabaseSecretKey()!,
     {
       auth: {
         autoRefreshToken: false,

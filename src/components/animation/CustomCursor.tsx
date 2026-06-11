@@ -42,9 +42,17 @@ export function CustomCursor() {
       autoAlpha: 1,
     });
 
+    // Use GSAP quickTo to avoid allocating new tweens on each mousemove.
+    const dotX = gsap.quickTo(dot, "x", { duration: 0.06, ease: "none" });
+    const dotY = gsap.quickTo(dot, "y", { duration: 0.06, ease: "none" });
+    const ringX = gsap.quickTo(ring, "x", { duration: 0.2, ease: "power2.out" });
+    const ringY = gsap.quickTo(ring, "y", { duration: 0.2, ease: "power2.out" });
+
     const onMove = (e: MouseEvent) => {
-      gsap.to(dot,  { x: e.clientX, y: e.clientY, duration: 0.06, ease: "none",       overwrite: "auto" });
-      gsap.to(ring, { x: e.clientX, y: e.clientY, duration: 0.2,  ease: "power2.out", overwrite: "auto" });
+      dotX(e.clientX);
+      dotY(e.clientY);
+      ringX(e.clientX);
+      ringY(e.clientY);
     };
 
     const onEnterInteractive = () => {
@@ -59,30 +67,40 @@ export function CustomCursor() {
     const onClickDown = () => gsap.to(ring, { scale: 0.7, duration: 0.12, ease: "power3.out" });
     const onClickUp   = () => gsap.to(ring, { scale: 1,   duration: 0.4,  ease: "elastic.out(1.2,0.5)" });
 
+    // Use event delegation for interactive hover states instead of attaching
+    // listeners to every interactive element and using a MutationObserver.
     const interactiveSelectors = "a, button, [data-interactive], input, textarea, select, label";
+    let lastInteractive: Element | null = null;
 
-    const attachInteractive = () => {
-      document.querySelectorAll<HTMLElement>(interactiveSelectors).forEach((el) => {
-        el.addEventListener("mouseenter", onEnterInteractive);
-        el.addEventListener("mouseleave", onLeaveInteractive);
-      });
+    const onPointerOver = (ev: PointerEvent) => {
+      const target = (ev.target as Element)?.closest?.(interactiveSelectors) as Element | null;
+      if (target && target !== lastInteractive) {
+        lastInteractive = target;
+        onEnterInteractive();
+      }
     };
 
-    attachInteractive();
+    const onPointerOut = (ev: PointerEvent) => {
+      const to = ev.relatedTarget as Element | null;
+      if (!to || !to.closest || !to.closest(interactiveSelectors)) {
+        lastInteractive = null;
+        onLeaveInteractive();
+      }
+    };
 
-    const observer = new MutationObserver(attachInteractive);
-    observer.observe(document.body, { childList: true, subtree: true });
-
-    window.addEventListener("mousemove", onMove);
+    window.addEventListener("pointerover", onPointerOver);
+    window.addEventListener("pointerout", onPointerOut);
+    window.addEventListener("mousemove", onMove, { passive: true });
     window.addEventListener("mousedown", onClickDown);
-    window.addEventListener("mouseup",   onClickUp);
+    window.addEventListener("mouseup", onClickUp);
     document.documentElement.style.cursor = "none";
 
     return () => {
+      window.removeEventListener("pointerover", onPointerOver);
+      window.removeEventListener("pointerout", onPointerOut);
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mousedown", onClickDown);
-      window.removeEventListener("mouseup",   onClickUp);
-      observer.disconnect();
+      window.removeEventListener("mouseup", onClickUp);
       document.documentElement.style.cursor = "";
       // portal cleanup handled by useLayoutEffect return
     };

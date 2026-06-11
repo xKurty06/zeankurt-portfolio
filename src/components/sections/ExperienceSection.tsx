@@ -4,15 +4,31 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { useGSAP } from "@gsap/react";
 import { MapPin, Sparkles, Users, X } from "lucide-react";
-import { experience, certifications, eventHighlights } from "@/data/skills";
+import {
+  experience as fallbackExperience,
+  certifications as fallbackCertifications,
+  eventHighlights as fallbackEventHighlights,
+} from "@/data/skills";
 import { RevealOnScroll } from "@/components/animation/RevealOnScroll";
 import { GlowCard } from "@/components/animation/GlowCard";
 import { Badge } from "@/components/ui/Badge";
+import BackgroundScene from "@/components/ui/AuroraSectionHero";
 import { Container, Section } from "@/components/ui/Container";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { gsap, registerGsapPlugins, ScrollTrigger } from "@/lib/gsap";
+import type { Certification, EventHighlight, ExperienceItem } from "@/types";
 
-export function ExperienceSection() {
+interface ExperienceSectionProps {
+  experience?: ExperienceItem[];
+  certifications?: Certification[];
+  eventHighlights?: EventHighlight[];
+}
+
+export function ExperienceSection({
+  experience = fallbackExperience,
+  certifications = fallbackCertifications,
+  eventHighlights = fallbackEventHighlights,
+}: ExperienceSectionProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const [activeCert, setActiveCert] = useState<{ name: string; image: string } | null>(null);
   const sortedEvents = [...eventHighlights].sort(
@@ -197,7 +213,8 @@ export function ExperienceSection() {
 
   return (
     <Section id="experience" surface="subtle" ref={sectionRef}>
-      <Container>
+      <BackgroundScene beamCount={44} />
+      <Container className="relative z-[1]">
         <RevealOnScroll>
           <SectionHeading
             eyebrow="Experience"
@@ -231,7 +248,7 @@ export function ExperienceSection() {
                 <article
                   key={item.id}
                   data-exp-card
-                  className="relative rounded-2xl border border-[var(--border)] bg-white/[0.02] p-5 transition-colors duration-300 hover:border-[var(--border-strong)] hover:bg-white/[0.04] md:p-6"
+                  className="relative rounded-2xl border border-[rgba(72,202,228,0.14)] bg-[linear-gradient(180deg,rgba(6,12,24,0.92),rgba(8,15,30,0.9))] p-5 transition-colors duration-300 hover:border-[rgba(72,202,228,0.28)] hover:bg-[linear-gradient(180deg,rgba(8,15,30,0.96),rgba(10,18,34,0.94))] md:p-6"
                 >
                   <div className="timeline-dot absolute -left-[calc(1.5rem+6px)] top-7 hidden h-3 w-3 rounded-full border-2 border-[var(--blue-500)] bg-[var(--background-subtle)] md:block" />
 
@@ -260,7 +277,7 @@ export function ExperienceSection() {
               <GlowCard
                 intensity={0.35}
                 tilt={false}
-                className="rounded-2xl border border-[var(--border)] bg-white/[0.02] p-5 md:p-6"
+                className="rounded-2xl border border-[rgba(72,202,228,0.14)] bg-[linear-gradient(180deg,rgba(6,12,24,0.94),rgba(8,15,30,0.92))] p-5 md:p-6"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div>
@@ -295,9 +312,9 @@ export function ExperienceSection() {
                       <ul className="space-y-3">
                         {items.map((cert, index) => (
                           <li
-                            key={cert.image ?? `${issuer}-${cert.name}-${index}`}
+                            key={cert.id ?? `${issuer}-${cert.name}-${index}`}
                             data-cert-row
-                            className="cert-row flex items-start justify-between gap-4 rounded-2xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.035),rgba(255,255,255,0.015))] p-4"
+                            className="cert-row flex items-start justify-between gap-4 rounded-2xl border border-[rgba(72,202,228,0.12)] bg-[linear-gradient(180deg,rgba(8,14,28,0.9),rgba(10,18,32,0.88))] p-4"
                           >
                             <div>
                               <p className="text-sm font-medium text-white">{cert.name}</p>
@@ -331,7 +348,7 @@ export function ExperienceSection() {
               <GlowCard
                 intensity={0.35}
                 tilt={false}
-                className="rounded-2xl border border-[var(--border)] bg-white/[0.02] p-5 md:p-6"
+                className="rounded-2xl border border-[rgba(72,202,228,0.14)] bg-[linear-gradient(180deg,rgba(6,12,24,0.94),rgba(8,15,30,0.92))] p-5 md:p-6"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div>
@@ -369,7 +386,7 @@ export function ExperienceSection() {
                           <article
                             key={event.id}
                             data-event-card
-                            className="event-card min-w-0 rounded-2xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.035),rgba(255,255,255,0.015))] p-4 transition-colors duration-300 hover:border-[var(--border-strong)]"
+                            className="event-card min-w-0 rounded-2xl border border-[rgba(72,202,228,0.12)] bg-[linear-gradient(180deg,rgba(8,14,28,0.9),rgba(10,18,32,0.88))] p-4 transition-colors duration-300 hover:border-[rgba(72,202,228,0.24)]"
                           >
                             <div className="flex min-w-0 items-start justify-between gap-3">
                               <div className="min-w-0 flex-1">

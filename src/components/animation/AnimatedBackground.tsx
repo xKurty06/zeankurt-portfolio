@@ -17,8 +17,16 @@ function ParticleCanvas() {
     const ctx = context;
 
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    let W = (canvas.width = window.innerWidth);
-    let H = (canvas.height = window.innerHeight);
+    const resizeCanvas = () => {
+      const bounds = canvas.getBoundingClientRect();
+      canvas.width = Math.max(1, Math.floor(bounds.width));
+      canvas.height = Math.max(1, Math.floor(bounds.height));
+      return bounds;
+    };
+
+    let bounds = resizeCanvas();
+    let W = canvas.width;
+    let H = canvas.height;
 
     const COUNT = prefersReduced ? 0 : Math.min(96, Math.floor((W * H) / 14500));
     const CONNECT = 190;
@@ -122,21 +130,32 @@ function ParticleCanvas() {
     tick();
 
     const onResize = () => {
-      W = canvas.width = window.innerWidth;
-      H = canvas.height = window.innerHeight;
+      bounds = resizeCanvas();
+      W = canvas.width;
+      H = canvas.height;
     };
 
+    // Use the cached bounds updated on resize instead of remeasuring every mousemove.
     const onMouse = (event: MouseEvent) => {
-      mouseRef.current = { x: event.clientX, y: event.clientY };
+      mouseRef.current = {
+        x: event.clientX - bounds.left,
+        y: event.clientY - bounds.top,
+      };
+    };
+
+    const onMouseLeave = () => {
+      mouseRef.current = { x: -9999, y: -9999 };
     };
 
     window.addEventListener("resize", onResize);
     window.addEventListener("mousemove", onMouse, { passive: true });
+    window.addEventListener("mouseout", onMouseLeave);
 
     return () => {
       cancelAnimationFrame(rafRef.current);
       window.removeEventListener("resize", onResize);
       window.removeEventListener("mousemove", onMouse);
+      window.removeEventListener("mouseout", onMouseLeave);
     };
   }, []);
 
@@ -245,26 +264,32 @@ export function AnimatedBackground() {
         ? gsap.quickTo(cursorGlowSecondary, "y", { duration: 0.75, ease: "power3.out" })
         : null;
 
+      // Pre-create quickTo setters for parallax layers to avoid creating new
+      // tweens on every mouse move.
+      const parallaxSetters = parallaxLayers.map((layer) => {
+        const x = gsap.quickTo(layer, "x", { duration: 0.8, ease: "power3.out" });
+        const y = gsap.quickTo(layer, "y", { duration: 0.8, ease: "power3.out" });
+        const depth = Number(layer.dataset.parallax ?? 0);
+        return { x, y, depth };
+      });
+
       const onMouseMove = (event: MouseEvent) => {
-        const px = event.clientX;
-        const py = event.clientY;
-        const nx = px / window.innerWidth - 0.5;
-        const ny = py / window.innerHeight - 0.5;
+        const bounds = rootRef.current?.getBoundingClientRect();
+        if (!bounds) return;
+
+        const px = event.clientX - bounds.left;
+        const py = event.clientY - bounds.top;
+        const nx = px / bounds.width - 0.5;
+        const ny = py / bounds.height - 0.5;
 
         glowPrimaryX?.(px);
         glowPrimaryY?.(py);
         glowSecondaryX?.(px);
         glowSecondaryY?.(py);
 
-        parallaxLayers.forEach((layer) => {
-          const depth = Number(layer.dataset.parallax ?? 0);
-          gsap.to(layer, {
-            x: nx * depth,
-            y: ny * depth,
-            duration: 0.8,
-            ease: "power3.out",
-            overwrite: "auto",
-          });
+        parallaxSetters.forEach((s) => {
+          s.x(nx * s.depth);
+          s.y(ny * s.depth);
         });
       };
 

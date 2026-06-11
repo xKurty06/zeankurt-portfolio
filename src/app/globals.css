@@ -288,6 +288,126 @@ body {
 
 /* ─── Interactive elements — restore cursor for touch ───────────────────────── */
 
+/* Experience aurora background */
+
+.aurora-scene {
+  --aurora-glow-soft: rgba(0, 180, 216, 0.2);
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 32%, rgba(72, 202, 228, 0.1), transparent 27rem),
+    radial-gradient(circle at 8% 48%, rgba(0, 119, 182, 0.16), transparent 24rem),
+    radial-gradient(circle at 92% 72%, rgba(144, 224, 239, 0.075), transparent 28rem);
+  opacity: 0.92;
+}
+
+.aurora-scene::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(144, 224, 239, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(144, 224, 239, 0.03) 1px, transparent 1px);
+  background-size: 80px 80px;
+  mask-image: radial-gradient(circle at center, black 0%, transparent 72%);
+  animation: auroraMoveGrid 18s linear infinite;
+}
+
+.aurora-floor {
+  position: absolute;
+  left: 50%;
+  bottom: -9rem;
+  width: min(72rem, 86vw);
+  height: 22rem;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(72, 202, 228, 0.2),
+    rgba(0, 180, 216, 0.055) 42%,
+    transparent 70%
+  );
+  filter: blur(18px);
+  transform: translateX(-50%) rotateX(62deg);
+  animation: auroraFloorGlow 5.8s ease-in-out infinite;
+}
+
+.aurora-main-column {
+  position: absolute;
+  left: 50%;
+  top: 8%;
+  width: min(26rem, 38vw);
+  height: 78%;
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, transparent, rgba(72, 202, 228, 0.12), transparent),
+    radial-gradient(ellipse at center, rgba(72, 202, 228, 0.16), transparent 64%);
+  filter: blur(32px);
+  opacity: 0.5;
+  transform: translateX(-50%);
+  animation: auroraMainGlow 6.5s ease-in-out infinite alternate;
+}
+
+.aurora-light-stream-container {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  mask-image: linear-gradient(180deg, transparent, black 15%, black 82%, transparent);
+}
+
+.aurora-light-beam {
+  position: absolute;
+  bottom: -18%;
+  height: 42%;
+  border-radius: 999px;
+  background: linear-gradient(
+    to top,
+    transparent,
+    rgba(72, 202, 228, 0.1) 20%,
+    rgba(144, 224, 239, 0.68) 58%,
+    transparent
+  );
+  box-shadow:
+    0 0 14px var(--aurora-glow-soft),
+    0 0 30px rgba(72, 202, 228, 0.12);
+  opacity: 0;
+  animation-name: auroraRise, auroraFade, auroraDrift;
+  animation-timing-function: ease-out, linear, ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+@keyframes auroraRise {
+  0% { transform: translate3d(0, 100%, 0) scaleY(0.7); }
+  100% { transform: translate3d(0, -245%, 0) scaleY(1.18); }
+}
+
+@keyframes auroraFade {
+  0%, 100% { opacity: 0; }
+  12%, 72% { opacity: 0.55; }
+}
+
+@keyframes auroraFloorGlow {
+  0%, 100% { opacity: 0.54; transform: translateX(-50%) rotateX(62deg) scale(0.95); }
+  50% { opacity: 0.82; transform: translateX(-50%) rotateX(62deg) scale(1.05); }
+}
+
+@keyframes auroraMainGlow {
+  from { opacity: 0.34; filter: blur(36px); }
+  to { opacity: 0.62; filter: blur(24px); }
+}
+
+@keyframes auroraMoveGrid {
+  from { background-position: 0 0; }
+  to { background-position: -80px -80px; }
+}
+
+@keyframes auroraDrift {
+  0%, 100% { margin-left: -0.35rem; }
+  50% { margin-left: 0.35rem; }
+}
+
 @media (pointer: fine) {
   a, button, [data-interactive], input, select, textarea, label {
     cursor: none;

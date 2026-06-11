@@ -55,6 +55,7 @@ export function mapExperience(row: CmsExperienceRow): ExperienceItem {
 
 export function mapCertification(row: CmsCertificationRow): Certification {
   return {
+    id: row.id ?? row.image_path ?? `${row.issuer}-${row.name}`,
     name: row.name,
     issuer: row.issuer,
     issued: row.issued ?? undefined,
