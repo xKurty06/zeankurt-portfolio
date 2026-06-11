@@ -48,6 +48,17 @@ export function PhotographyTeaser() {
 
         if (!img) return;
 
+        gsap.to(img, {
+          yPercent: i % 2 === 0 ? -5 : 5,
+          ease: "none",
+          scrollTrigger: {
+            trigger: card,
+            start: "top bottom",
+            end: "bottom top",
+            scrub: 1.2,
+          },
+        });
+
         const onEnter = () => {
           gsap.to(img, { scale: 1.08, y: -8, duration: 0.6, ease: "power2.out" });
           if (overlay) gsap.to(overlay, { opacity: 1, duration: 0.35 });
@@ -92,7 +103,7 @@ export function PhotographyTeaser() {
               href="/photography"
               data-photo-card
               data-interactive
-              className="group relative block overflow-hidden rounded-2xl border border-[var(--border)] bg-black"
+              className="photo-card group relative block overflow-hidden rounded-2xl border border-[var(--border)] bg-black"
             >
               <div className="relative aspect-[4/5] overflow-hidden">
                 <div data-photo-img className="absolute inset-0">

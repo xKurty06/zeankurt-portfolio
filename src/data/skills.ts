@@ -18,6 +18,7 @@ export const skillCategories: SkillCategory[] = [
     name: "Web3 & Blockchain",
     skills: [
       "Base Ecosystem",
+      "Avalanche Ecosystem",
       "Smart Contracts",
       "Wallet Integration",
       "Community Building",
@@ -30,6 +31,7 @@ export const skillCategories: SkillCategory[] = [
     skills: [
       "Photography",
       "Videography",
+      "Photo Editing",
       "Video Editing",
       "Event Coverage",
       "Visual Storytelling",

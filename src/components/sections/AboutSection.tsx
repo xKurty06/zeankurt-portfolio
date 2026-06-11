@@ -72,6 +72,7 @@ export function AboutSection() {
           },
         );
       }
+
     },
     { scope: sectionRef },
   );

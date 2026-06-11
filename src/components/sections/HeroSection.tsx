@@ -19,11 +19,10 @@ const ROLES = [
   "Web3 Builder",
   "Co-Founder",
   "Photographer & Videographer",
-  "UI/UX Tinkerer",
-  "Hackathon Competitor",
-  "Open-Source Author",
-  "Community Volunteer",
+  "Creative Technologist",
 ];
+
+const HERO_STACK = ["Build", "Ship", "Capture", "Connect"];
 
 // ─── Click-to-shatter name ────────────────────────────────────────────────────
 function ShatterName({ name }: { name: string }) {
@@ -124,6 +123,7 @@ export function HeroSection() {
         stagger: 0.08, duration: 0.55, ease: "back.out(1.5)",
       }, "-=0.4");
       tl.from("[data-hero='meta']",    { autoAlpha: 0, y: 12, duration: 0.5 }, "-=0.3");
+      tl.from("[data-hero='network']", { autoAlpha: 0, x: 24, scale: 0.96, duration: 0.75 }, "-=0.55");
 
       // Scroll parallax
       ScrollTrigger.create({
@@ -203,6 +203,20 @@ export function HeroSection() {
 
             <div data-hero="meta" className="mt-6">
               <SocialLinks links={socialGroups.personal} />
+            </div>
+          </div>
+
+          <div
+            data-hero="network"
+            aria-hidden
+            className="hero-network-panel pointer-events-none absolute right-0 top-1/2 hidden w-[18rem] -translate-y-1/2 lg:block"
+          >
+            <div className="hero-network-orbit">
+              {HERO_STACK.map((item, index) => (
+                <span key={item} className={`hero-network-node hero-network-node-${index}`}>
+                  {item}
+                </span>
+              ))}
             </div>
           </div>
       </Container>

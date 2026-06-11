@@ -126,6 +126,15 @@ export function ExperienceSection() {
         card.addEventListener("mouseleave", onLeave);
       });
 
+      const certRows = gsap.utils.toArray<HTMLElement>("[data-cert-row]");
+      certRows.forEach((row) => {
+        const onEnter = () => gsap.to(row, { x: 4, duration: 0.28, ease: "power2.out" });
+        const onLeave = () => gsap.to(row, { x: 0, duration: 0.35, ease: "power2.out" });
+
+        row.addEventListener("mouseenter", onEnter);
+        row.addEventListener("mouseleave", onLeave);
+      });
+
       const traveller = sectionRef.current?.querySelector<HTMLElement>("[data-timeline-traveller]");
       const lineEl = sectionRef.current?.querySelector<HTMLElement>("[data-timeline-line]");
       if (traveller && lineEl && sectionRef.current) {
@@ -224,7 +233,7 @@ export function ExperienceSection() {
                   data-exp-card
                   className="relative rounded-2xl border border-[var(--border)] bg-white/[0.02] p-5 transition-colors duration-300 hover:border-[var(--border-strong)] hover:bg-white/[0.04] md:p-6"
                 >
-                  <div className="timeline-dot absolute -left-[calc(1.5rem+1px)] top-6 hidden h-3 w-3 rounded-full border-2 border-[var(--blue-500)] bg-[var(--background-subtle)] md:block" />
+                  <div className="timeline-dot absolute -left-[calc(1.5rem+6px)] top-7 hidden h-3 w-3 rounded-full border-2 border-[var(--blue-500)] bg-[var(--background-subtle)] md:block" />
 
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
@@ -244,7 +253,9 @@ export function ExperienceSection() {
             </div>
           </div>
 
-          <div className="space-y-6">
+          <div className="sui-modular-panel relative space-y-6">
+            <span aria-hidden className="sui-stack-ring sui-stack-ring-a" />
+            <span aria-hidden className="sui-stack-ring sui-stack-ring-b" />
             <RevealOnScroll delay={0.08} variant="scale-in">
               <GlowCard
                 intensity={0.35}
@@ -285,7 +296,8 @@ export function ExperienceSection() {
                         {items.map((cert, index) => (
                           <li
                             key={cert.image ?? `${issuer}-${cert.name}-${index}`}
-                            className="flex items-start justify-between gap-4 rounded-2xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.035),rgba(255,255,255,0.015))] p-4"
+                            data-cert-row
+                            className="cert-row flex items-start justify-between gap-4 rounded-2xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.035),rgba(255,255,255,0.015))] p-4"
                           >
                             <div>
                               <p className="text-sm font-medium text-white">{cert.name}</p>
@@ -336,7 +348,7 @@ export function ExperienceSection() {
                   </div>
                 </div>
 
-                <div className="events-scroll mt-5 max-h-[42rem] space-y-5 overflow-y-auto pr-2">
+                <div className="events-scroll mt-5 max-h-[42rem] min-w-0 space-y-5 overflow-y-auto overflow-x-hidden pr-2">
                   {eventsByYear.map(([year, events]) => (
                     <section key={year}>
                       <div className="sticky top-0 z-10 mb-3 flex items-center gap-3 py-2">
@@ -356,14 +368,15 @@ export function ExperienceSection() {
                         {events.map((event) => (
                           <article
                             key={event.id}
-                            className="rounded-2xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.035),rgba(255,255,255,0.015))] p-4 transition-colors duration-300 hover:border-[var(--border-strong)]"
+                            data-event-card
+                            className="event-card min-w-0 rounded-2xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.035),rgba(255,255,255,0.015))] p-4 transition-colors duration-300 hover:border-[var(--border-strong)]"
                           >
-                            <div className="flex items-start justify-between gap-3">
-                              <div>
+                            <div className="flex min-w-0 items-start justify-between gap-3">
+                              <div className="min-w-0 flex-1">
                                 <p className="text-xs font-mono uppercase tracking-[0.16em] text-[var(--blue-300)]">
                                   {event.date}
                                 </p>
-                                <h4 className="mt-2 text-base font-semibold leading-snug text-white">
+                                <h4 className="mt-2 break-words text-base font-semibold leading-snug text-white">
                                   {event.title}
                                 </h4>
                               </div>
@@ -372,21 +385,21 @@ export function ExperienceSection() {
                               </span>
                             </div>
 
-                            <div className="mt-3 space-y-2 text-sm text-[var(--foreground-muted)]">
+                            <div className="mt-3 min-w-0 space-y-2 text-sm text-[var(--foreground-muted)]">
                               <div className="flex items-start gap-2">
                                 <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--blue-400)]" />
-                                <span>{event.venue}</span>
+                                <span className="min-w-0 break-words">{event.venue}</span>
                               </div>
                               {event.organizers ? (
                                 <div className="flex items-start gap-2">
                                   <Users className="mt-0.5 h-4 w-4 shrink-0 text-[var(--blue-400)]" />
-                                  <span>{event.organizers}</span>
+                                  <span className="min-w-0 break-words">{event.organizers}</span>
                                 </div>
                               ) : null}
                               {event.role ? (
                                 <div className="flex items-start gap-2">
                                   <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-[var(--blue-400)]" />
-                                  <span>{event.role}</span>
+                                  <span className="min-w-0 break-words">{event.role}</span>
                                 </div>
                               ) : null}
                             </div>

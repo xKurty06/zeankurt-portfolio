@@ -1,7 +1,10 @@
 "use client";
 
+import { useRef } from "react";
 import Image from "next/image";
+import { useGSAP } from "@gsap/react";
 import { cn } from "@/lib/cn";
+import { gsap, registerGsapPlugins } from "@/lib/gsap";
 import { getPhotoImageUrl } from "@/data/photography";
 import type { PhotoItem } from "@/types";
 
@@ -11,12 +14,37 @@ interface GalleryGridProps {
 }
 
 export function GalleryGrid({ photos, onPhotoClick }: GalleryGridProps) {
+  const gridRef = useRef<HTMLDivElement>(null);
+
+  useGSAP(
+    () => {
+      registerGsapPlugins();
+      const frames = gsap.utils.toArray<HTMLElement>("[data-gallery-frame]");
+
+      gsap.fromTo(
+        frames,
+        { autoAlpha: 0, y: 14, scale: 0.985, filter: "blur(6px)" },
+        {
+          autoAlpha: 1,
+          y: 0,
+          scale: 1,
+          filter: "blur(0px)",
+          duration: 0.42,
+          stagger: 0.035,
+          ease: "power2.out",
+        },
+      );
+    },
+    { dependencies: [photos], revertOnUpdate: true, scope: gridRef },
+  );
+
   return (
-    <div className="columns-1 gap-4 sm:columns-2 xl:columns-3">
+    <div ref={gridRef} className="columns-1 gap-4 sm:columns-2 xl:columns-3">
       {photos.map((photo, index) => (
         <button
           key={photo.id}
           type="button"
+          data-gallery-frame
           onClick={() => onPhotoClick(photo, index)}
           className="group mb-4 block w-full overflow-hidden rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
         >

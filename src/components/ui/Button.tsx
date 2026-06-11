@@ -43,7 +43,7 @@ export function Button({
       {/* Shine sweep on hover */}
       <span
         aria-hidden
-        className="pointer-events-none absolute inset-0 -translate-x-full skew-x-[-20deg] bg-white/10 transition-transform duration-500 group-hover:translate-x-[150%]"
+        className="pointer-events-none absolute inset-0 rounded-[inherit] -translate-x-full skew-x-[-20deg] bg-white/10 transition-transform duration-500 group-hover:translate-x-[150%]"
       />
       {children}
     </>

@@ -18,6 +18,7 @@ export function SkillsSection() {
       registerGsapPlugins();
 
       const cards = gsap.utils.toArray<HTMLElement>("[data-skill-card]");
+      const section = sectionRef.current;
 
       cards.forEach((card, ci) => {
         // Card spring-in
@@ -54,22 +55,47 @@ export function SkillsSection() {
           );
         }
       });
+
+      if (section) {
+        const onMove = (event: MouseEvent) => {
+          const sectionRect = section.getBoundingClientRect();
+          section.style.setProperty("--skills-bg-x", `${event.clientX - sectionRect.left}px`);
+          section.style.setProperty("--skills-bg-y", `${event.clientY - sectionRect.top}px`);
+        };
+
+        section.addEventListener("mousemove", onMove);
+
+        return () => {
+          section.removeEventListener("mousemove", onMove);
+        };
+      }
     },
     { scope: sectionRef },
   );
 
   return (
     <Section id="skills" ref={sectionRef}>
-      <Container>
+      <div aria-hidden className="skills-ambient-bg">
+        <span className="skills-bg-stream skills-bg-stream-a" />
+        <span className="skills-bg-stream skills-bg-stream-b" />
+        <span className="skills-bg-dot skills-bg-dot-a" />
+        <span className="skills-bg-dot skills-bg-dot-b" />
+        <span className="skills-bg-dot skills-bg-dot-c" />
+      </div>
+
+      <Container className="relative z-10">
         <RevealOnScroll>
           <SectionHeading
             eyebrow="Skills"
             title="Stack, systems, and creative tooling."
-            description="Full-stack development with a Web3 and media production layer — shaped by hackathons, templates, and real client work."
+            description="Full-stack development for websites, web systems, and software products, paired with media production work shaped by hackathons, templates, and real client projects."
           />
         </RevealOnScroll>
 
-        <div className="mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-3" style={{ perspective: 1200 }}>
+        <div
+          className="relative mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-3"
+          style={{ perspective: 1200 }}
+        >
           {skillCategories.map((category) => (
             <GlowCard
               key={category.name}

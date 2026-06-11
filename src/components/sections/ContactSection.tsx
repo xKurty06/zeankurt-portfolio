@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { Mail } from "lucide-react";
 import { useGSAP } from "@gsap/react";
 import { siteConfig } from "@/data/site";
 import { socialGroups } from "@/data/social";
@@ -60,6 +61,17 @@ export function ContactSection() {
           gsap.to(glow, { opacity: 0, duration: 0.5 });
         });
       }
+
+      const signalItems = gsap.utils.toArray<HTMLElement>("[data-contact-signal]");
+      gsap.to(signalItems, {
+        y: -10,
+        opacity: 0.95,
+        duration: 2.4,
+        stagger: 0.35,
+        repeat: -1,
+        yoyo: true,
+        ease: "sine.inOut",
+      });
     },
     { scope: sectionRef },
   );
@@ -90,6 +102,16 @@ export function ContactSection() {
           {/* Corner glows */}
           <div aria-hidden className="pointer-events-none absolute -top-28 -right-28 h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(0,180,216,0.15),transparent_65%)] blur-3xl" />
           <div aria-hidden className="pointer-events-none absolute -bottom-28 -left-28 h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(2,62,138,0.3),transparent_65%)] blur-3xl" />
+          <div aria-hidden className="contact-signal-field pointer-events-none absolute inset-0">
+            <span data-contact-signal className="contact-signal contact-signal-a" />
+            <span data-contact-signal className="contact-signal contact-signal-b" />
+            <span data-contact-signal className="contact-signal contact-signal-c" />
+          </div>
+          <div aria-hidden className="polygon-stack pointer-events-none absolute right-6 top-6 hidden md:block">
+            <span />
+            <span />
+            <span />
+          </div>
 
           {/* Scan line in the card */}
           <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-px scan-line-card" />
@@ -106,11 +128,9 @@ export function ContactSection() {
             <RevealOnScroll delay={0.1}>
               <div className="mt-8 flex flex-wrap gap-3">
                 <MagneticButton>
-                  <Button href={`mailto:${siteConfig.email}`}>Email me</Button>
-                </MagneticButton>
-                <MagneticButton>
-                  <Button href="https://www.linkedin.com/in/zeank/" external variant="secondary">
-                    LinkedIn
+                  <Button href={`mailto:${siteConfig.email}`}>
+                    <Mail className="h-4 w-4" />
+                    Email me
                   </Button>
                 </MagneticButton>
               </div>

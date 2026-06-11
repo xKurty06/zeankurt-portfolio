@@ -17,8 +17,8 @@ import { cn } from "@/lib/cn";
 
 const INITIAL_SHOW = 6;
 
-function projectImageUrl(seed: string) {
-  return `https://picsum.photos/seed/${seed}/1200/800`;
+function projectImageUrl(project: Project) {
+  return project.image || `https://picsum.photos/seed/${project.imageSeed}/1200/800`;
 }
 
 const STATUS_STYLES = {
@@ -54,16 +54,16 @@ function FeaturedCard({ project, index }: { project: Project; index: number }) {
     <GlowCard
       ref={cardRef}
       intensity={0.55}
-      className="group rounded-2xl border border-[var(--border)] bg-[var(--background-elevated)] transition-shadow duration-500 hover:border-[var(--border-strong)] hover:shadow-[0_0_60px_rgba(0,180,216,0.13)]"
+      className="project-feature-card group rounded-2xl border border-[var(--border)] bg-[var(--background-elevated)] transition-shadow duration-500 hover:border-[var(--border-strong)] hover:shadow-[0_0_60px_rgba(0,180,216,0.13)]"
     >
       {/* Image */}
       <div className="relative aspect-[16/10] overflow-hidden">
         <Image
-          src={projectImageUrl(project.imageSeed)}
+          src={projectImageUrl(project)}
           alt={project.title}
           fill
           className="object-cover transition duration-700 group-hover:scale-[1.05]"
-          sizes="(max-width: 1024px) 100vw, 50vw"
+          sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#030712] via-transparent to-transparent" />
         <div className="absolute inset-0 opacity-0 transition duration-500 group-hover:opacity-100 bg-[radial-gradient(ellipse_at_50%_0%,rgba(0,180,216,0.1),transparent_65%)]" />
@@ -78,13 +78,19 @@ function FeaturedCard({ project, index }: { project: Project; index: number }) {
       </div>
 
       {/* Body */}
-      <div className="space-y-3 p-6 md:p-7">
+      <div className="space-y-3 p-5 md:p-6 xl:p-5">
+        <div aria-hidden className="project-module-rail">
+          <span />
+          <span />
+          <span />
+          <span />
+        </div>
         <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--blue-400)]">
+          <div className="min-w-0">
+            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--blue-400)]">
               {project.year} · {project.role}
             </p>
-            <h3 className="mt-1.5 font-[family-name:var(--font-syne)] text-xl font-semibold text-white sm:text-2xl">
+            <h3 className="mt-1.5 font-[family-name:var(--font-syne)] text-lg font-semibold leading-tight text-white sm:text-xl xl:text-lg">
               {project.title}
             </h3>
           </div>
@@ -102,11 +108,11 @@ function FeaturedCard({ project, index }: { project: Project; index: number }) {
           ) : null}
         </div>
 
-        <p className="text-sm leading-relaxed text-[var(--foreground-muted)] sm:text-base">
+        <p className="text-sm leading-relaxed text-[var(--foreground-muted)]">
           {project.description}
         </p>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1.5">
           {project.tags.map((tag) => <Badge key={tag}>{tag}</Badge>)}
         </div>
 
@@ -131,8 +137,11 @@ function CompactCard({ project }: { project: Project }) {
   return (
     <GlowCard
       intensity={0.4}
-      className="group flex h-full flex-col rounded-xl border border-[var(--border)] bg-[var(--background-elevated)] p-5 transition duration-300 hover:border-[var(--border-strong)] hover:shadow-[0_0_28px_rgba(0,180,216,0.08)]"
+      className="project-compact-card group flex h-full flex-col rounded-xl border border-[var(--border)] bg-[var(--background-elevated)] p-5 transition duration-300 hover:border-[var(--border-strong)] hover:shadow-[0_0_28px_rgba(0,180,216,0.08)]"
     >
+      <span aria-hidden className="project-corner project-corner-tl" />
+      <span aria-hidden className="project-corner project-corner-br" />
+      <span aria-hidden className="project-module-dot" />
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--blue-400)]">
@@ -199,8 +208,29 @@ function CompactCard({ project }: { project: Project }) {
 // ─── Section ──────────────────────────────────────────────────────────────────
 export function ProjectsSection() {
   const sectionRef = useRef<HTMLElement>(null);
+  const allProjectsGridRef = useRef<HTMLDivElement>(null);
   const [activeTag, setActiveTag] = useState("All");
   const [expanded, setExpanded] = useState(false);
+
+  useGSAP(
+    () => {
+      const section = sectionRef.current;
+      if (!section) return;
+
+      const onMove = (event: MouseEvent) => {
+        const rect = section.getBoundingClientRect();
+        section.style.setProperty("--projects-x", `${event.clientX - rect.left}px`);
+        section.style.setProperty("--projects-y", `${event.clientY - rect.top}px`);
+      };
+
+      section.addEventListener("mousemove", onMove);
+
+      return () => {
+        section.removeEventListener("mousemove", onMove);
+      };
+    },
+    { scope: sectionRef },
+  );
 
   // Non-featured projects, filtered by tag
   const nonFeatured = useMemo(
@@ -216,9 +246,38 @@ export function ProjectsSection() {
   const visible = expanded ? filtered : filtered.slice(0, INITIAL_SHOW);
   const hasMore = filtered.length > INITIAL_SHOW;
 
+  useGSAP(
+    () => {
+      registerGsapPlugins();
+      const items = gsap.utils.toArray<HTMLElement>("[data-all-project-frame]");
+
+      gsap.fromTo(
+        items,
+        { autoAlpha: 0, y: 14, scale: 0.985, filter: "blur(6px)" },
+        {
+          autoAlpha: 1,
+          y: 0,
+          scale: 1,
+          filter: "blur(0px)",
+          duration: 0.38,
+          stagger: 0.035,
+          ease: "power2.out",
+        },
+      );
+    },
+    { dependencies: [visible], revertOnUpdate: true, scope: allProjectsGridRef },
+  );
+
   return (
     <Section id="projects" ref={sectionRef}>
-      <Container>
+      <div aria-hidden className="projects-interactive-bg">
+        <span className="projects-bg-band projects-bg-band-a" />
+        <span className="projects-bg-band projects-bg-band-b" />
+        <span className="projects-bg-pulse projects-bg-pulse-a" />
+        <span className="projects-bg-pulse projects-bg-pulse-b" />
+      </div>
+
+      <Container className="relative z-10">
         {/* ── Heading ── */}
         <RevealOnScroll>
           <SectionHeading
@@ -230,7 +289,7 @@ export function ProjectsSection() {
 
         {/* ── Featured 2-col grid ── */}
         <div
-          className="mt-12 grid gap-6 lg:grid-cols-2"
+          className="mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-3"
           style={{ perspective: 1400 }}
         >
           {featuredProjects.map((project, i) => (
@@ -273,11 +332,11 @@ export function ProjectsSection() {
             </RevealOnScroll>
 
             {/* Compact grid */}
-            <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div ref={allProjectsGridRef} className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {visible.map((project, i) => (
-                <RevealOnScroll key={project.slug} delay={i * 0.04} variant="scale-in">
+                <div key={project.slug} data-all-project-frame>
                   <CompactCard project={project} />
-                </RevealOnScroll>
+                </div>
               ))}
 
               {filtered.length === 0 && (
