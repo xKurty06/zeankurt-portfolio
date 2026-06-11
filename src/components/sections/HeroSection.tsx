@@ -213,7 +213,7 @@ export function HeroSection() {
               {siteConfig.description}
             </p>
 
-            <div data-hero="actions" className="mt-8 flex flex-wrap items-center gap-3">
+            <div data-hero="actions" className="mt-6 flex flex-wrap items-center gap-3">
               <MagneticButton>
                 <RippleButton>
                   <Button href="/#projects">
@@ -226,14 +226,9 @@ export function HeroSection() {
                   <Button href="/photography" variant="secondary">Photography</Button>
                 </RippleButton>
               </MagneticButton>
-              <MagneticButton>
-                <RippleButton>
-                  <Button href="https://github.com/xKurty06" external variant="ghost">GitHub</Button>
-                </RippleButton>
-              </MagneticButton>
             </div>
 
-            <div data-hero="meta" className="mt-10 space-y-4">
+            <div data-hero="meta" className="mt-8 space-y-4">
               <SocialLinks links={socialGroups.personal} />
               <a
                 href="/#about"
@@ -244,11 +239,6 @@ export function HeroSection() {
                 <ArrowDown className="h-4 w-4 animate-bounce" />
               </a>
             </div>
-
-            {/* Easter egg hint */}
-            <p className="mt-4 text-[10px] font-mono text-[var(--foreground-subtle)] opacity-50 select-none">
-              ↑ click the name
-            </p>
           </div>
       </Container>
     </section>
