@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, useLayoutEffect } from "react";
+import { createPortal } from "react-dom";
 import { gsap, registerGsapPlugins } from "@/lib/gsap";
 
 /**
@@ -11,16 +12,20 @@ import { gsap, registerGsapPlugins } from "@/lib/gsap";
 export function CustomCursor() {
   const dotRef = useRef<HTMLDivElement>(null);
   const ringRef = useRef<HTMLDivElement>(null);
+  const [portalEl, setPortalEl] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
+    if (!portalEl) return;
     if (typeof window === "undefined") return;
     if (window.matchMedia("(pointer: coarse)").matches) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     registerGsapPlugins();
 
-    const dot = dotRef.current!;
-    const ring = ringRef.current!;
+    const dot = dotRef.current;
+    const ring = ringRef.current;
+    if (!dot || !ring) return;
+
 
     // Place both at center-screen initially and make them visible.
     // xPercent/yPercent tell GSAP to offset by -50% of the element's own size —
@@ -79,10 +84,11 @@ export function CustomCursor() {
       window.removeEventListener("mouseup",   onClickUp);
       observer.disconnect();
       document.documentElement.style.cursor = "";
+      // portal cleanup handled by useLayoutEffect return
     };
-  }, []);
+  }, [portalEl]);
 
-  return (
+  const content = (
     <>
       {/* Dot — 8px solid circle */}
       <div
@@ -112,4 +118,19 @@ export function CustomCursor() {
       />
     </>
   );
+
+  // Create portal container during layout so the portal and its children
+  // are mounted before effects run — this ensures refs are populated.
+  useLayoutEffect(() => {
+    const el = document.createElement("div");
+    document.body.appendChild(el);
+    setPortalEl(el);
+    return () => {
+      try { document.body.removeChild(el); } catch {}
+      setPortalEl(null);
+    };
+  }, []);
+
+  // Only render portal once container exists
+  return portalEl ? createPortal(content, portalEl) : null;
 }

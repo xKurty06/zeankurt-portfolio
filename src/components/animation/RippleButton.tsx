@@ -47,7 +47,7 @@ export function RippleButton({ children, className, onClick }: RippleButtonProps
     <span
       ref={containerRef}
       onMouseDown={createRipple}
-      className={cn("relative inline-flex overflow-hidden", className)}
+      className={cn("relative inline-flex overflow-hidden rounded-full", className)}
     >
       {children}
     </span>

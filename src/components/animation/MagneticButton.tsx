@@ -3,6 +3,7 @@
 import { useRef, type ReactNode } from "react";
 import { gsap, registerGsapPlugins } from "@/lib/gsap";
 import { useGSAP } from "@gsap/react";
+import { cn } from "@/lib/cn";
 
 interface MagneticButtonProps {
   children: ReactNode;
@@ -52,7 +53,7 @@ export function MagneticButton({
   );
 
   return (
-    <div ref={ref} className={className}>
+    <div ref={ref} className={cn("rounded-full", className)}>
       {children}
     </div>
   );
