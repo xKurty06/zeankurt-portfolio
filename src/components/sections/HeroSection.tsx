@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowDown, ArrowUpRight } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { useGSAP } from "@gsap/react";
 import { siteConfig } from "@/data/site";
 import { socialGroups } from "@/data/social";
@@ -13,7 +13,6 @@ import { RippleButton } from "@/components/animation/RippleButton";
 import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
 import { SocialLinks } from "@/components/ui/SocialLinks";
-import { Badge } from "@/components/ui/Badge";
 
 const ROLES = [
   "Full-Stack Developer",
@@ -114,33 +113,16 @@ export function HeroSection() {
       registerGsapPlugins();
       gsap.set(sectionRef.current, { autoAlpha: 1 });
 
-      const titleEl = sectionRef.current?.querySelector<HTMLElement>("[data-hero='title']");
-      let titleSplit: InstanceType<typeof SplitText> | null = null;
-      if (titleEl) titleSplit = new SplitText(titleEl, { type: "words" });
-
       const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
 
-      tl.from("[data-hero='status']",  { autoAlpha: 0, y: 12, duration: 0.5 });
-      tl.from("[data-hero='eyebrow'] > *", { autoAlpha: 0, y: 16, scale: 0.85, stagger: 0.1, duration: 0.6 }, "-=0.2");
-      tl.from("[data-hero='name']",    { autoAlpha: 0, scale: 0.85, y: 40, duration: 0.8, ease: "back.out(1.6)" }, "-=0.3");
+      tl.from("[data-hero='name']",    { autoAlpha: 0, scale: 0.85, y: 40, duration: 0.8, ease: "back.out(1.6)" });
       tl.from("[data-hero='role']",    { autoAlpha: 0, y: 16, duration: 0.55 }, "-=0.3");
-
-      if (titleSplit?.words?.length) {
-        tl.from(titleSplit.words, {
-          autoAlpha: 0, y: 32, rotateX: -8,
-          stagger: 0.05, duration: 0.65,
-          transformPerspective: 600,
-        }, "-=0.4");
-      }
-
       tl.from("[data-hero='copy']",    { autoAlpha: 0, y: 18, duration: 0.6 }, "-=0.35");
       tl.from("[data-hero='actions'] > *", {
         autoAlpha: 0, y: 16, scale: 0.9,
         stagger: 0.08, duration: 0.55, ease: "back.out(1.5)",
       }, "-=0.4");
       tl.from("[data-hero='meta']",    { autoAlpha: 0, y: 12, duration: 0.5 }, "-=0.3");
-
-      tl.eventCallback("onComplete", () => titleSplit?.revert());
 
       // Scroll parallax
       ScrollTrigger.create({
@@ -174,14 +156,7 @@ export function HeroSection() {
       </div>
 
       <Container className="relative z-10 py-20 md:py-28" data-hero-content="">
-        <div className="max-w-4xl">
-
-
-            {/* Eyebrow badges */}
-            <div data-hero="eyebrow" className="mb-4 flex flex-wrap gap-2">
-              <Badge>{siteConfig.location}</Badge>
-            </div>
-
+        <div className="max-w-3xl">
             {/* Name — click to shatter */}
             <h1 className="font-[family-name:var(--font-syne)] text-4xl font-semibold leading-[1.05] tracking-tight text-white sm:text-6xl md:text-7xl">
               <span data-hero="name">
@@ -196,24 +171,16 @@ export function HeroSection() {
                 <TypewriterCycle phrases={ROLES} className="font-[family-name:var(--font-syne)]" />
               </span>
 
-              {/* Static headline */}
-              <span
-                data-hero="title"
-                className="mt-2 block text-white/90"
-                style={{ perspective: 600 }}
-              >
-                {siteConfig.headline}
-              </span>
             </h1>
 
             <p
               data-hero="copy"
-              className="mt-6 max-w-2xl text-base leading-relaxed text-[var(--foreground-muted)] sm:text-lg"
+              className="mt-3 max-w-2xl text-sm leading-relaxed text-[var(--foreground-muted)] sm:text-base"
             >
               {siteConfig.description}
             </p>
 
-            <div data-hero="actions" className="mt-6 flex flex-wrap items-center gap-3">
+            <div data-hero="actions" className="mt-4 flex flex-wrap items-center gap-3">
               <MagneticButton>
                 <RippleButton>
                   <Button href="/#projects">
@@ -228,16 +195,8 @@ export function HeroSection() {
               </MagneticButton>
             </div>
 
-            <div data-hero="meta" className="mt-8 space-y-4">
+            <div data-hero="meta" className="mt-6">
               <SocialLinks links={socialGroups.personal} />
-              <a
-                href="/#about"
-                data-interactive
-                className="inline-flex items-center gap-2 text-sm text-[var(--foreground-muted)] transition hover:text-white"
-              >
-                Scroll to explore
-                <ArrowDown className="h-4 w-4 animate-bounce" />
-              </a>
             </div>
           </div>
       </Container>
