@@ -117,6 +117,7 @@ export function HeroSection() {
 
       tl.from("[data-hero='name']",    { autoAlpha: 0, scale: 0.85, y: 40, duration: 0.8, ease: "back.out(1.6)" });
       tl.from("[data-hero='role']",    { autoAlpha: 0, y: 16, duration: 0.55 }, "-=0.3");
+      tl.from("[data-hero='tagline']", { autoAlpha: 0, y: 12, duration: 0.4 }, "-=0.25");
       tl.from("[data-hero='copy']",    { autoAlpha: 0, y: 18, duration: 0.6 }, "-=0.35");
       tl.from("[data-hero='actions'] > *", {
         autoAlpha: 0, y: 16, scale: 0.9,
@@ -169,6 +170,11 @@ export function HeroSection() {
                 className="mt-1 block text-2xl font-normal text-[var(--blue-300)] sm:text-3xl md:text-4xl"
               >
                 <TypewriterCycle phrases={ROLES} className="font-[family-name:var(--font-syne)]" />
+              </span>
+
+              {/* Tagline */}
+              <span data-hero="tagline" className="mt-2 block text-sm text-white/50 font-light tracking-wide">
+                {siteConfig.headline}
               </span>
 
             </h1>

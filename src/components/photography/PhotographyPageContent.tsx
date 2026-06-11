@@ -55,7 +55,7 @@ export function PhotographyPageContent() {
             data-photo-hero="line"
             className="mt-4 max-w-3xl font-[family-name:var(--font-syne)] text-4xl font-semibold leading-tight text-white sm:text-5xl md:text-6xl"
           >
-            Photography & visual stories from events, portraits, and the streets of CALABARZON.
+            Photography & visual stories from events, portraits, and the streets.
           </h1>
           <p
             data-photo-hero="line"

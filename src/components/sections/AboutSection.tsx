@@ -3,6 +3,8 @@
 import { useRef } from "react";
 import { useGSAP } from "@gsap/react";
 import { aboutContent } from "@/data/site";
+import { skillCategories, certifications, eventHighlights } from "@/data/skills";
+import { photos } from "@/data/photography";
 import { RevealOnScroll } from "@/components/animation/RevealOnScroll";
 import { AnimatedCounter } from "@/components/animation/AnimatedCounter";
 import { GlowCard } from "@/components/animation/GlowCard";
@@ -10,12 +12,19 @@ import { Container, Section } from "@/components/ui/Container";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { gsap, registerGsapPlugins } from "@/lib/gsap";
 
-// Map highlight labels to countable numbers for the animated counters
-const COUNTER_MAP: Record<string, { to: number; suffix: string; prefix?: string }> = {
-  "Focus":     { to: 3, suffix: "+ stacks" },
-  "Events":    { to: 6, suffix: "+ events" },
-  "Education": { to: 3, suffix: "rd year" },
-  "Creative":  { to: 50, suffix: "+ shoots" },
+type CounterData = {
+  to: number;
+  suffix: string;
+  prefix?: string;
+};
+
+type CounterLabel = "Focus" | "Events" | "Education" | "Creative";
+
+const COUNTER_MAP: Record<CounterLabel, CounterData> = {
+  Focus: { to: skillCategories.length, suffix: "+ stacks" },
+  Events: { to: eventHighlights.length, suffix: "+ events" },
+  Education: { to: certifications.length, suffix: "+ certs" },
+  Creative: { to: photos.length, suffix: "+ shoots" },
 };
 
 export function AboutSection() {
@@ -103,29 +112,28 @@ export function AboutSection() {
             ))}
 
             <RevealOnScroll delay={0.2}>
-              <dl className="grid gap-4 sm:grid-cols-2">
+              <dl className="grid gap-3 sm:grid-cols-2">
                 {aboutContent.highlights.map((item) => {
-                  const counter = COUNTER_MAP[item.label];
+                  const label = item.label as CounterLabel;
+                  const counter = COUNTER_MAP[label];
                   return (
                     <GlowCard
                       key={item.label}
-                      className="rounded-2xl border border-[var(--border)] bg-white/[0.02] p-4 cursor-default"
+                      className="rounded-lg border border-[var(--border)] bg-white/[0.02] p-3 cursor-default"
                       intensity={0.4}
                       data-interactive
                     >
-                      <dt className="font-mono text-xs uppercase tracking-[0.18em] text-[var(--blue-400)]">
+                      <dt className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--blue-400)]">
                         {item.label}
                       </dt>
-                      <dd className="mt-2 text-sm font-medium text-white">
+                      <dd className="mt-1.5 text-sm font-medium text-white">
                         {counter ? (
-                          <>
-                            <AnimatedCounter
-                              to={counter.to}
-                              suffix={counter.suffix}
-                              prefix={counter.prefix}
-                              className="text-[var(--blue-300)] font-semibold"
-                            />
-                          </>
+                          <AnimatedCounter
+                            to={counter.to}
+                            suffix={counter.suffix}
+                            prefix={counter.prefix}
+                            className="text-[var(--blue-300)] font-semibold"
+                          />
                         ) : (
                           item.value
                         )}
