@@ -1,4 +1,4 @@
-# Zean Kurt — Portfolio
+# Zean Kurt Balboa — Personal Portfolio
 
 > A modern, responsive personal portfolio and photography gallery built with Next.js, TypeScript, and Tailwind CSS.
 
@@ -8,7 +8,7 @@
 
 Welcome to my personal portfolio website. This is a showcase of my projects, professional experience, skills, and photography work. Built with modern web technologies and optimized for performance, accessibility, and user experience.
 
-**Live:** [zeankurt-portfolio.vercel.app](https://zeankurt-portfolio.vercel.app)
+**Live:** [zeankurtbalboa.vercel.app](https://zeankurtbalboa.vercel.app)
 
 ---
 
@@ -189,14 +189,6 @@ docker run -p 3000:3000 zeankurt-portfolio
 
 ---
 
-## 🤝 Contributing
-
-Feedback and suggestions are welcome! Feel free to:
-- [Open an issue](https://github.com/xKurty06/zeankurt-portfolio/issues)
-- [Submit a pull request](https://github.com/xKurty06/zeankurt-portfolio/pulls)
-
----
-
 ## 📄 License
 
 This project is open source under the [MIT License](LICENSE).
@@ -205,16 +197,15 @@ This project is open source under the [MIT License](LICENSE).
 
 ## 📞 Connect
 
-- **Website** – [zeankurt.com](https://zeankurt.com)
 - **GitHub** – [@xKurty06](https://github.com/xKurty06)
-- **Email** – [contact@zeankurt.com](mailto:contact@zeankurt.com)
+- **Email** – [zkg.balboa@gmail.com](mailto:zkg.balboa@gmail.com)
 - **LinkedIn** – [Zean Kurt](https://linkedin.com/in/zeankurt)
 
 ---
 
 <div align="center">
 
-**Built with ❤️ by Zean Kurt**
+**Built by Zean Kurt**
 
 *Last updated: June 2026*
 
