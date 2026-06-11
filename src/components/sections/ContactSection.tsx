@@ -98,7 +98,7 @@ export function ContactSection() {
             <RevealOnScroll>
               <SectionHeading
                 eyebrow="Contact"
-                title="Open to dev collaborations, Web3 builds, and photo/video work."
+                title="Open to dev collaborations, software and web builds, and photo/video work."
                 description="Reach out for software projects, hackathon teams, event coverage, or Studio Nomads inquiries."
               />
             </RevealOnScroll>
