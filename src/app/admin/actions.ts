@@ -17,11 +17,45 @@ type CmsTable =
   | "skill_categories"
   | "skills";
 
+type SortableCmsTable = Exclude<CmsTable, "skills">;
+
+const SORTABLE_KEYS: Record<SortableCmsTable, "slug" | "id"> = {
+  projects: "slug",
+  experience_items: "slug",
+  certifications: "id",
+  events: "slug",
+  skill_categories: "id",
+};
+
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
+const MAX_CSV_UPLOAD_BYTES = 512 * 1024;
+const MAX_PROJECT_IMPORT_ROWS = 100;
+const PROJECT_IMPORT_HEADERS = [
+  "slug",
+  "title",
+  "year",
+  "role",
+  "description",
+  "long_description",
+  "tags",
+  "github_url",
+  "live_url",
+  "status",
+  "featured",
+  "published",
+] as const;
 
 function extensionFromFilename(value: string) {
   const match = /\.[a-z0-9]+$/i.exec(value);
   return match ? match[0].toLowerCase() : "";
+}
+
+function publicStorageObjectPath(value: string) {
+  const marker = `/storage/v1/object/public/${SUPABASE_BUCKET}/`;
+  if (!value.includes(marker)) return null;
+
+  const [, objectPath = ""] = value.split(marker);
+  return objectPath || null;
 }
 
 function text(formData: FormData, key: string) {
@@ -34,18 +68,36 @@ function optionalText(formData: FormData, key: string) {
   return value || null;
 }
 
-function numberOrZero(formData: FormData, key: string) {
-  const value = Number(text(formData, key));
-  return Number.isFinite(value) ? value : 0;
+function optionalNumber(formData: FormData, key: string) {
+  const raw = text(formData, key);
+  if (!raw) return null;
+
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : null;
 }
 
 function bool(formData: FormData, key: string) {
   return formData.get(key) === "on";
 }
 
+function parseBoolean(value: string, fallback = false) {
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) return fallback;
+  if (["1", "true", "yes", "y", "on"].includes(normalized)) return true;
+  if (["0", "false", "no", "n", "off"].includes(normalized)) return false;
+  throw new Error(`Invalid boolean value "${value}". Use true or false.`);
+}
+
 function tags(formData: FormData, key: string) {
   return text(formData, key)
     .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+}
+
+function parseTagsValue(value: string) {
+  return value
+    .split(/[|,]/)
     .map((tag) => tag.trim())
     .filter(Boolean);
 }
@@ -118,23 +170,21 @@ async function uploadAssetIfPresent(
   if (!admin) throw new Error("Supabase service role is not configured.");
 
   const extension = extensionFromFilename(file.name);
-  const path = `${objectBasePath}${extension}`;
+  const version = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
+  const path = `${objectBasePath}-${safeFilename(version)}${extension}`;
   const { error } = await admin.storage
     .from(SUPABASE_BUCKET)
     .upload(path, file, {
       cacheControl: "31536000",
-      upsert: true,
+      upsert: false,
       contentType: file.type,
     });
 
   if (error) throw error;
 
-  if (existingPath && existingPath.includes(`/storage/v1/object/public/${SUPABASE_BUCKET}/`)) {
-    const marker = `/storage/v1/object/public/${SUPABASE_BUCKET}/`;
-    const previousObjectPath = existingPath.split(marker)[1];
-    if (previousObjectPath && previousObjectPath !== path) {
-      await admin.storage.from(SUPABASE_BUCKET).remove([previousObjectPath]);
-    }
+  const previousObjectPath = existingPath ? publicStorageObjectPath(existingPath) : null;
+  if (previousObjectPath && previousObjectPath !== path) {
+    await admin.storage.from(SUPABASE_BUCKET).remove([previousObjectPath]);
   }
 
   const { data } = admin.storage.from(SUPABASE_BUCKET).getPublicUrl(path);
@@ -156,6 +206,84 @@ async function mutateAndRefresh<T extends Record<string, unknown>>(
 
   revalidateTag("portfolio-content", "max");
   redirect("/admin");
+}
+
+async function resolveSortOrder(table: CmsTable, formData: FormData) {
+  const existing = optionalNumber(formData, "existing_sort_order");
+  if (existing !== null) return existing;
+
+  const admin = await requireAdmin();
+  const { data, error } = await admin
+    .from(table)
+    .select("sort_order")
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+
+  const maxSortOrder = typeof data?.sort_order === "number" ? data.sort_order : -1;
+  return maxSortOrder + 1;
+}
+
+function parseCsvRows(source: string) {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let field = "";
+  let inQuotes = false;
+
+  for (let index = 0; index < source.length; index += 1) {
+    const char = source[index];
+    const nextChar = source[index + 1];
+
+    if (char === '"') {
+      if (inQuotes && nextChar === '"') {
+        field += '"';
+        index += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (char === "," && !inQuotes) {
+      row.push(field.trim());
+      field = "";
+      continue;
+    }
+
+    if ((char === "\n" || char === "\r") && !inQuotes) {
+      if (char === "\r" && nextChar === "\n") index += 1;
+      row.push(field.trim());
+      if (row.some((value) => value.length > 0)) rows.push(row);
+      row = [];
+      field = "";
+      continue;
+    }
+
+    field += char;
+  }
+
+  if (inQuotes) throw new Error("CSV has an unclosed quoted field.");
+
+  row.push(field.trim());
+  if (row.some((value) => value.length > 0)) rows.push(row);
+
+  return rows;
+}
+
+function normalizeHeader(value: string) {
+  return value.trim().replace(/^\uFEFF/, "").toLowerCase();
+}
+
+function projectImportValue(row: Record<string, string>, key: (typeof PROJECT_IMPORT_HEADERS)[number]) {
+  return row[key]?.trim() ?? "";
+}
+
+function assertAllowedProjectStatus(value: string) {
+  if (!value) return null;
+  if (value === "live" || value === "wip" || value === "archived") return value;
+  throw new Error(`Invalid project status "${value}". Use live, wip, or archived.`);
 }
 
 export async function signInWithMagicLink(formData: FormData) {
@@ -215,11 +343,127 @@ export async function saveProject(formData: FormData) {
       role,
       featured: bool(formData, "featured"),
       status: optionalText(formData, "status"),
-      sort_order: numberOrZero(formData, "sort_order"),
+      sort_order: await resolveSortOrder("projects", formData),
       published: bool(formData, "published"),
     },
     "slug",
   );
+}
+
+export async function importProjectsCsv(formData: FormData) {
+  const admin = await requireAdmin();
+  const file = formData.get("csv_file");
+
+  if (!(file instanceof File) || file.size === 0) {
+    throw new Error("CSV file is required.");
+  }
+
+  if (file.size > MAX_CSV_UPLOAD_BYTES) {
+    throw new Error("CSV is too large. Import up to 512KB at a time.");
+  }
+
+  const extension = extensionFromFilename(file.name);
+  if (extension && extension !== ".csv") {
+    throw new Error("Only CSV files are supported.");
+  }
+
+  const rows = parseCsvRows(await file.text());
+  if (rows.length < 2) throw new Error("CSV must include a header row and at least one project.");
+
+  const headers = rows[0].map(normalizeHeader);
+  const missingHeaders = PROJECT_IMPORT_HEADERS.filter((header) => !headers.includes(header));
+  if (missingHeaders.length > 0) {
+    throw new Error(`CSV is missing required columns: ${missingHeaders.join(", ")}.`);
+  }
+
+  const dataRows = rows.slice(1);
+  if (dataRows.length > MAX_PROJECT_IMPORT_ROWS) {
+    throw new Error(`Import up to ${MAX_PROJECT_IMPORT_ROWS} projects at a time.`);
+  }
+
+  const seenSlugs = new Set<string>();
+
+  const { data: sortData, error: sortError } = await admin
+    .from("projects")
+    .select("sort_order")
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (sortError) throw sortError;
+
+  const nextSortOrder = typeof sortData?.sort_order === "number" ? sortData.sort_order + 1 : 0;
+
+  const importedProjects = dataRows.map((values, index) => {
+    const row = Object.fromEntries(
+      headers.map((header, headerIndex) => [header, values[headerIndex] ?? ""]),
+    ) as Record<string, string>;
+
+    const title = projectImportValue(row, "title");
+    const slug = projectImportValue(row, "slug") || slugify(title);
+    const year = projectImportValue(row, "year");
+    const role = projectImportValue(row, "role");
+    const description = projectImportValue(row, "description");
+
+    if (!title) throw new Error(`Row ${index + 2}: title is required.`);
+    if (!slug) throw new Error(`Row ${index + 2}: slug is required when title cannot generate one.`);
+    if (!year) throw new Error(`Row ${index + 2}: year is required.`);
+    if (!role) throw new Error(`Row ${index + 2}: role is required.`);
+    if (!description) throw new Error(`Row ${index + 2}: description is required.`);
+
+    if (seenSlugs.has(slug)) {
+      throw new Error(`Row ${index + 2}: duplicate slug "${slug}" in CSV.`);
+    }
+    seenSlugs.add(slug);
+
+    return {
+      slug,
+      title,
+      description,
+      long_description: projectImportValue(row, "long_description") || null,
+      tags: parseTagsValue(projectImportValue(row, "tags")),
+      github_url: projectImportValue(row, "github_url") || null,
+      live_url: projectImportValue(row, "live_url") || null,
+      year,
+      role,
+      featured: parseBoolean(projectImportValue(row, "featured")),
+      status: assertAllowedProjectStatus(projectImportValue(row, "status")),
+      sort_order: nextSortOrder + index,
+      published: parseBoolean(projectImportValue(row, "published"), true),
+    };
+  });
+
+  const existingImagesResult = await admin
+    .from("projects")
+    .select("slug,image_path,image_seed")
+    .in("slug", importedProjects.map((project) => project.slug));
+
+  if (existingImagesResult.error) throw existingImagesResult.error;
+
+  const existingAssets = new Map(
+    (existingImagesResult.data ?? []).map((row) => [
+      row.slug,
+      {
+        imagePath: row.image_path as string | null,
+        imageSeed: row.image_seed as string | null,
+      },
+    ]),
+  );
+
+  const payload = importedProjects.map((project) => {
+    const existingAsset = existingAssets.get(project.slug);
+    return {
+      ...project,
+      image_path: existingAsset?.imagePath ?? null,
+      image_seed: existingAsset?.imageSeed || project.slug,
+    };
+  });
+
+  const { error } = await admin.from("projects").upsert(payload, { onConflict: "slug" });
+  if (error) throw error;
+
+  revalidateTag("portfolio-content", "max");
+  redirect("/admin#projects");
 }
 
 export async function saveExperience(formData: FormData) {
@@ -240,7 +484,7 @@ export async function saveExperience(formData: FormData) {
       period,
       description,
       type,
-      sort_order: numberOrZero(formData, "sort_order"),
+      sort_order: await resolveSortOrder("experience_items", formData),
       published: bool(formData, "published"),
     },
     "slug",
@@ -267,7 +511,7 @@ export async function saveCertification(formData: FormData) {
     issued: optionalText(formData, "issued"),
     expires: optionalText(formData, "expires"),
     image_path: image ?? existingImagePath,
-    sort_order: numberOrZero(formData, "sort_order"),
+    sort_order: await resolveSortOrder("certifications", formData),
     published: bool(formData, "published"),
   });
 }
@@ -300,7 +544,7 @@ export async function saveEvent(formData: FormData) {
       role: optionalText(formData, "role"),
       category: optionalText(formData, "category"),
       image_path: image ?? existingImagePath,
-      sort_order: numberOrZero(formData, "sort_order"),
+      sort_order: await resolveSortOrder("events", formData),
       published: bool(formData, "published"),
     },
     "slug",
@@ -312,7 +556,7 @@ export async function saveSkillCategory(formData: FormData) {
   await mutateAndRefresh("skill_categories", {
     ...(id ? { id } : {}),
     name: requiredText(formData, "name", "Name"),
-    sort_order: numberOrZero(formData, "sort_order"),
+    sort_order: await resolveSortOrder("skill_categories", formData),
     published: bool(formData, "published"),
   });
 }
@@ -323,7 +567,7 @@ export async function saveSkill(formData: FormData) {
     ...(id ? { id } : {}),
     category_id: requiredText(formData, "category_id", "Category"),
     name: requiredText(formData, "name", "Name"),
-    sort_order: numberOrZero(formData, "sort_order"),
+    sort_order: await resolveSortOrder("skills", formData),
   });
 }
 
@@ -337,6 +581,35 @@ export async function saveSiteContent(formData: FormData) {
 
   revalidateTag("portfolio-content", "max");
   redirect("/admin");
+}
+
+export async function updateSortOrder({
+  ids,
+  table,
+}: {
+  ids: string[];
+  table: SortableCmsTable;
+}) {
+  const admin = await requireAdmin();
+  const key = SORTABLE_KEYS[table];
+
+  if (!key) throw new Error("Unsupported sortable table.");
+  if (!Array.isArray(ids) || ids.some((id) => typeof id !== "string" || !id.trim())) {
+    throw new Error("Invalid sort order payload.");
+  }
+
+  const updates = ids.map((id, index) =>
+    admin
+      .from(table)
+      .update({ sort_order: index })
+      .eq(key, id),
+  );
+
+  const results = await Promise.all(updates);
+  const error = results.find((result) => result.error)?.error;
+  if (error) throw error;
+
+  revalidateTag("portfolio-content", "max");
 }
 
 export async function deleteRecord(formData: FormData) {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 type AdminDialogProps = {
   title: string;
@@ -24,6 +25,8 @@ export function AdminDialog({
   const descriptionId = useId();
   const contentRef = useRef<HTMLDivElement>(null);
   const initialSnapshotRef = useRef<string>("");
+  const portalNodeRef = useRef<HTMLDivElement | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   const snapshotFields = () => {
     const root = contentRef.current;
@@ -53,13 +56,37 @@ export function AdminDialog({
   };
 
   useEffect(() => {
+    const portalNode = document.createElement("div");
+    portalNode.dataset.adminDialogPortal = "true";
+    portalNodeRef.current = portalNode;
+    document.body.appendChild(portalNode);
+    setMounted(true);
+
+    return () => {
+      portalNode.remove();
+      portalNodeRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!open) return;
 
     const previousOverflow = document.body.style.overflow;
+    const previousOverscroll = document.body.style.overscrollBehavior;
+    const siblings = Array.from(document.body.children).filter(
+      (element) => element !== portalNodeRef.current,
+    );
+
     document.body.style.overflow = "hidden";
+    document.body.style.overscrollBehavior = "none";
     initialSnapshotRef.current = snapshotFields();
     setDirty(false);
     setHasForm(Boolean(contentRef.current?.querySelector("form")));
+
+    siblings.forEach((element) => {
+      element.setAttribute("inert", "");
+      element.setAttribute("aria-hidden", "true");
+    });
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") setOpen(false);
@@ -68,6 +95,11 @@ export function AdminDialog({
     window.addEventListener("keydown", onKeyDown);
     return () => {
       document.body.style.overflow = previousOverflow;
+      document.body.style.overscrollBehavior = previousOverscroll;
+      siblings.forEach((element) => {
+        element.removeAttribute("inert");
+        element.removeAttribute("aria-hidden");
+      });
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [open]);
@@ -104,9 +136,18 @@ export function AdminDialog({
         {triggerLabel}
       </button>
 
-      {open ? (
+      {open && mounted && portalNodeRef.current
+        ? createPortal(
         <div
-          className="animate-fade-in fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-[rgba(3,7,18,0.76)] p-4 md:p-6"
+          aria-hidden="false"
+          className="animate-fade-in fixed inset-0 z-[1000] flex items-center justify-center overflow-hidden bg-[rgba(3,7,18,0.76)] p-4 md:p-6"
+          onPointerDown={(event) => {
+            event.preventDefault();
+          }}
+          onClick={() => setOpen(false)}
+          onDragStart={(event) => event.preventDefault()}
+          onDragOver={(event) => event.preventDefault()}
+          onDrop={(event) => event.preventDefault()}
         >
           <div
             role="dialog"
@@ -115,6 +156,10 @@ export function AdminDialog({
             aria-describedby={description ? descriptionId : undefined}
             className="animate-modal-in flex max-h-[calc(100dvh-2rem)] w-full max-w-3xl flex-col rounded-[1.75rem] border border-[var(--border-strong)] bg-[var(--background-elevated)] shadow-[0_20px_80px_rgba(0,0,0,0.45)] md:max-h-[calc(100dvh-3rem)]"
             onClick={(event) => event.stopPropagation()}
+            onPointerDown={(event) => event.stopPropagation()}
+            onDragStart={(event) => event.stopPropagation()}
+            onDragOver={(event) => event.stopPropagation()}
+            onDrop={(event) => event.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-4 border-b border-[var(--border)] px-5 py-4">
               <div className="min-w-0">
@@ -167,7 +212,8 @@ export function AdminDialog({
             </div>
           </div>
         </div>
-      ) : null}
+        , portalNodeRef.current)
+        : null}
     </>
   );
 }

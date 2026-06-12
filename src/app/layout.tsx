@@ -45,7 +45,7 @@ export default function RootLayout({
         <ThemeProvider>
           <GsapInit />
           {/* Page loader */}
-          <LoaderWrapper />
+          {/* <LoaderWrapper /> */}
           <ScrollProgressBar />
           <ConditionalHeader />
           <main className="flex-1">{children}</main>

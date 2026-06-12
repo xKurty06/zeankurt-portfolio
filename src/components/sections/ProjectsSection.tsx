@@ -1,8 +1,7 @@
 "use client";
 
 import { useRef, useState, useMemo } from "react";
-import Image from "next/image";
-import { ArrowUpRight, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowUpRight, ChevronDown, ChevronUp, Star } from "lucide-react";
 import { useGSAP } from "@gsap/react";
 import type { Project } from "@/types";
 import { RevealOnScroll } from "@/components/animation/RevealOnScroll";
@@ -11,6 +10,7 @@ import { Badge } from "@/components/ui/Badge";
 import { SocialIcon } from "@/components/ui/SocialIcon";
 import { Container, Section } from "@/components/ui/Container";
 import { SectionHeading } from "@/components/ui/SectionHeading";
+import { ZoomableImage } from "@/components/ui/ZoomableImage";
 import { gsap, registerGsapPlugins } from "@/lib/gsap";
 import { cn } from "@/lib/cn";
 
@@ -54,15 +54,20 @@ function FeaturedCard({ project, index }: { project: Project; index: number }) {
       {/* Image */}
       <div className="relative aspect-[16/10] overflow-hidden bg-[linear-gradient(145deg,rgba(10,15,26,0.96),rgba(2,62,138,0.22))]">
         {project.image ? (
-          <Image
+          <ZoomableImage
             src={project.image}
             alt={project.title}
-            fill
-            className="object-cover transition duration-700 group-hover:scale-[1.05]"
             sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
+            className="absolute inset-0"
+            imageClassName="object-cover"
+            buttonClassName="right-3 top-3"
           />
         ) : (
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_24%_24%,rgba(72,202,228,0.16),transparent_28%),radial-gradient(circle_at_78%_76%,rgba(0,119,182,0.2),transparent_32%)]" />
+          <div className="absolute inset-0 flex items-center justify-center bg-[radial-gradient(circle_at_24%_24%,rgba(72,202,228,0.16),transparent_28%),radial-gradient(circle_at_78%_76%,rgba(0,119,182,0.2),transparent_32%)] px-6 text-center">
+            <p className="max-w-[80%] font-[family-name:var(--font-syne)] text-2xl font-semibold leading-tight text-white sm:text-3xl">
+              {project.title}
+            </p>
+          </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-[#030712] via-transparent to-transparent" />
         <div className="absolute inset-0 opacity-0 transition duration-500 group-hover:opacity-100 bg-[radial-gradient(ellipse_at_50%_0%,rgba(0,180,216,0.1),transparent_65%)]" />

@@ -76,6 +76,7 @@ async function fetchPortfolioContent(): Promise<PortfolioContent> {
         .from("events")
         .select("*")
         .eq("published", true)
+        .order("sort_order", { ascending: true })
         .order("event_date", { ascending: false }),
       supabase
         .from("skill_categories")

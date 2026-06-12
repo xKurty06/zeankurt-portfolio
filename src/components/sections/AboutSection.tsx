@@ -7,7 +7,7 @@ import { RevealOnScroll } from "@/components/animation/RevealOnScroll";
 import { AnimatedCounter } from "@/components/animation/AnimatedCounter";
 import { GlowCard } from "@/components/animation/GlowCard";
 import { Container, Section } from "@/components/ui/Container";
-import { FlickeringGrid } from "@/components/ui/flickering-grid-hero";
+import { FlickeringGrid } from "@/components/ui/FlickeringGridHero";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { gsap, registerGsapPlugins } from "@/lib/gsap";
 import type { Certification, EventHighlight, SkillCategory } from "@/types";
