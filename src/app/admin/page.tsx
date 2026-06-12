@@ -1,7 +1,11 @@
 import { redirect } from "next/navigation";
 import {
   deleteRecord,
+  importCertificationsCsv,
+  importEventsCsv,
+  importExperienceCsv,
   importProjectsCsv,
+  importSkillsCsv,
   saveCreativeCategory,
   saveCreativePhoto,
   saveCertification,
@@ -15,13 +19,15 @@ import {
   signOut,
   uploadCreativePhotos,
 } from "@/app/admin/actions";
+import { AdminCollapsibleSection } from "@/app/admin/AdminCollapsibleSection";
 import { AdminDialog } from "@/app/admin/AdminDialog";
+import { AdminPhotoCategoryBrowser } from "@/app/admin/AdminPhotoCategoryBrowser";
 import { AdminSelect } from "@/app/admin/AdminSelect";
 import { AdminSortableList } from "@/app/admin/AdminSortableList";
 import { ZoomableImage } from "@/components/ui/ZoomableImage";
 import { createSupabaseAdminClient, createSupabaseServerClient } from "@/lib/supabase/server";
 import { isAllowedAdminEmail } from "@/lib/supabase/config";
-import { Camera, Check } from "lucide-react";
+import { Camera, Check, SquarePen, Trash2 } from "lucide-react";
 import SaveButton from "@/components/ui/SaveButton";
 import UploadWithValidation from "@/components/admin/UploadWithValidationClient";
 
@@ -199,6 +205,27 @@ const PROJECT_CSV_TEMPLATE = [
 ].join("\n");
 
 const PROJECT_CSV_TEMPLATE_HREF = `data:text/csv;charset=utf-8,${encodeURIComponent(PROJECT_CSV_TEMPLATE)}`;
+const EXPERIENCE_CSV_TEMPLATE = [
+  "slug,organization,role,period,type,description,published",
+  "studio-nomads,Studio Nomads,Photographer & Editor,2025 - Present,work,Lead visual coverage and creative production,true",
+].join("\n");
+const EXPERIENCE_CSV_TEMPLATE_HREF = `data:text/csv;charset=utf-8,${encodeURIComponent(EXPERIENCE_CSV_TEMPLATE)}`;
+const CERTIFICATIONS_CSV_TEMPLATE = [
+  "name,issuer,issued,expires,published",
+  "AWS Certified Cloud Practitioner,Amazon Web Services,2026-01-15,,true",
+].join("\n");
+const CERTIFICATIONS_CSV_TEMPLATE_HREF = `data:text/csv;charset=utf-8,${encodeURIComponent(CERTIFICATIONS_CSV_TEMPLATE)}`;
+const EVENTS_CSV_TEMPLATE = [
+  "slug,title,event_date,venue,organizers,role,category,published",
+  "build-week-2026,Build Week 2026,2026-03-14,Manila,OpenClaw,Speaker,conference,true",
+].join("\n");
+const EVENTS_CSV_TEMPLATE_HREF = `data:text/csv;charset=utf-8,${encodeURIComponent(EVENTS_CSV_TEMPLATE)}`;
+const SKILLS_CSV_TEMPLATE = [
+  "category,skill,category_published",
+  "Frontend,Next.js,true",
+  "Frontend,TypeScript,true",
+].join("\n");
+const SKILLS_CSV_TEMPLATE_HREF = `data:text/csv;charset=utf-8,${encodeURIComponent(SKILLS_CSV_TEMPLATE)}`;
 
 const EXPERIENCE_TYPE_OPTIONS = [
   { label: "Work", value: "work" },
@@ -339,40 +366,6 @@ function UploadField({
         className="mt-2 text-sm text-[var(--foreground-muted)] file:mr-3 file:rounded-full file:border-0 file:bg-[var(--accent-soft)] file:px-3 file:py-2 file:font-semibold file:text-[var(--blue-200)]"
       />
     </label>
-  );
-}
-
-function Section({
-  id,
-  title,
-  count,
-  addDialog,
-  children,
-}: {
-  id: string;
-  title: string;
-  count?: number;
-  addDialog?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <section
-      id={id}
-      className="scroll-mt-6 rounded-3xl border border-[var(--border)] bg-[var(--background-elevated)] p-6"
-    >
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <h2 className="font-[family-name:var(--font-syne)] text-xl font-semibold text-white">{title}</h2>
-          {count !== undefined ? (
-            <span className="rounded-full border border-[var(--border)] px-3 py-1 text-xs text-[var(--foreground-muted)]">
-              {count} {count === 1 ? "record" : "records"}
-            </span>
-          ) : null}
-        </div>
-        {addDialog}
-      </div>
-      <div className="flex flex-col gap-3">{children}</div>
-    </section>
   );
 }
 
@@ -612,7 +605,7 @@ export default async function AdminPage() {
           </div>
 
           <div className="flex flex-col gap-6">
-            <Section
+            <AdminCollapsibleSection
               id="projects"
               title="Projects"
               count={projects.length}
@@ -723,26 +716,46 @@ export default async function AdminPage() {
                   ),
                 }))}
               />
-            </Section>
+            </AdminCollapsibleSection>
 
-            <Section
+            <AdminCollapsibleSection
               id="experience"
               title="Experience"
               count={experiences.length}
               addDialog={
-                <AdminDialog title="Add Experience" description="Create a new experience entry." triggerLabel="Add Experience" triggerVariant="primary">
-                  <RowForm action={saveExperience}>
-                    <div className="grid gap-3 md:grid-cols-2">
-                      <Field label="Slug" name="slug" />
-                      <Field label="Organization" name="organization" required />
-                      <Field label="Role" name="role" required />
-                      <Field label="Period" name="period" required />
-                      <Field label="Type" name="type" required options={EXPERIENCE_TYPE_OPTIONS} />
-                    </div>
-                    <Field label="Description" name="description" textarea required />
-                    <PublishControls />
-                  </RowForm>
-                </AdminDialog>
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <AdminDialog title="Import Experience" description="Upload experience rows in CSV format." triggerLabel="Import CSV">
+                    <RowForm action={importExperienceCsv}>
+                      <div className="rounded-2xl border border-[var(--border)] bg-white/[0.02] p-4">
+                        <p className="text-sm font-medium text-white">CSV format</p>
+                        <p className="mt-1 text-xs leading-relaxed text-[var(--foreground-muted)]">
+                          Required columns are slug, organization, role, period, type, description, and published.
+                        </p>
+                        <a
+                          href={EXPERIENCE_CSV_TEMPLATE_HREF}
+                          download="experience-import-template.csv"
+                          className="mt-3 inline-flex rounded-full border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--blue-300)] transition hover:border-[var(--border-strong)] hover:text-white"
+                        >
+                          Download format
+                        </a>
+                      </div>
+                      <UploadField label="Upload experience CSV" name="csv_file" accept=".csv,text/csv" />
+                    </RowForm>
+                  </AdminDialog>
+                  <AdminDialog title="Add Experience" description="Create a new experience entry." triggerLabel="Add Experience" triggerVariant="primary">
+                    <RowForm action={saveExperience}>
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <Field label="Slug" name="slug" />
+                        <Field label="Organization" name="organization" required />
+                        <Field label="Role" name="role" required />
+                        <Field label="Period" name="period" required />
+                        <Field label="Type" name="type" required options={EXPERIENCE_TYPE_OPTIONS} />
+                      </div>
+                      <Field label="Description" name="description" textarea required />
+                      <PublishControls />
+                    </RowForm>
+                  </AdminDialog>
+                </div>
               }
             >
               <AdminSortableList
@@ -794,25 +807,45 @@ export default async function AdminPage() {
                   ),
                 }))}
               />
-            </Section>
+            </AdminCollapsibleSection>
 
-            <Section
+            <AdminCollapsibleSection
               id="certifications"
               title="Certifications"
               count={certifications.length}
               addDialog={
-                <AdminDialog title="Add Certification" description="Create a new certification entry." triggerLabel="Add Certification" triggerVariant="primary">
-                  <RowForm action={saveCertification}>
-                    <div className="grid gap-3 md:grid-cols-2">
-                      <Field label="Name" name="name" required />
-                      <Field label="Issuer" name="issuer" required />
-                      <Field label="Issued" name="issued" />
-                      <Field label="Expires" name="expires" />
-                    </div>
-                    <UploadField label="Upload certificate to Supabase Storage" name="image_file" accept="image/*,application/pdf" />
-                    <PublishControls />
-                  </RowForm>
-                </AdminDialog>
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <AdminDialog title="Import Certifications" description="Upload certification rows in CSV format. Assets can be added later per record." triggerLabel="Import CSV">
+                    <RowForm action={importCertificationsCsv}>
+                      <div className="rounded-2xl border border-[var(--border)] bg-white/[0.02] p-4">
+                        <p className="text-sm font-medium text-white">CSV format</p>
+                        <p className="mt-1 text-xs leading-relaxed text-[var(--foreground-muted)]">
+                          Required columns are name, issuer, issued, expires, and published.
+                        </p>
+                        <a
+                          href={CERTIFICATIONS_CSV_TEMPLATE_HREF}
+                          download="certifications-import-template.csv"
+                          className="mt-3 inline-flex rounded-full border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--blue-300)] transition hover:border-[var(--border-strong)] hover:text-white"
+                        >
+                          Download format
+                        </a>
+                      </div>
+                      <UploadField label="Upload certifications CSV" name="csv_file" accept=".csv,text/csv" />
+                    </RowForm>
+                  </AdminDialog>
+                  <AdminDialog title="Add Certification" description="Create a new certification entry." triggerLabel="Add Certification" triggerVariant="primary">
+                    <RowForm action={saveCertification}>
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <Field label="Name" name="name" required />
+                        <Field label="Issuer" name="issuer" required />
+                        <Field label="Issued" name="issued" />
+                        <Field label="Expires" name="expires" />
+                      </div>
+                      <UploadField label="Upload certificate to Supabase Storage" name="image_file" accept="image/*,application/pdf" />
+                      <PublishControls />
+                    </RowForm>
+                  </AdminDialog>
+                </div>
               }
             >
               <AdminSortableList
@@ -866,28 +899,48 @@ export default async function AdminPage() {
                   ),
                 }))}
               />
-            </Section>
+            </AdminCollapsibleSection>
 
-            <Section
+            <AdminCollapsibleSection
               id="events"
               title="Events"
               count={events.length}
               addDialog={
-                <AdminDialog title="Add Event" description="Create a new event entry." triggerLabel="Add Event" triggerVariant="primary">
-                  <RowForm action={saveEvent}>
-                    <div className="grid gap-3 md:grid-cols-2">
-                      <Field label="Slug" name="slug" />
-                      <Field label="Title" name="title" required />
-                      <Field label="Date" name="event_date" type="date" required />
-                      <Field label="Venue" name="venue" required />
-                      <Field label="Organizers" name="organizers" />
-                      <Field label="Role" name="role" />
-                      <Field label="Category" name="category" options={EVENT_CATEGORY_OPTIONS} />
-                    </div>
-                    <UploadField label="Upload event image to Supabase Storage" name="image_file" accept="image/*" />
-                    <PublishControls />
-                  </RowForm>
-                </AdminDialog>
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <AdminDialog title="Import Events" description="Upload event rows in CSV format. Images can be attached later." triggerLabel="Import CSV">
+                    <RowForm action={importEventsCsv}>
+                      <div className="rounded-2xl border border-[var(--border)] bg-white/[0.02] p-4">
+                        <p className="text-sm font-medium text-white">CSV format</p>
+                        <p className="mt-1 text-xs leading-relaxed text-[var(--foreground-muted)]">
+                          Required columns are slug, title, event_date, venue, organizers, role, category, and published.
+                        </p>
+                        <a
+                          href={EVENTS_CSV_TEMPLATE_HREF}
+                          download="events-import-template.csv"
+                          className="mt-3 inline-flex rounded-full border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--blue-300)] transition hover:border-[var(--border-strong)] hover:text-white"
+                        >
+                          Download format
+                        </a>
+                      </div>
+                      <UploadField label="Upload events CSV" name="csv_file" accept=".csv,text/csv" />
+                    </RowForm>
+                  </AdminDialog>
+                  <AdminDialog title="Add Event" description="Create a new event entry." triggerLabel="Add Event" triggerVariant="primary">
+                    <RowForm action={saveEvent}>
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <Field label="Slug" name="slug" />
+                        <Field label="Title" name="title" required />
+                        <Field label="Date" name="event_date" type="date" required />
+                        <Field label="Venue" name="venue" required />
+                        <Field label="Organizers" name="organizers" />
+                        <Field label="Role" name="role" />
+                        <Field label="Category" name="category" options={EVENT_CATEGORY_OPTIONS} />
+                      </div>
+                      <UploadField label="Upload event image to Supabase Storage" name="image_file" accept="image/*" />
+                      <PublishControls />
+                    </RowForm>
+                  </AdminDialog>
+                </div>
               }
             >
               <AdminSortableList
@@ -947,19 +1000,39 @@ export default async function AdminPage() {
                   ),
                 }))}
               />
-            </Section>
+            </AdminCollapsibleSection>
 
-            <Section
+            <AdminCollapsibleSection
               id="skills"
               title="Skills"
               count={skills.length}
               addDialog={
-                <AdminDialog title="Add Skill Category" description="Create a new skills category." triggerLabel="Add Category" triggerVariant="primary">
-                  <RowForm action={saveSkillCategory}>
-                    <Field label="Name" name="name" required />
-                    <PublishControls />
-                  </RowForm>
-                </AdminDialog>
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <AdminDialog title="Import Skills" description="Upload skills as category and skill pairs. Missing categories will be created automatically." triggerLabel="Import CSV">
+                    <RowForm action={importSkillsCsv}>
+                      <div className="rounded-2xl border border-[var(--border)] bg-white/[0.02] p-4">
+                        <p className="text-sm font-medium text-white">CSV format</p>
+                        <p className="mt-1 text-xs leading-relaxed text-[var(--foreground-muted)]">
+                          Required columns are category, skill, and category_published.
+                        </p>
+                        <a
+                          href={SKILLS_CSV_TEMPLATE_HREF}
+                          download="skills-import-template.csv"
+                          className="mt-3 inline-flex rounded-full border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--blue-300)] transition hover:border-[var(--border-strong)] hover:text-white"
+                        >
+                          Download format
+                        </a>
+                      </div>
+                      <UploadField label="Upload skills CSV" name="csv_file" accept=".csv,text/csv" />
+                    </RowForm>
+                  </AdminDialog>
+                  <AdminDialog title="Add Skill Category" description="Create a new skills category." triggerLabel="Add Category" triggerVariant="primary">
+                    <RowForm action={saveSkillCategory}>
+                      <Field label="Name" name="name" required />
+                      <PublishControls />
+                    </RowForm>
+                  </AdminDialog>
+                </div>
               }
             >
               {skillCategories.map((category) => {
@@ -1030,9 +1103,9 @@ export default async function AdminPage() {
                   </div>
                 );
               })}
-            </Section>
+            </AdminCollapsibleSection>
 
-            <Section
+            <AdminCollapsibleSection
               id="creative-portfolio"
               title="Creative Portfolio"
               count={creativeCategories.length + creativePhotos.length}
@@ -1140,16 +1213,6 @@ export default async function AdminPage() {
                                 </p>
                               </RowForm>
                             </AdminDialog>
-                            <AdminDialog title={`Add one photo to ${value(category, "name")}`} description="Create a single editable photo record." triggerLabel="Add Photo">
-                              <RowForm action={saveCreativePhoto}>
-                                <input type="hidden" name="category_id" value={value(category, "id")} />
-                                <Field label="Title" name="title" required />
-                                <Field label="Aspect ratio" name="aspect_ratio" options={PHOTO_ASPECT_OPTIONS} />
-                                <UploadField label="Upload photo image" name="image_file" accept="image/*" />
-                                <AdminCheckbox name="featured" label="Featured" />
-                                <PublishControls />
-                              </RowForm>
-                            </AdminDialog>
                           </>
                         ) : (
                           <div className="rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-3 text-sm text-yellow-100">
@@ -1162,49 +1225,50 @@ export default async function AdminPage() {
                 })}
               />
 
-              {creativeCategories.map((category) => {
-                const categoryPhotos = creativePhotos.filter((photo) => value(photo, "category_id") === value(category, "id"));
-                if (categoryPhotos.length === 0) return null;
-
-                return (
-                  <div key={`${value(category, "id")}-photos`} className="rounded-2xl border border-[var(--border)] bg-white/[0.02] p-4">
-                    <div className="mb-4 flex flex-col gap-1">
-                      <p className="text-sm font-semibold text-white">{value(category, "name")} photos</p>
-                      <p className="text-xs text-[var(--foreground-muted)]">{categoryPhotos.length} uploaded images</p>
-                    </div>
-                    <AdminSortableList
-                      table="creative_photos"
-                      sortOptions={[
-                        { label: "Custom", value: "custom" },
-                        { label: "Name", value: "name" },
-                        { label: "Featured", value: "featured" },
-                      ]}
-                      items={categoryPhotos.map((photo) => ({
+              <AdminPhotoCategoryBrowser
+                categories={creativeCategories
+                  .map((category) => {
+                    const categoryPhotos = creativePhotos.filter((photo) => value(photo, "category_id") === value(category, "id"));
+                    return {
+                      id: value(category, "id"),
+                      name: value(category, "name"),
+                      slug: value(category, "slug"),
+                      description: value(category, "description"),
+                      photoCount: categoryPhotos.length,
+                      photos: categoryPhotos.map((photo) => ({
                         id: value(photo, "id"),
                         title: value(photo, "title"),
-                        subtitle: value(category, "name"),
+                        subtitle: value(photo, "aspect_ratio"),
                         meta: checked(photo) ? "Published" : "Draft",
                         featured: Boolean(photo.featured),
+                        published: checked(photo),
                         sortOrder: Number(value(photo, "sort_order")) || 0,
-                        sortValues: {
-                          name: value(photo, "title"),
-                          featured: Boolean(photo.featured),
-                        },
-                        actions: (
-                          <>
-                            <AdminDialog title={value(photo, "title")} description="Creative photo overview" triggerLabel="View">
-                              <ViewGrid>
-                                <AssetPreview src={value(photo, "image_path")} alt={value(photo, "title")} />
-                                {labelValue("Title", value(photo, "title"))}
-                                {labelValue("Category", value(category, "name"))}
-                                {labelValue("Aspect", value(photo, "aspect_ratio"))}
-                                {labelValue("Asset", value(photo, "image_path"))}
-                              </ViewGrid>
-                            </AdminDialog>
-                            <AdminDialog title={`Edit ${value(photo, "title")}`} description="Update photo details." triggerLabel="Edit">
+                        imagePath: value(photo, "image_path"),
+                        editAction: (
+                          <div className="flex items-center gap-2">
+                            <form action={deleteRecord}>
+                              <input type="hidden" name="table" value="creative_photos" />
+                              <input type="hidden" name="id" value={value(photo, "id")} />
+                              <button
+                                type="submit"
+                                aria-label={`Delete ${value(photo, "title")}`}
+                                title="Delete"
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-red-400/20 bg-black/45 text-red-200 transition hover:bg-red-500/10"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </form>
+                            <AdminDialog
+                              title={`Edit ${value(photo, "title")}`}
+                              description="Update or remove this photo."
+                              triggerLabel="Edit photo"
+                              triggerContent={<SquarePen className="h-3.5 w-3.5" />}
+                              triggerClassName="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-black/45 text-white transition hover:border-[var(--border-strong)] hover:text-white"
+                            >
                               <RowForm action={saveCreativePhoto}>
                                 <input type="hidden" name="id" value={value(photo, "id")} />
                                 <input type="hidden" name="category_id" value={value(category, "id")} />
+                                <input type="hidden" name="category_slug" value={value(category, "slug")} />
                                 <div className="flex items-center justify-end gap-3">
                                   <DeleteButton table="creative_photos" id={value(photo, "id")} />
                                 </div>
@@ -1218,16 +1282,16 @@ export default async function AdminPage() {
                                 <PublishControls row={photo} />
                               </RowForm>
                             </AdminDialog>
-                          </>
+                          </div>
                         ),
-                      }))}
-                    />
-                  </div>
-                );
-              })}
-            </Section>
+                      })),
+                    };
+                  })
+                  .filter((category) => category.photoCount > 0)}
+              />
+            </AdminCollapsibleSection>
 
-            <Section id="site-content" title="Site Copy" count={siteRows.length}>
+            <AdminCollapsibleSection id="site-content" title="Site Copy" count={siteRows.length}>
               {siteRows.map((row) => (
                 <RecordRow
                   key={value(row, "key")}
@@ -1264,7 +1328,7 @@ export default async function AdminPage() {
                   }
                 />
               ))}
-            </Section>
+            </AdminCollapsibleSection>
           </div>
         </main>
       </div>

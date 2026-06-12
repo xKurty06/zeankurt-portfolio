@@ -1,7 +1,38 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { AlertTriangle, Check, FolderUp, Trash2, Upload, X } from "lucide-react";
 import { useSaving } from "@/lib/saving";
+
+type UploadProgress = {
+  loaded: number;
+  total: number;
+  status: "pending" | "uploading" | "done" | "error";
+};
+
+type DirectoryPickerWindow = Window & {
+  showDirectoryPicker?: () => Promise<unknown>;
+};
+
+async function collectFilesFromDirectoryHandle(handle: any): Promise<File[]> {
+  const files: File[] = [];
+
+  // Traverse the selected folder recursively so nested albums still work.
+  for await (const entry of handle.values()) {
+    if (entry.kind === "file") {
+      const file = await entry.getFile();
+      files.push(file);
+      continue;
+    }
+
+    if (entry.kind === "directory") {
+      const nestedFiles = await collectFilesFromDirectoryHandle(entry);
+      files.push(...nestedFiles);
+    }
+  }
+
+  return files;
+}
 
 export default function UploadWithValidation({
   label,
@@ -19,37 +50,36 @@ export default function UploadWithValidation({
   maxFiles?: number;
 }) {
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const [fileCount, setFileCount] = useState(0);
+  const submittingRef = useRef(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
-  const [progress, setProgress] = useState<Record<string, { loaded: number; total: number; status: "pending" | "uploading" | "done" | "error" }>>({});
+  const [selectionApproved, setSelectionApproved] = useState(true);
+  const [progress, setProgress] = useState<Record<string, UploadProgress>>({});
   const { setSaving } = useSaving();
+
+  const fileCount = selectedFiles.length;
+  const overLimit = fileCount > maxFiles;
+  const TriggerIcon = directory ? FolderUp : Upload;
+  const triggerLabel = directory ? "Choose Folder" : "Choose Files";
+  const uploadIndicatorLabel =
+    fileCount === 0
+      ? "Uploading photos. You can close this modal and keep working."
+      : `Uploading ${fileCount} photo${fileCount === 1 ? "" : "s"}. You can close this modal and keep working.`;
 
   useEffect(() => {
     const input = inputRef.current;
     if (!input) return;
 
     const handleChange = () => {
-      const files = input.files;
-      const count = files ? files.length : 0;
-      setFileCount(count);
-
-      if (count > maxFiles) {
-        // Ask the user to confirm large uploads
-        const ok = window.confirm(
-          `You selected ${count} files. Uploading more than ${maxFiles} images may take a long time. Continue?`,
-        );
-        if (!ok) {
-          input.value = "";
-          setFileCount(0);
-          input.setCustomValidity("Please select fewer files.");
-          // Clearing validity after a short delay so future selections can be validated
-          setTimeout(() => input.setCustomValidity(""), 500);
-        } else {
-          input.setCustomValidity("");
-        }
-      } else {
-        input.setCustomValidity("");
-      }
+      const files = input.files ? Array.from(input.files) : [];
+      setSelectedFiles(files);
+      setSelectionApproved(files.length <= maxFiles);
+      setProgress({});
+      setSubmitting(false);
+      setSaving(false);
+      submittingRef.current = false;
+      input.value = "";
+      input.setCustomValidity("");
     };
 
     input.addEventListener("change", handleChange);
@@ -62,12 +92,47 @@ export default function UploadWithValidation({
     const form = input.form as HTMLFormElement | null;
     if (!form) return;
 
-    const handleSubmit = (e: Event) => {
-      const filesList = input.files ? Array.from(input.files) : [];
+    const resetSelection = () => {
+      submittingRef.current = false;
+      setSelectedFiles([]);
+      setSelectionApproved(true);
+      setProgress({});
+      setSubmitting(false);
+      setSaving(false);
+      if (inputRef.current) {
+        inputRef.current.value = "";
+        inputRef.current.setCustomValidity("");
+      }
+    };
+
+    const handleSubmit = (event: Event) => {
+      const filesList = [...selectedFiles];
       if (filesList.length === 0) return;
-      e.preventDefault();
+      if (submittingRef.current) {
+        event.preventDefault();
+        return;
+      }
+
+      if (filesList.length > maxFiles && !selectionApproved) {
+        event.preventDefault();
+        input.setCustomValidity(`Review the ${filesList.length} selected files before uploading.`);
+        input.reportValidity();
+        setTimeout(() => input.setCustomValidity(""), 1000);
+        return;
+      }
+
+      event.preventDefault();
+      submittingRef.current = true;
       setSubmitting(true);
-      setSaving(true);
+      setSaving(
+        true,
+        `Uploading ${filesList.length} photo${filesList.length === 1 ? "" : "s"}. You can close this modal and keep working.`,
+        {
+          completedCount: 0,
+          progressPercent: 0,
+          totalCount: filesList.length,
+        },
+      );
 
       const categoryIdInput = form.querySelector<HTMLInputElement>("input[name=category_id]");
       const categorySlugInput = form.querySelector<HTMLInputElement>("input[name=category_slug]");
@@ -76,37 +141,55 @@ export default function UploadWithValidation({
 
       const uploadOne = (file: File) =>
         new Promise<void>((resolve) => {
-          const fd = new FormData();
-          fd.append("file", file, file.name);
-          fd.append("category_id", categoryId);
-          fd.append("category_slug", categorySlug);
+          const formData = new FormData();
+          formData.append("file", file, file.name);
+          formData.append("category_id", categoryId);
+          formData.append("category_slug", categorySlug);
 
           const xhr = new XMLHttpRequest();
           xhr.open("POST", "/api/admin/upload-file", true);
           xhr.withCredentials = true;
 
-          const key = file.name + "-" + file.size;
-          setProgress((p) => ({ ...p, [key]: { loaded: 0, total: file.size, status: "uploading" } }));
+          const key = `${file.name}-${file.size}`;
+          setProgress((current) => ({
+            ...current,
+            [key]: { loaded: 0, total: file.size, status: "uploading" },
+          }));
 
-          xhr.upload.onprogress = (ev) => {
-            setProgress((p) => ({ ...p, [key]: { loaded: ev.loaded, total: ev.total || file.size, status: "uploading" } }));
+          xhr.upload.onprogress = (progressEvent) => {
+            setProgress((current) => ({
+              ...current,
+              [key]: {
+                loaded: progressEvent.loaded,
+                total: progressEvent.total || file.size,
+                status: "uploading",
+              },
+            }));
           };
 
           xhr.onload = () => {
-            if (xhr.status >= 200 && xhr.status < 300) {
-              setProgress((p) => ({ ...p, [key]: { ...(p[key] ?? { loaded: file.size, total: file.size }), status: "done" } }));
-            } else {
-              setProgress((p) => ({ ...p, [key]: { ...(p[key] ?? { loaded: 0, total: file.size }), status: "error" } }));
-            }
+            setProgress((current) => ({
+              ...current,
+              [key]: {
+                ...(current[key] ?? { loaded: file.size, total: file.size }),
+                status: xhr.status >= 200 && xhr.status < 300 ? "done" : "error",
+              },
+            }));
             resolve();
           };
 
           xhr.onerror = () => {
-            setProgress((p) => ({ ...p, [key]: { ...(p[key] ?? { loaded: 0, total: file.size }), status: "error" } }));
+            setProgress((current) => ({
+              ...current,
+              [key]: {
+                ...(current[key] ?? { loaded: 0, total: file.size }),
+                status: "error",
+              },
+            }));
             resolve();
           };
 
-          xhr.send(fd);
+          xhr.send(formData);
         });
 
       (async () => {
@@ -114,43 +197,195 @@ export default function UploadWithValidation({
           // eslint-disable-next-line no-await-in-loop
           await uploadOne(file);
         }
-        setSubmitting(false);
-        setSaving(false);
-        // refresh to show new records
+
+        resetSelection();
         window.location.reload();
       })();
     };
 
+    form.addEventListener("reset", resetSelection);
     form.addEventListener("submit", handleSubmit);
-    return () => form.removeEventListener("submit", handleSubmit);
-  }, []);
+    return () => {
+      form.removeEventListener("reset", resetSelection);
+      form.removeEventListener("submit", handleSubmit);
+    };
+  }, [maxFiles, selectedFiles, selectionApproved, setSaving]);
+
+  useEffect(() => {
+    if (!submitting || selectedFiles.length === 0) return;
+
+    const trackedEntries = selectedFiles.map((file) => {
+      const key = `${file.name}-${file.size}`;
+      return progress[key] ?? { loaded: 0, status: "pending", total: file.size };
+    });
+
+    const totalBytes = trackedEntries.reduce((sum, item) => sum + Math.max(1, item.total), 0);
+    const loadedBytes = trackedEntries.reduce((sum, item) => {
+      if (item.status === "done") return sum + Math.max(1, item.total);
+      return sum + Math.min(item.loaded, Math.max(1, item.total));
+    }, 0);
+    const completedCount = trackedEntries.filter((item) => item.status === "done").length;
+    const progressPercent = Math.min(100, Math.max(0, Math.round((loadedBytes / Math.max(1, totalBytes)) * 100)));
+
+    setSaving(true, uploadIndicatorLabel, {
+      completedCount,
+      progressPercent,
+      totalCount: selectedFiles.length,
+    });
+  }, [progress, selectedFiles, setSaving, submitting, uploadIndicatorLabel]);
+
+  const applySelectedFiles = (files: File[]) => {
+    setSelectedFiles(files);
+    setSelectionApproved(files.length <= maxFiles);
+    setProgress({});
+    setSubmitting(false);
+    setSaving(false);
+    submittingRef.current = false;
+  };
+
+  const handleDirectoryPick = async () => {
+    const pickerWindow = window as DirectoryPickerWindow;
+    if (!pickerWindow.showDirectoryPicker) {
+      inputRef.current?.click();
+      return;
+    }
+
+    try {
+      const handle = await pickerWindow.showDirectoryPicker();
+      const files = await collectFilesFromDirectoryHandle(handle);
+      applySelectedFiles(files);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return;
+      }
+
+      throw error;
+    }
+  };
 
   return (
-    <label className="rounded-2xl border border-dashed border-[var(--border)] bg-white/[0.015] px-4 py-3 text-xs font-medium text-[var(--foreground-muted)]">
+    <div className="rounded-[1.75rem] border border-dashed border-[var(--border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.015))] px-4 py-4 text-xs font-medium text-[var(--foreground-muted)]">
       <div className="flex items-center justify-between">
         <span>{label}</span>
-        {fileCount > 0 ? <span className="text-[10px] text-[var(--foreground-muted)]">{fileCount} selected</span> : null}
+        {fileCount > 0 ? (
+          <span className="text-[10px] uppercase tracking-[0.14em] text-[var(--foreground-muted)]">
+            {fileCount} selected
+          </span>
+        ) : null}
       </div>
 
       <input
-        ref={inputRef}
-        name={name}
-        type="file"
-        accept={accept}
-        multiple={multiple}
-        {...(directory ? { webkitdirectory: "" as any } : {})}
-        className="mt-2 text-sm text-[var(--foreground-muted)] file:mr-3 file:rounded-full file:border-0 file:bg-[var(--accent-soft)] file:px-3 file:py-2 file:font-semibold file:text-[var(--blue-200)]"
+        type="hidden"
+        name={`${name}__selection_count`}
+        value={String(fileCount)}
+        readOnly
       />
 
-      {fileCount > maxFiles ? (
-        <p className="mt-2 text-xs text-yellow-300">Large upload selected — confirm to proceed.</p>
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        {directory ? (
+          <>
+            <button
+              type="button"
+              onClick={handleDirectoryPick}
+              className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--accent-soft)] px-4 py-2 text-sm font-semibold text-[var(--blue-100)] transition hover:border-[var(--border-strong)] hover:text-white"
+            >
+              <TriggerIcon className="h-4 w-4" />
+              {triggerLabel}
+            </button>
+            <input
+              ref={inputRef}
+              name={name}
+              type="file"
+              accept={accept}
+              multiple={multiple}
+              {...({ webkitdirectory: "" } as Record<string, string>)}
+              className="sr-only"
+            />
+          </>
+        ) : (
+          <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--accent-soft)] px-4 py-2 text-sm font-semibold text-[var(--blue-100)] transition hover:border-[var(--border-strong)] hover:text-white">
+            <TriggerIcon className="h-4 w-4" />
+            {triggerLabel}
+            <input
+              ref={inputRef}
+              name={name}
+              type="file"
+              accept={accept}
+              multiple={multiple}
+              className="sr-only"
+            />
+          </label>
+        )}
+        <p className="text-sm text-[var(--foreground-muted)]">
+          {fileCount === 0 ? "No files chosen" : `${fileCount} file${fileCount === 1 ? "" : "s"} ready`}
+        </p>
+        {fileCount > 0 ? (
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedFiles([]);
+              setSelectionApproved(true);
+              setProgress({});
+              setSubmitting(false);
+              setSaving(false);
+              submittingRef.current = false;
+            }}
+            className="inline-flex items-center gap-2 rounded-full border border-red-400/20 px-3 py-2 text-xs font-medium text-red-200 transition hover:bg-red-500/10"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Clear
+          </button>
+        ) : null}
+      </div>
+
+      {overLimit ? (
+        <div className="mt-3 rounded-2xl border border-yellow-500/20 bg-yellow-500/8 p-3">
+          <div className="flex items-start gap-3">
+            <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-yellow-400/20 bg-yellow-500/10 text-yellow-200">
+              <AlertTriangle className="h-4 w-4" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-yellow-100">
+                Review this large upload before saving
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-yellow-100/80">
+                {fileCount} images are queued. That is above the recommended batch size of {maxFiles}. Keep this selection only if you want to upload the full batch now.
+              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectionApproved(true)}
+                  className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-2 text-xs font-medium text-emerald-200 transition hover:bg-emerald-500/15"
+                >
+                  <Check className="h-3.5 w-3.5" />
+                  Keep selection
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedFiles([]);
+                    setSelectionApproved(true);
+                    setProgress({});
+                    setSubmitting(false);
+                    setSaving(false);
+                    submittingRef.current = false;
+                  }}
+                  className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] px-3 py-2 text-xs font-medium text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white"
+                >
+                  <X className="h-3.5 w-3.5" />
+                  Remove selection
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       ) : null}
 
       {fileCount > 0 ? (
         <div className="mt-3 space-y-2 text-xs text-[var(--foreground-muted)]">
-          {Array.from(inputRef.current?.files ?? []).map((file) => {
-            const key = file.name + "-" + file.size;
-            const p = progress[key];
+          {selectedFiles.map((file) => {
+            const key = `${file.name}-${file.size}`;
+            const currentProgress = progress[key];
             return (
               <div key={key} className="flex items-center gap-3">
                 <div className="min-w-[160px] truncate">{file.name}</div>
@@ -158,12 +393,22 @@ export default function UploadWithValidation({
                   <div className="relative h-2 w-full rounded bg-white/[0.03]">
                     <div
                       className="absolute left-0 top-0 h-2 rounded bg-[var(--blue-400)] transition-all"
-                      style={{ width: p ? `${(p.loaded / Math.max(1, p.total)) * 100}%` : `0%` }}
+                      style={{
+                        width: currentProgress
+                          ? `${(currentProgress.loaded / Math.max(1, currentProgress.total)) * 100}%`
+                          : "0%",
+                      }}
                     />
                   </div>
                 </div>
                 <div className="w-24 text-right">
-                  {p ? (p.status === "uploading" ? `${Math.round((p.loaded / Math.max(1, p.total)) * 100)}%` : p.status === "done" ? "Done" : "Error") : "Pending"}
+                  {currentProgress
+                    ? currentProgress.status === "uploading"
+                      ? `${Math.round((currentProgress.loaded / Math.max(1, currentProgress.total)) * 100)}%`
+                      : currentProgress.status === "done"
+                        ? "Done"
+                        : "Error"
+                    : "Pending"}
                 </div>
               </div>
             );
@@ -177,9 +422,9 @@ export default function UploadWithValidation({
             <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" opacity="0.2" />
             <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
           </svg>
-          Uploading — the request may take a while for large folders.
+          Uploading. Large folders may take a while.
         </div>
       ) : null}
-    </label>
+    </div>
   );
 }

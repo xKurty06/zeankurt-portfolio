@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import sharp from "sharp";
 import { createSupabaseAdminClient, createSupabaseServerClient } from "@/lib/supabase/server";
-import { isAllowedAdminEmail, SUPABASE_BUCKET } from "@/lib/supabase/config";
+import { isAllowedAdminEmail, PHOTOGRAPHY_BUCKET } from "@/lib/supabase/config";
 
 function extensionFromFilename(value: string) {
   const match = /\.[a-z0-9]+$/i.exec(value);
@@ -15,12 +15,15 @@ function safeFilename(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
-function titleFromFilename(value: string) {
+function categoryTitleFromSlug(value: string) {
   return value
-    .replace(/\.[a-z0-9]+$/i, "")
-    .replace(/[_-]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+    .split("-")
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(" ");
+}
+
+function padSequence(value: number) {
+  return String(value).padStart(4, "0");
 }
 
 async function optimizeImage(buffer: Buffer, mime = "image/jpeg") {
@@ -72,24 +75,28 @@ export async function POST(req: Request) {
   const processed = file.type.startsWith("image/") ? await optimizeImage(input, file.type) : { bytes: input, contentType: file.type || "application/octet-stream" };
 
   const id = crypto.randomUUID();
-  const extension = extensionFromFilename(file.name) || "";
-  const path = `creative/photos/${String(categorySlug)}/${id}-${safeFilename(file.name)}`;
-
-  const { error: uploadError } = await admin.storage.from(SUPABASE_BUCKET).upload(path, processed.bytes, { cacheControl: "31536000", upsert: false, contentType: processed.contentType });
-  if (uploadError) return NextResponse.json({ error: uploadError.message || uploadError }, { status: 500 });
-
-  const { data: publicData } = admin.storage.from(SUPABASE_BUCKET).getPublicUrl(path);
-  const publicUrl = publicData?.publicUrl ?? null;
 
   // determine sort_order
   const { data: sortData, error: sortError } = await admin.from("creative_photos").select("sort_order").eq("category_id", String(categoryId)).order("sort_order", { ascending: false }).limit(1).maybeSingle();
   if (sortError) return NextResponse.json({ error: sortError.message || sortError }, { status: 500 });
   const nextSortOrder = typeof sortData?.sort_order === "number" ? sortData.sort_order + 1 : 0;
+  const nextSequence = nextSortOrder + 1;
+  const safeCategorySlug = safeFilename(String(categorySlug || "creative"));
+  const sequenceLabel = padSequence(nextSequence);
+  const extension = extensionFromFilename(file.name) || "";
+  const title = `${categoryTitleFromSlug(safeCategorySlug)} ${nextSequence}`;
+  const path = `${safeCategorySlug}/${safeCategorySlug}-${sequenceLabel}${extension}`;
+
+  const { error: uploadError } = await admin.storage.from(PHOTOGRAPHY_BUCKET).upload(path, processed.bytes, { cacheControl: "31536000", upsert: false, contentType: processed.contentType });
+  if (uploadError) return NextResponse.json({ error: uploadError.message || uploadError }, { status: 500 });
+
+  const { data: publicData } = admin.storage.from(PHOTOGRAPHY_BUCKET).getPublicUrl(path);
+  const publicUrl = publicData?.publicUrl ?? null;
 
   const payload = {
     id,
     category_id: String(categoryId),
-    title: titleFromFilename(file.name) || `Creative photo`,
+    title,
     image_path: publicUrl,
     aspect_ratio: "landscape",
     featured: false,

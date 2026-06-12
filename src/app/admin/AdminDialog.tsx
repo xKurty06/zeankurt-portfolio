@@ -5,11 +5,15 @@ import SaveButton from "@/components/ui/SaveButton";
 import { useSaving } from "@/lib/saving";
 import { createPortal } from "react-dom";
 
+type UploadDialogState = "idle" | "uploading" | "complete";
+
 type AdminDialogProps = {
   title: string;
   description?: string;
   triggerLabel: string;
   triggerVariant?: "primary" | "secondary";
+  triggerContent?: React.ReactNode;
+  triggerClassName?: string;
   children: React.ReactNode;
 };
 
@@ -18,11 +22,15 @@ export function AdminDialog({
   description,
   triggerLabel,
   triggerVariant = "secondary",
+  triggerContent,
+  triggerClassName,
   children,
 }: AdminDialogProps) {
   const [open, setOpen] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [hasForm, setHasForm] = useState(false);
+  const [hasFileInput, setHasFileInput] = useState(false);
+  const [uploadDialogState, setUploadDialogState] = useState<UploadDialogState>("idle");
   const titleId = useId();
   const descriptionId = useId();
   const contentRef = useRef<HTMLDivElement>(null);
@@ -83,7 +91,10 @@ export function AdminDialog({
     document.body.style.overscrollBehavior = "none";
     initialSnapshotRef.current = snapshotFields();
     setDirty(false);
-    setHasForm(Boolean(contentRef.current?.querySelector("form")));
+    setUploadDialogState("idle");
+    const form = contentRef.current?.querySelector("form") ?? null;
+    setHasForm(Boolean(form));
+    setHasFileInput(Boolean(form?.querySelector('input[type="file"]')));
 
     siblings.forEach((element) => {
       element.setAttribute("inert", "");
@@ -102,6 +113,7 @@ export function AdminDialog({
         element.removeAttribute("inert");
         element.removeAttribute("aria-hidden");
       });
+      setUploadDialogState("idle");
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [open]);
@@ -119,26 +131,72 @@ export function AdminDialog({
 
     initialSnapshotRef.current = snapshotFields();
     setDirty(false);
+    setUploadDialogState("idle");
   };
 
   const { setSaving } = useSaving();
 
-  const handleSave = () => {
+  useEffect(() => {
+    if (open) {
+      setSaving(false);
+    }
+  }, [open, setSaving]);
+
+  useEffect(() => {
+    if (!open || !hasFileInput) return;
+
     const form = contentRef.current?.querySelector("form");
     if (!form) return;
-    setSaving(true);
+
+    const handleUploadStateChange = (event: Event) => {
+      const nextState = (event as CustomEvent<{ state?: UploadDialogState }>).detail?.state;
+      if (nextState === "idle" || nextState === "uploading" || nextState === "complete") {
+        setUploadDialogState(nextState);
+      }
+    };
+
+    form.addEventListener("admin-upload-state-change", handleUploadStateChange as EventListener);
+    return () => {
+      form.removeEventListener("admin-upload-state-change", handleUploadStateChange as EventListener);
+    };
+  }, [hasFileInput, open]);
+
+  const handleSave = () => {
+    if (hasFileInput && uploadDialogState === "complete") {
+      setOpen(false);
+      return;
+    }
+
+    const form = contentRef.current?.querySelector("form");
+    if (!form) return;
+    if (hasFileInput) {
+      setUploadDialogState("uploading");
+    }
+    setSaving(true, hasFileInput ? "Uploading selected files. You can close this modal and keep working." : "Saving changes...");
     form.requestSubmit();
   };
 
-  const triggerClassName =
+  const primaryActionLabel = hasFileInput
+    ? uploadDialogState === "complete"
+      ? "Close"
+      : "Upload"
+    : "Save";
+
+  const defaultTriggerClassName =
     triggerVariant === "primary"
       ? "rounded-full bg-[var(--blue-500)] px-4 py-2 text-sm font-medium text-[#03121a] transition hover:bg-[var(--blue-300)]"
       : "rounded-full border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white";
 
   return (
     <>
-      <button type="button" className={triggerClassName} onClick={() => setOpen(true)}>
-        {triggerLabel}
+      <button
+        type="button"
+        aria-label={triggerLabel}
+        title={triggerLabel}
+        className={triggerClassName ?? defaultTriggerClassName}
+        onClick={() => setOpen(true)}
+      >
+        {triggerContent ?? triggerLabel}
       </button>
 
       {open && mounted && portalNodeRef.current
@@ -195,18 +253,24 @@ export function AdminDialog({
             >
               {children}
             </div>
-              <div className="flex items-center justify-end gap-2 border-t border-[var(--border)] px-5 py-4">
-              <button
-                type="button"
-                onClick={handleDiscard}
-                disabled={!dirty}
-                className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--foreground-muted)] transition enabled:hover:border-[var(--border-strong)] enabled:hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
-              >
-                Discard
-              </button>
+            <div className="flex items-center justify-end gap-2 border-t border-[var(--border)] px-5 py-4">
+              {uploadDialogState !== "complete" ? (
+                <button
+                  type="button"
+                  onClick={handleDiscard}
+                  disabled={!dirty}
+                  className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--foreground-muted)] transition enabled:hover:border-[var(--border-strong)] enabled:hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
+                >
+                  Discard
+                </button>
+              ) : null}
               {hasForm ? (
-                <SaveButton type="button" onClick={handleSave}>
-                  Save
+                <SaveButton
+                  type="button"
+                  onClick={handleSave}
+                  loadingLabel={hasFileInput ? "Uploading..." : "Saving..."}
+                >
+                  {primaryActionLabel}
                 </SaveButton>
               ) : null}
             </div>

@@ -8,7 +8,7 @@ import {
   createSupabaseAdminClient,
   createSupabaseServerClient,
 } from "@/lib/supabase/server";
-import { isAllowedAdminEmail, SUPABASE_BUCKET } from "@/lib/supabase/config";
+import { isAllowedAdminEmail, PHOTOGRAPHY_BUCKET, SUPABASE_BUCKET } from "@/lib/supabase/config";
 
 type CmsTable =
   | "projects"
@@ -36,6 +36,7 @@ const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
 const MAX_CREATIVE_UPLOAD_FILES = 8;
 const MAX_CSV_UPLOAD_BYTES = 512 * 1024;
 const MAX_PROJECT_IMPORT_ROWS = 100;
+const MAX_GENERIC_IMPORT_ROWS = 200;
 const PROJECT_IMPORT_HEADERS = [
   "slug",
   "title",
@@ -50,18 +51,53 @@ const PROJECT_IMPORT_HEADERS = [
   "featured",
   "published",
 ] as const;
+const EXPERIENCE_IMPORT_HEADERS = [
+  "slug",
+  "organization",
+  "role",
+  "period",
+  "type",
+  "description",
+  "published",
+] as const;
+const CERTIFICATION_IMPORT_HEADERS = [
+  "name",
+  "issuer",
+  "issued",
+  "expires",
+  "published",
+] as const;
+const EVENT_IMPORT_HEADERS = [
+  "slug",
+  "title",
+  "event_date",
+  "venue",
+  "organizers",
+  "role",
+  "category",
+  "published",
+] as const;
+const SKILL_IMPORT_HEADERS = [
+  "category",
+  "skill",
+  "category_published",
+] as const;
 
 function extensionFromFilename(value: string) {
   const match = /\.[a-z0-9]+$/i.exec(value);
   return match ? match[0].toLowerCase() : "";
 }
 
-function publicStorageObjectPath(value: string) {
-  const marker = `/storage/v1/object/public/${SUPABASE_BUCKET}/`;
+function publicStorageObjectRef(value: string) {
+  const marker = "/storage/v1/object/public/";
   if (!value.includes(marker)) return null;
 
-  const [, objectPath = ""] = value.split(marker);
-  return objectPath || null;
+  const [, suffix = ""] = value.split(marker);
+  const [bucket = "", ...pathParts] = suffix.split("/");
+  const objectPath = pathParts.join("/");
+
+  if (!bucket || !objectPath) return null;
+  return { bucket, objectPath };
 }
 
 function text(formData: FormData, key: string) {
@@ -150,6 +186,17 @@ function titleFromFilename(value: string) {
     .trim();
 }
 
+function categoryTitleFromSlug(value: string) {
+  return value
+    .split("-")
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(" ");
+}
+
+function padSequence(value: number) {
+  return String(value).padStart(4, "0");
+}
+
 async function optimizeImageUpload(file: File) {
   const arrayBuffer = await file.arrayBuffer();
   const input = Buffer.from(arrayBuffer);
@@ -215,6 +262,7 @@ async function uploadAssetIfPresent(
   field: string,
   objectBasePath: string,
   existingPath?: string | null,
+  bucket = SUPABASE_BUCKET,
 ) {
   const file = formData.get(field);
   if (!(file instanceof File) || file.size === 0) return null;
@@ -233,7 +281,7 @@ async function uploadAssetIfPresent(
   const version = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
   const path = `${objectBasePath}-${safeFilename(version)}${extension}`;
   const { error } = await admin.storage
-    .from(SUPABASE_BUCKET)
+    .from(bucket)
     .upload(path, processed.bytes, {
       cacheControl: "31536000",
       upsert: false,
@@ -242,18 +290,19 @@ async function uploadAssetIfPresent(
 
   if (error) throw error;
 
-  const previousObjectPath = existingPath ? publicStorageObjectPath(existingPath) : null;
-  if (previousObjectPath && previousObjectPath !== path) {
-    await admin.storage.from(SUPABASE_BUCKET).remove([previousObjectPath]);
+  const previousObjectRef = existingPath ? publicStorageObjectRef(existingPath) : null;
+  if (previousObjectRef && (previousObjectRef.bucket !== bucket || previousObjectRef.objectPath !== path)) {
+    await admin.storage.from(previousObjectRef.bucket).remove([previousObjectRef.objectPath]);
   }
 
-  const { data } = admin.storage.from(SUPABASE_BUCKET).getPublicUrl(path);
+  const { data } = admin.storage.from(bucket).getPublicUrl(path);
   return data.publicUrl;
 }
 
 async function uploadImageFile(
   file: File,
   objectBasePath: string,
+  bucket = SUPABASE_BUCKET,
 ) {
   if (file.size === 0) throw new Error("Image file is empty.");
   if (file.size > MAX_UPLOAD_BYTES) {
@@ -267,10 +316,7 @@ async function uploadImageFile(
   if (!admin) throw new Error("Supabase service role is not configured.");
 
   const processed = await optimizeImageUpload(file);
-  const extension = extensionFromFilename(file.name);
-  const version = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
-  const path = `${objectBasePath}-${safeFilename(version)}${extension}`;
-  const { error } = await admin.storage.from(SUPABASE_BUCKET).upload(path, processed.bytes, {
+  const { error } = await admin.storage.from(bucket).upload(objectBasePath, processed.bytes, {
     cacheControl: "31536000",
     upsert: false,
     contentType: processed.contentType,
@@ -278,7 +324,7 @@ async function uploadImageFile(
 
   if (error) throw error;
 
-  const { data } = admin.storage.from(SUPABASE_BUCKET).getPublicUrl(path);
+  const { data } = admin.storage.from(bucket).getPublicUrl(objectBasePath);
   return data.publicUrl;
 }
 
@@ -375,6 +421,19 @@ function assertAllowedProjectStatus(value: string) {
   if (!value) return null;
   if (value === "live" || value === "wip" || value === "archived") return value;
   throw new Error(`Invalid project status "${value}". Use live, wip, or archived.`);
+}
+
+function assertAllowedExperienceType(value: string) {
+  if (value === "work" || value === "community" || value === "hackathon") return value;
+  throw new Error(`Invalid experience type "${value}". Use work, community, or hackathon.`);
+}
+
+function assertAllowedEventCategory(value: string) {
+  if (!value) return null;
+  if (value === "community" || value === "hackathon" || value === "meetup" || value === "conference" || value === "workshop") {
+    return value;
+  }
+  throw new Error(`Invalid event category "${value}".`);
 }
 
 function assertAllowedPhotoAspect(value: string | null) {
@@ -563,6 +622,369 @@ export async function importProjectsCsv(formData: FormData) {
   redirect("/admin#projects");
 }
 
+export async function importExperienceCsv(formData: FormData) {
+  const admin = await requireAdmin();
+  const file = formData.get("csv_file");
+
+  if (!(file instanceof File) || file.size === 0) {
+    throw new Error("CSV file is required.");
+  }
+  if (file.size > MAX_CSV_UPLOAD_BYTES) {
+    throw new Error("CSV is too large. Import up to 512KB at a time.");
+  }
+  const extension = extensionFromFilename(file.name);
+  if (extension && extension !== ".csv") {
+    throw new Error("Only CSV files are supported.");
+  }
+
+  const rows = parseCsvRows(await file.text());
+  if (rows.length < 2) throw new Error("CSV must include a header row and at least one experience record.");
+
+  const headers = rows[0].map(normalizeHeader);
+  const missingHeaders = EXPERIENCE_IMPORT_HEADERS.filter((header) => !headers.includes(header));
+  if (missingHeaders.length > 0) {
+    throw new Error(`CSV is missing required columns: ${missingHeaders.join(", ")}.`);
+  }
+
+  const dataRows = rows.slice(1);
+  if (dataRows.length > MAX_GENERIC_IMPORT_ROWS) {
+    throw new Error(`Import up to ${MAX_GENERIC_IMPORT_ROWS} experience records at a time.`);
+  }
+
+  const seenSlugs = new Set<string>();
+  const { data: sortData, error: sortError } = await admin
+    .from("experience_items")
+    .select("sort_order")
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (sortError) throw sortError;
+  const nextSortOrder = typeof sortData?.sort_order === "number" ? sortData.sort_order + 1 : 0;
+
+  const payload = dataRows.map((values, index) => {
+    const row = Object.fromEntries(
+      headers.map((header, headerIndex) => [header, values[headerIndex] ?? ""]),
+    ) as Record<string, string>;
+
+    const organization = row.organization?.trim() ?? "";
+    const slug = (row.slug?.trim() || slugify(organization));
+    const role = row.role?.trim() ?? "";
+    const period = row.period?.trim() ?? "";
+    const description = row.description?.trim() ?? "";
+    const type = row.type?.trim() ?? "";
+
+    if (!organization) throw new Error(`Row ${index + 2}: organization is required.`);
+    if (!slug) throw new Error(`Row ${index + 2}: slug is required when organization cannot generate one.`);
+    if (!role) throw new Error(`Row ${index + 2}: role is required.`);
+    if (!period) throw new Error(`Row ${index + 2}: period is required.`);
+    if (!description) throw new Error(`Row ${index + 2}: description is required.`);
+    if (!type) throw new Error(`Row ${index + 2}: type is required.`);
+    if (seenSlugs.has(slug)) throw new Error(`Row ${index + 2}: duplicate slug "${slug}" in CSV.`);
+    seenSlugs.add(slug);
+
+    return {
+      slug,
+      organization,
+      role,
+      period,
+      description,
+      type: assertAllowedExperienceType(type),
+      sort_order: nextSortOrder + index,
+      published: parseBoolean(row.published ?? "", true),
+    };
+  });
+
+  const { error } = await admin.from("experience_items").upsert(payload, { onConflict: "slug" });
+  if (error) throw error;
+
+  revalidateTag("portfolio-content", "max");
+  redirect("/admin#experience");
+}
+
+export async function importCertificationsCsv(formData: FormData) {
+  const admin = await requireAdmin();
+  const file = formData.get("csv_file");
+
+  if (!(file instanceof File) || file.size === 0) {
+    throw new Error("CSV file is required.");
+  }
+  if (file.size > MAX_CSV_UPLOAD_BYTES) {
+    throw new Error("CSV is too large. Import up to 512KB at a time.");
+  }
+  const extension = extensionFromFilename(file.name);
+  if (extension && extension !== ".csv") {
+    throw new Error("Only CSV files are supported.");
+  }
+
+  const rows = parseCsvRows(await file.text());
+  if (rows.length < 2) throw new Error("CSV must include a header row and at least one certification.");
+
+  const headers = rows[0].map(normalizeHeader);
+  const missingHeaders = CERTIFICATION_IMPORT_HEADERS.filter((header) => !headers.includes(header));
+  if (missingHeaders.length > 0) {
+    throw new Error(`CSV is missing required columns: ${missingHeaders.join(", ")}.`);
+  }
+
+  const dataRows = rows.slice(1);
+  if (dataRows.length > MAX_GENERIC_IMPORT_ROWS) {
+    throw new Error(`Import up to ${MAX_GENERIC_IMPORT_ROWS} certifications at a time.`);
+  }
+
+  const existingResult = await admin.from("certifications").select("id,name,issuer,image_path,sort_order");
+  if (existingResult.error) throw existingResult.error;
+  const existingMap = new Map(
+    (existingResult.data ?? []).map((row) => [`${row.name}::${row.issuer}`.toLowerCase(), row]),
+  );
+  const seenKeys = new Set<string>();
+
+  const { data: sortData, error: sortError } = await admin
+    .from("certifications")
+    .select("sort_order")
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (sortError) throw sortError;
+  let nextSortOrder = typeof sortData?.sort_order === "number" ? sortData.sort_order + 1 : 0;
+
+  const payload = dataRows.map((values, index) => {
+    const row = Object.fromEntries(
+      headers.map((header, headerIndex) => [header, values[headerIndex] ?? ""]),
+    ) as Record<string, string>;
+
+    const name = row.name?.trim() ?? "";
+    const issuer = row.issuer?.trim() ?? "";
+    if (!name) throw new Error(`Row ${index + 2}: name is required.`);
+    if (!issuer) throw new Error(`Row ${index + 2}: issuer is required.`);
+
+    const compositeKey = `${name}::${issuer}`.toLowerCase();
+    if (seenKeys.has(compositeKey)) {
+      throw new Error(`Row ${index + 2}: duplicate certification "${name}" from "${issuer}" in CSV.`);
+    }
+    seenKeys.add(compositeKey);
+
+    const existing = existingMap.get(compositeKey);
+    return {
+      id: existing?.id ?? crypto.randomUUID(),
+      name,
+      issuer,
+      issued: row.issued?.trim() || null,
+      expires: row.expires?.trim() || null,
+      image_path: existing?.image_path ?? null,
+      sort_order: existing?.sort_order ?? nextSortOrder++,
+      published: parseBoolean(row.published ?? "", true),
+    };
+  });
+
+  const { error } = await admin.from("certifications").upsert(payload);
+  if (error) throw error;
+
+  revalidateTag("portfolio-content", "max");
+  redirect("/admin#certifications");
+}
+
+export async function importEventsCsv(formData: FormData) {
+  const admin = await requireAdmin();
+  const file = formData.get("csv_file");
+
+  if (!(file instanceof File) || file.size === 0) {
+    throw new Error("CSV file is required.");
+  }
+  if (file.size > MAX_CSV_UPLOAD_BYTES) {
+    throw new Error("CSV is too large. Import up to 512KB at a time.");
+  }
+  const extension = extensionFromFilename(file.name);
+  if (extension && extension !== ".csv") {
+    throw new Error("Only CSV files are supported.");
+  }
+
+  const rows = parseCsvRows(await file.text());
+  if (rows.length < 2) throw new Error("CSV must include a header row and at least one event.");
+
+  const headers = rows[0].map(normalizeHeader);
+  const missingHeaders = EVENT_IMPORT_HEADERS.filter((header) => !headers.includes(header));
+  if (missingHeaders.length > 0) {
+    throw new Error(`CSV is missing required columns: ${missingHeaders.join(", ")}.`);
+  }
+
+  const dataRows = rows.slice(1);
+  if (dataRows.length > MAX_GENERIC_IMPORT_ROWS) {
+    throw new Error(`Import up to ${MAX_GENERIC_IMPORT_ROWS} events at a time.`);
+  }
+
+  const seenSlugs = new Set<string>();
+  const existingResult = await admin.from("events").select("slug,image_path,sort_order");
+  if (existingResult.error) throw existingResult.error;
+  const existingMap = new Map((existingResult.data ?? []).map((row) => [row.slug, row]));
+
+  const { data: sortData, error: sortError } = await admin
+    .from("events")
+    .select("sort_order")
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (sortError) throw sortError;
+  let nextSortOrder = typeof sortData?.sort_order === "number" ? sortData.sort_order + 1 : 0;
+
+  const payload = dataRows.map((values, index) => {
+    const row = Object.fromEntries(
+      headers.map((header, headerIndex) => [header, values[headerIndex] ?? ""]),
+    ) as Record<string, string>;
+
+    const title = row.title?.trim() ?? "";
+    const slug = row.slug?.trim() || slugify(title);
+    const eventDate = row.event_date?.trim() ?? "";
+    const venue = row.venue?.trim() ?? "";
+
+    if (!title) throw new Error(`Row ${index + 2}: title is required.`);
+    if (!slug) throw new Error(`Row ${index + 2}: slug is required when title cannot generate one.`);
+    if (!eventDate) throw new Error(`Row ${index + 2}: event_date is required.`);
+    if (!venue) throw new Error(`Row ${index + 2}: venue is required.`);
+    if (Number.isNaN(Date.parse(`${eventDate}T00:00:00`))) {
+      throw new Error(`Row ${index + 2}: event_date must be a valid date in YYYY-MM-DD format.`);
+    }
+    if (seenSlugs.has(slug)) throw new Error(`Row ${index + 2}: duplicate slug "${slug}" in CSV.`);
+    seenSlugs.add(slug);
+
+    const existing = existingMap.get(slug);
+    return {
+      slug,
+      title,
+      event_date: eventDate,
+      year: new Date(`${eventDate}T00:00:00`).getFullYear().toString(),
+      venue,
+      organizers: row.organizers?.trim() || null,
+      role: row.role?.trim() || null,
+      category: assertAllowedEventCategory(row.category?.trim() ?? ""),
+      image_path: existing?.image_path ?? null,
+      sort_order: existing?.sort_order ?? nextSortOrder++,
+      published: parseBoolean(row.published ?? "", true),
+    };
+  });
+
+  const { error } = await admin.from("events").upsert(payload, { onConflict: "slug" });
+  if (error) throw error;
+
+  revalidateTag("portfolio-content", "max");
+  redirect("/admin#events");
+}
+
+export async function importSkillsCsv(formData: FormData) {
+  const admin = await requireAdmin();
+  const file = formData.get("csv_file");
+
+  if (!(file instanceof File) || file.size === 0) {
+    throw new Error("CSV file is required.");
+  }
+  if (file.size > MAX_CSV_UPLOAD_BYTES) {
+    throw new Error("CSV is too large. Import up to 512KB at a time.");
+  }
+  const extension = extensionFromFilename(file.name);
+  if (extension && extension !== ".csv") {
+    throw new Error("Only CSV files are supported.");
+  }
+
+  const rows = parseCsvRows(await file.text());
+  if (rows.length < 2) throw new Error("CSV must include a header row and at least one skill.");
+
+  const headers = rows[0].map(normalizeHeader);
+  const missingHeaders = SKILL_IMPORT_HEADERS.filter((header) => !headers.includes(header));
+  if (missingHeaders.length > 0) {
+    throw new Error(`CSV is missing required columns: ${missingHeaders.join(", ")}.`);
+  }
+
+  const dataRows = rows.slice(1);
+  if (dataRows.length > MAX_GENERIC_IMPORT_ROWS) {
+    throw new Error(`Import up to ${MAX_GENERIC_IMPORT_ROWS} skills at a time.`);
+  }
+
+  const categoriesResult = await admin.from("skill_categories").select("id,name,published,sort_order");
+  if (categoriesResult.error) throw categoriesResult.error;
+  const skillsResult = await admin.from("skills").select("id,category_id,name,sort_order");
+  if (skillsResult.error) throw skillsResult.error;
+
+  const categoriesByName = new Map(
+    (categoriesResult.data ?? []).map((row) => [row.name.toLowerCase(), row]),
+  );
+  const existingSkills = new Set(
+    (skillsResult.data ?? []).map((row) => `${row.category_id}::${row.name.toLowerCase()}`),
+  );
+
+  const { data: categorySortData, error: categorySortError } = await admin
+    .from("skill_categories")
+    .select("sort_order")
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (categorySortError) throw categorySortError;
+  let nextCategorySortOrder = typeof categorySortData?.sort_order === "number" ? categorySortData.sort_order + 1 : 0;
+
+  const { data: skillSortData, error: skillSortError } = await admin
+    .from("skills")
+    .select("sort_order")
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (skillSortError) throw skillSortError;
+  let nextSkillSortOrder = typeof skillSortData?.sort_order === "number" ? skillSortData.sort_order + 1 : 0;
+
+  const categoriesToUpsert: Array<{ id: string; name: string; published: boolean; sort_order: number }> = [];
+  const skillsToInsert: Array<{ id: string; category_id: string; name: string; sort_order: number }> = [];
+  const seenCsvRows = new Set<string>();
+
+  for (let index = 0; index < dataRows.length; index += 1) {
+    const values = dataRows[index];
+    const row = Object.fromEntries(
+      headers.map((header, headerIndex) => [header, values[headerIndex] ?? ""]),
+    ) as Record<string, string>;
+
+    const categoryName = row.category?.trim() ?? "";
+    const skillName = row.skill?.trim() ?? "";
+    if (!categoryName) throw new Error(`Row ${index + 2}: category is required.`);
+    if (!skillName) throw new Error(`Row ${index + 2}: skill is required.`);
+
+    const csvKey = `${categoryName.toLowerCase()}::${skillName.toLowerCase()}`;
+    if (seenCsvRows.has(csvKey)) throw new Error(`Row ${index + 2}: duplicate skill "${skillName}" in category "${categoryName}" in CSV.`);
+    seenCsvRows.add(csvKey);
+
+    const normalizedCategory = categoryName.toLowerCase();
+    let category = categoriesByName.get(normalizedCategory);
+
+    if (!category) {
+      category = {
+        id: crypto.randomUUID(),
+        name: categoryName,
+        published: parseBoolean(row.category_published ?? "", true),
+        sort_order: nextCategorySortOrder++,
+      };
+      categoriesByName.set(normalizedCategory, category);
+      categoriesToUpsert.push(category);
+    }
+
+    const skillKey = `${category.id}::${skillName.toLowerCase()}`;
+    if (existingSkills.has(skillKey)) continue;
+
+    existingSkills.add(skillKey);
+    skillsToInsert.push({
+      id: crypto.randomUUID(),
+      category_id: category.id,
+      name: skillName,
+      sort_order: nextSkillSortOrder++,
+    });
+  }
+
+  if (categoriesToUpsert.length > 0) {
+    const { error } = await admin.from("skill_categories").upsert(categoriesToUpsert);
+    if (error) throw error;
+  }
+  if (skillsToInsert.length > 0) {
+    const { error } = await admin.from("skills").insert(skillsToInsert);
+    if (error) throw error;
+  }
+
+  revalidateTag("portfolio-content", "max");
+  redirect("/admin#skills");
+}
+
 export async function saveExperience(formData: FormData) {
   const organization = requiredText(formData, "organization", "Organization");
   const slug = text(formData, "slug") || slugify(organization);
@@ -680,8 +1102,9 @@ export async function saveCreativeCategory(formData: FormData) {
   const image = await uploadAssetIfPresent(
     formData,
     "image_file",
-    `creative/categories/${slug}/showcase`,
+    `${slug}/showcase`,
     existingImagePath,
+    PHOTOGRAPHY_BUCKET,
   );
 
   await mutateAndRefresh("creative_categories", {
@@ -749,8 +1172,9 @@ export async function saveCreativePhoto(formData: FormData) {
   const image = await uploadAssetIfPresent(
     formData,
     "image_file",
-    `creative/photos/${categoryId}/${id}`,
+    `${text(formData, "category_slug") || categoryId}/${id}`,
     existingImagePath,
+    PHOTOGRAPHY_BUCKET,
   );
 
   if (!image && !existingImagePath) throw new Error("Photo image is required.");
@@ -799,11 +1223,18 @@ export async function uploadCreativePhotos(formData: FormData) {
       batch.map(async (file, batchIndex) => {
         const overallIndex = offset + batchIndex;
         const id = crypto.randomUUID();
-        const imagePath = await uploadImageFile(file, `creative/photos/${categorySlug}/${id}`);
+        const sequence = nextSortOrder + overallIndex + 1;
+        const sequenceLabel = padSequence(sequence);
+        const extension = extensionFromFilename(file.name);
+        const imagePath = await uploadImageFile(
+          file,
+          `${categorySlug}/${categorySlug}-${sequenceLabel}${extension}`,
+          PHOTOGRAPHY_BUCKET,
+        );
         return {
           id,
           category_id: categoryId,
-          title: titleFromFilename(file.name) || `Creative photo ${overallIndex + 1}`,
+          title: `${categoryTitleFromSlug(categorySlug)} ${sequence}`,
           image_path: imagePath,
           aspect_ratio: "landscape",
           featured: false,
@@ -818,6 +1249,50 @@ export async function uploadCreativePhotos(formData: FormData) {
 
   const { error } = await admin.from("creative_photos").insert(uploaded);
   if (error) throw error;
+
+  revalidateTag("portfolio-content", "max");
+  redirect("/admin#creative-portfolio");
+}
+
+export async function deleteCreativePhotos(formData: FormData) {
+  const admin = await requireAdmin();
+  const rawIds = text(formData, "ids");
+  const parsed = JSON.parse(rawIds || "[]");
+
+  if (!Array.isArray(parsed) || parsed.some((id) => typeof id !== "string" || !id.trim())) {
+    throw new Error("Invalid photo selection.");
+  }
+
+  const ids = Array.from(new Set(parsed.map((id) => id.trim()))).filter(Boolean);
+  if (ids.length === 0) {
+    throw new Error("Select at least one photo to remove.");
+  }
+
+  const { data, error } = await admin
+    .from("creative_photos")
+    .select("id,image_path")
+    .in("id", ids);
+
+  if (error) throw error;
+
+  const objectRefs = (data ?? [])
+    .map((row) => publicStorageObjectRef(typeof row.image_path === "string" ? row.image_path : ""))
+    .filter((ref): ref is { bucket: string; objectPath: string } => Boolean(ref));
+
+  const { error: deleteError } = await admin.from("creative_photos").delete().in("id", ids);
+  if (deleteError) throw deleteError;
+
+  if (objectRefs.length > 0) {
+    const refsByBucket = new Map<string, string[]>();
+    objectRefs.forEach((ref) => {
+      refsByBucket.set(ref.bucket, [...(refsByBucket.get(ref.bucket) ?? []), ref.objectPath]);
+    });
+    await Promise.all(
+      Array.from(refsByBucket.entries()).map(([bucket, objectPaths]) =>
+        admin.storage.from(bucket).remove(objectPaths),
+      ),
+    );
+  }
 
   revalidateTag("portfolio-content", "max");
   redirect("/admin#creative-portfolio");
