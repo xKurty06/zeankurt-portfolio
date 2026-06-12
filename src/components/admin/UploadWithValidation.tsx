@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AlertTriangle, Check, FolderUp, Trash2, Upload, X } from "lucide-react";
 import { useSaving } from "@/lib/saving";
 
@@ -51,6 +52,7 @@ export default function UploadWithValidation({
 }) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const submittingRef = useRef(false);
+  const router = useRouter();
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [selectionApproved, setSelectionApproved] = useState(true);
@@ -66,6 +68,18 @@ export default function UploadWithValidation({
       ? "Uploading photos. You can close this modal and keep working."
       : `Uploading ${fileCount} photo${fileCount === 1 ? "" : "s"}. You can close this modal and keep working.`;
 
+  const emitUploadState = (state: "idle" | "uploading" | "complete") => {
+    const form = inputRef.current?.form;
+    if (!form) return;
+
+    form.dispatchEvent(
+      new CustomEvent("admin-upload-state-change", {
+        bubbles: true,
+        detail: { state },
+      }),
+    );
+  };
+
   useEffect(() => {
     const input = inputRef.current;
     if (!input) return;
@@ -78,6 +92,7 @@ export default function UploadWithValidation({
       setSubmitting(false);
       setSaving(false);
       submittingRef.current = false;
+      emitUploadState("idle");
       input.value = "";
       input.setCustomValidity("");
     };
@@ -99,6 +114,7 @@ export default function UploadWithValidation({
       setProgress({});
       setSubmitting(false);
       setSaving(false);
+      emitUploadState("idle");
       if (inputRef.current) {
         inputRef.current.value = "";
         inputRef.current.setCustomValidity("");
@@ -124,6 +140,7 @@ export default function UploadWithValidation({
       event.preventDefault();
       submittingRef.current = true;
       setSubmitting(true);
+      emitUploadState("uploading");
       setSaving(
         true,
         `Uploading ${filesList.length} photo${filesList.length === 1 ? "" : "s"}. You can close this modal and keep working.`,
@@ -198,8 +215,11 @@ export default function UploadWithValidation({
           await uploadOne(file);
         }
 
-        resetSelection();
-        window.location.reload();
+        submittingRef.current = false;
+        setSubmitting(false);
+        setSaving(false);
+        emitUploadState("complete");
+        router.refresh();
       })();
     };
 
@@ -241,6 +261,7 @@ export default function UploadWithValidation({
     setSubmitting(false);
     setSaving(false);
     submittingRef.current = false;
+    emitUploadState("idle");
   };
 
   const handleDirectoryPick = async () => {
@@ -329,6 +350,7 @@ export default function UploadWithValidation({
               setSubmitting(false);
               setSaving(false);
               submittingRef.current = false;
+              emitUploadState("idle");
             }}
             className="inline-flex items-center gap-2 rounded-full border border-red-400/20 px-3 py-2 text-xs font-medium text-red-200 transition hover:bg-red-500/10"
           >
@@ -369,6 +391,7 @@ export default function UploadWithValidation({
                     setSubmitting(false);
                     setSaving(false);
                     submittingRef.current = false;
+                    emitUploadState("idle");
                   }}
                   className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] px-3 py-2 text-xs font-medium text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white"
                 >
