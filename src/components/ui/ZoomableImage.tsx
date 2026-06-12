@@ -109,12 +109,11 @@ export function ZoomableImage({
             "fixed inset-0 z-[10000] flex items-center justify-center p-4 backdrop-blur-sm",
             open
               ? "motion-safe:animate-[zoomableBackdropIn_220ms_ease-out_forwards]"
-              : "motion-safe:animate-[zoomableBackdropOut_220ms_ease-out_forwards]",
+              : "motion-safe:animate-[zoomableBackdropOut_220ms_cubic-bezier(0.4,0,1,1)_forwards]",
           )}
           role="dialog"
           aria-modal="true"
           aria-label={alt}
-          onClick={() => setOpen(false)}
         >
           <button
             type="button"

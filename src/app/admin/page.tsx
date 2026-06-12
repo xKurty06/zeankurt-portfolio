@@ -496,7 +496,7 @@ export default async function AdminPage() {
   navItems.push({
     id: "creative-portfolio",
     label: "Creative CMS",
-    count: creativeCategories.length + creativePhotos.length,
+    count: creativeCategories.length,
     icon: <Camera className="h-4 w-4" />,
   });
 
@@ -544,7 +544,7 @@ export default async function AdminPage() {
                   </span>
                   {item.label}
                 </span>
-                <span className="rounded-full bg-white/[0.07] px-1.5 py-0.5 text-[10px] tabular-nums">{item.count}</span>
+                <span className="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-white/[0.07] px-2 text-[10px] leading-none tabular-nums">{item.count}</span>
               </a>
             ))}
 
@@ -563,7 +563,7 @@ export default async function AdminPage() {
                     </span>
                     {item.label}
                   </span>
-                  <span className="rounded-full bg-white/[0.07] px-1.5 py-0.5 text-[10px] tabular-nums">{item.count}</span>
+                  <span className="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-white/[0.07] px-2 text-[10px] leading-none tabular-nums">{item.count}</span>
                 </a>
                 {creativeSidebarItems.length > 0 ? (
                   <div className="ml-6 flex flex-col gap-1 border-l border-[var(--border)] pl-3">
@@ -574,7 +574,7 @@ export default async function AdminPage() {
                         className="flex items-center justify-between gap-3 rounded-lg px-2 py-1.5 text-xs text-[var(--foreground-muted)] transition hover:bg-white/[0.04] hover:text-white"
                       >
                         <span className="truncate">{category.name}</span>
-                        <span className="shrink-0 text-[10px] tabular-nums text-[var(--blue-300)]">
+                        <span className="pr-3 shrink-0 text-[10px] tabular-nums text-[var(--blue-300)]">
                           {category.photoCount}
                         </span>
                       </a>
@@ -589,7 +589,7 @@ export default async function AdminPage() {
                 Total records
               </p>
               <p className="font-[family-name:var(--font-syne)] text-2xl font-semibold text-[var(--blue-300)]">
-                {projects.length + experiences.length + certifications.length + events.length + skills.length + creativeCategories.length + creativePhotos.length}
+                {projects.length + experiences.length + certifications.length + events.length + skills.length + creativePhotos.length}
               </p>
             </div>
           </nav>

@@ -144,7 +144,6 @@ export function AdminDialog({
           onPointerDown={(event) => {
             event.preventDefault();
           }}
-          onClick={() => setOpen(false)}
           onDragStart={(event) => event.preventDefault()}
           onDragOver={(event) => event.preventDefault()}
           onDrop={(event) => event.preventDefault()}
