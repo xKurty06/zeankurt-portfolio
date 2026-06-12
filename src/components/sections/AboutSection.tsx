@@ -2,12 +2,6 @@
 
 import { useRef } from "react";
 import { useGSAP } from "@gsap/react";
-import { aboutContent as fallbackAboutContent } from "@/data/site";
-import {
-  skillCategories as fallbackSkillCategories,
-  certifications as fallbackCertifications,
-  eventHighlights as fallbackEventHighlights,
-} from "@/data/skills";
 import { photos } from "@/data/photography";
 import { RevealOnScroll } from "@/components/animation/RevealOnScroll";
 import { AnimatedCounter } from "@/components/animation/AnimatedCounter";
@@ -26,17 +20,20 @@ type CounterData = {
 type CounterLabel = "Focus" | "Events" | "Education" | "Creative";
 
 interface AboutSectionProps {
-  aboutContent?: typeof fallbackAboutContent;
-  skillCategories?: SkillCategory[];
-  certifications?: Certification[];
-  eventHighlights?: EventHighlight[];
+  aboutContent: {
+    paragraphs: string[];
+    highlights: Array<{ label: string; value: string }>;
+  };
+  skillCategories: SkillCategory[];
+  certifications: Certification[];
+  eventHighlights: EventHighlight[];
 }
 
 export function AboutSection({
-  aboutContent = fallbackAboutContent,
-  skillCategories = fallbackSkillCategories,
-  certifications = fallbackCertifications,
-  eventHighlights = fallbackEventHighlights,
+  aboutContent,
+  skillCategories,
+  certifications,
+  eventHighlights,
 }: AboutSectionProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const counterMap: Record<CounterLabel, CounterData> = {
@@ -131,8 +128,7 @@ export function AboutSection({
             <RevealOnScroll delay={0.2}>
               <dl className="grid gap-3 sm:grid-cols-2">
                 {aboutContent.highlights.map((item) => {
-                  const label = item.label as CounterLabel;
-                  const counter = counterMap[label];
+                  const counter = counterMap[item.label as CounterLabel];
                   return (
                     <GlowCard
                       key={item.label}

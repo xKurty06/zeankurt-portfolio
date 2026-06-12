@@ -4,7 +4,6 @@ import { useRef, useState, useMemo } from "react";
 import Image from "next/image";
 import { ArrowUpRight, ChevronDown, ChevronUp } from "lucide-react";
 import { useGSAP } from "@gsap/react";
-import { projects as fallbackProjects } from "@/data/projects";
 import type { Project } from "@/types";
 import { RevealOnScroll } from "@/components/animation/RevealOnScroll";
 import { GlowCard } from "@/components/animation/GlowCard";
@@ -16,10 +15,6 @@ import { gsap, registerGsapPlugins } from "@/lib/gsap";
 import { cn } from "@/lib/cn";
 
 const INITIAL_SHOW = 6;
-
-function projectImageUrl(project: Project) {
-  return project.image || `https://picsum.photos/seed/${project.imageSeed}/1200/800`;
-}
 
 const STATUS_STYLES = {
   live:     "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
@@ -57,14 +52,18 @@ function FeaturedCard({ project, index }: { project: Project; index: number }) {
       className="project-feature-card group rounded-2xl border border-[var(--border)] bg-[var(--background-elevated)] transition-shadow duration-500 hover:border-[var(--border-strong)] hover:shadow-[0_0_60px_rgba(0,180,216,0.13)]"
     >
       {/* Image */}
-      <div className="relative aspect-[16/10] overflow-hidden">
-        <Image
-          src={projectImageUrl(project)}
-          alt={project.title}
-          fill
-          className="object-cover transition duration-700 group-hover:scale-[1.05]"
-          sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
-        />
+      <div className="relative aspect-[16/10] overflow-hidden bg-[linear-gradient(145deg,rgba(10,15,26,0.96),rgba(2,62,138,0.22))]">
+        {project.image ? (
+          <Image
+            src={project.image}
+            alt={project.title}
+            fill
+            className="object-cover transition duration-700 group-hover:scale-[1.05]"
+            sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
+          />
+        ) : (
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_24%_24%,rgba(72,202,228,0.16),transparent_28%),radial-gradient(circle_at_78%_76%,rgba(0,119,182,0.2),transparent_32%)]" />
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-[#030712] via-transparent to-transparent" />
         <div className="absolute inset-0 opacity-0 transition duration-500 group-hover:opacity-100 bg-[radial-gradient(ellipse_at_50%_0%,rgba(0,180,216,0.1),transparent_65%)]" />
         {project.status ? (
@@ -207,10 +206,10 @@ function CompactCard({ project }: { project: Project }) {
 
 // ─── Section ──────────────────────────────────────────────────────────────────
 interface ProjectsSectionProps {
-  projects?: Project[];
+  projects: Project[];
 }
 
-export function ProjectsSection({ projects = fallbackProjects }: ProjectsSectionProps) {
+export function ProjectsSection({ projects }: ProjectsSectionProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const allProjectsGridRef = useRef<HTMLDivElement>(null);
   const [activeTag, setActiveTag] = useState("All");

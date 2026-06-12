@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { useTheme } from "next-themes";
 import * as THREE from "three";
 import { cn } from "@/lib/cn";
+import { monitorElementActivity } from "@/lib/animationActivity";
 
 type DottedSurfaceProps = Omit<React.ComponentProps<"div">, "ref">;
 
@@ -90,8 +91,14 @@ export function DottedSurface({ className, ...props }: DottedSurfaceProps) {
 
     let count = 0;
     let animationId = 0;
+    let isActive = true;
 
     const animate = () => {
+      if (!isActive) {
+        animationId = 0;
+        return;
+      }
+
       animationId = window.requestAnimationFrame(animate);
 
       const positionAttribute = geometry.attributes.position;
@@ -125,6 +132,13 @@ export function DottedSurface({ className, ...props }: DottedSurfaceProps) {
       renderer.setSize(bounds.width, bounds.height);
     };
 
+    const stopMonitoring = monitorElementActivity(container, (nextActive) => {
+      isActive = nextActive;
+      if (isActive && animationId === 0) {
+        animate();
+      }
+    }, { threshold: 0.05 });
+
     window.addEventListener("resize", handleResize);
     animate();
 
@@ -138,6 +152,7 @@ export function DottedSurface({ className, ...props }: DottedSurfaceProps) {
     };
 
     return () => {
+      stopMonitoring();
       window.removeEventListener("resize", handleResize);
 
       if (sceneRef.current) {

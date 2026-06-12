@@ -16,13 +16,17 @@ export function ScrollProgressBar() {
 
     // Use a quickSetter for scaleX to avoid repeated style object allocation.
     const setScaleX = gsap.quickSetter(bar, "scaleX");
-    ScrollTrigger.create({
+    const trigger = ScrollTrigger.create({
       start: "top top",
       end: "bottom bottom",
       onUpdate: (self) => {
         setScaleX(self.progress);
       },
     });
+
+    return () => {
+      trigger.kill();
+    };
   }, []);
 
   return (

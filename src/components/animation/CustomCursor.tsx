@@ -43,10 +43,10 @@ export function CustomCursor() {
     });
 
     // Use GSAP quickTo to avoid allocating new tweens on each mousemove.
-    const dotX = gsap.quickTo(dot, "x", { duration: 0.06, ease: "none" });
-    const dotY = gsap.quickTo(dot, "y", { duration: 0.06, ease: "none" });
-    const ringX = gsap.quickTo(ring, "x", { duration: 0.2, ease: "power2.out" });
-    const ringY = gsap.quickTo(ring, "y", { duration: 0.2, ease: "power2.out" });
+    const dotX = gsap.quickTo(dot, "x", { duration: 0.02, ease: "none" });
+    const dotY = gsap.quickTo(dot, "y", { duration: 0.02, ease: "none" });
+    const ringX = gsap.quickTo(ring, "x", { duration: 0.07, ease: "power2.out" });
+    const ringY = gsap.quickTo(ring, "y", { duration: 0.07, ease: "power2.out" });
 
     const onMove = (e: MouseEvent) => {
       dotX(e.clientX);

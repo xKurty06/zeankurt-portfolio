@@ -3,7 +3,6 @@
 import { useRef } from "react";
 import { Mail } from "lucide-react";
 import { useGSAP } from "@gsap/react";
-import { siteConfig as fallbackSiteConfig } from "@/data/site";
 import { socialGroups } from "@/data/social";
 import { RevealOnScroll } from "@/components/animation/RevealOnScroll";
 import { MagneticButton } from "@/components/animation/MagneticButton";
@@ -14,10 +13,12 @@ import { Section, Container } from "@/components/ui/Container";
 import { gsap, registerGsapPlugins } from "@/lib/gsap";
 
 interface ContactSectionProps {
-  siteConfig?: typeof fallbackSiteConfig;
+  siteConfig: {
+    email: string;
+  };
 }
 
-export function ContactSection({ siteConfig = fallbackSiteConfig }: ContactSectionProps) {
+export function ContactSection({ siteConfig }: ContactSectionProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -53,17 +54,22 @@ export function ContactSection({ siteConfig = fallbackSiteConfig }: ContactSecti
 
       // Mouse-tracked glow inside the card
       const glow = card.querySelector<HTMLElement>("[data-contact-glow]");
+      let onMouseMove: ((event: MouseEvent) => void) | null = null;
+      let onMouseLeave: (() => void) | null = null;
       if (glow) {
-        card.addEventListener("mousemove", (e: MouseEvent) => {
+        onMouseMove = (e: MouseEvent) => {
           const rect = card.getBoundingClientRect();
           // Position via left/top; margin offsets (128px = half of h-64/w-64) centre it
           glow.style.left = `${e.clientX - rect.left}px`;
           glow.style.top  = `${e.clientY - rect.top}px`;
           gsap.to(glow, { opacity: 1, duration: 0.3, ease: "power2.out" });
-        });
-        card.addEventListener("mouseleave", () => {
+        };
+        onMouseLeave = () => {
           gsap.to(glow, { opacity: 0, duration: 0.5 });
-        });
+        };
+
+        card.addEventListener("mousemove", onMouseMove);
+        card.addEventListener("mouseleave", onMouseLeave);
       }
 
       const signalItems = gsap.utils.toArray<HTMLElement>("[data-contact-signal]");
@@ -76,6 +82,15 @@ export function ContactSection({ siteConfig = fallbackSiteConfig }: ContactSecti
         yoyo: true,
         ease: "sine.inOut",
       });
+
+      return () => {
+        if (onMouseMove) {
+          card.removeEventListener("mousemove", onMouseMove);
+        }
+        if (onMouseLeave) {
+          card.removeEventListener("mouseleave", onMouseLeave);
+        }
+      };
     },
     { scope: sectionRef },
   );

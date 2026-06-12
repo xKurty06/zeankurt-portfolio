@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useGSAP } from "@gsap/react";
 import { gsap, registerGsapPlugins } from "@/lib/gsap";
+import { monitorElementActivity } from "@/lib/animationActivity";
 
 function ParticleCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -17,16 +18,17 @@ function ParticleCanvas() {
     const ctx = context;
 
     const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const resizeCanvas = () => {
+    const measureCanvas = () => {
       const bounds = canvas.getBoundingClientRect();
       canvas.width = Math.max(1, Math.floor(bounds.width));
       canvas.height = Math.max(1, Math.floor(bounds.height));
       return bounds;
     };
 
-    let bounds = resizeCanvas();
+    let bounds = measureCanvas();
     let W = canvas.width;
     let H = canvas.height;
+    let isActive = true;
 
     const COUNT = prefersReduced ? 0 : Math.min(96, Math.floor((W * H) / 14500));
     const CONNECT = 190;
@@ -51,6 +53,11 @@ function ParticleCanvas() {
     }));
 
     function tick() {
+      if (!isActive) {
+        rafRef.current = 0;
+        return;
+      }
+
       ctx.clearRect(0, 0, W, H);
 
       const mx = mouseRef.current.x;
@@ -127,10 +134,25 @@ function ParticleCanvas() {
       rafRef.current = requestAnimationFrame(tick);
     }
 
+    const updateActivity = (nextActive: boolean) => {
+      isActive = nextActive;
+      if (isActive && rafRef.current === 0) {
+        tick();
+      }
+    };
+
+    const stopMonitoring = monitorElementActivity(canvas, updateActivity, {
+      threshold: 0.05,
+    });
+
     tick();
 
+    const syncBounds = () => {
+      bounds = canvas.getBoundingClientRect();
+    };
+
     const onResize = () => {
-      bounds = resizeCanvas();
+      bounds = measureCanvas();
       W = canvas.width;
       H = canvas.height;
     };
@@ -148,12 +170,15 @@ function ParticleCanvas() {
     };
 
     window.addEventListener("resize", onResize);
+    window.addEventListener("scroll", syncBounds, { passive: true });
     window.addEventListener("mousemove", onMouse, { passive: true });
     window.addEventListener("mouseout", onMouseLeave);
 
     return () => {
+      stopMonitoring();
       cancelAnimationFrame(rafRef.current);
       window.removeEventListener("resize", onResize);
+      window.removeEventListener("scroll", syncBounds);
       window.removeEventListener("mousemove", onMouse);
       window.removeEventListener("mouseout", onMouseLeave);
     };
@@ -234,10 +259,13 @@ export function AnimatedBackground() {
   useGSAP(
     () => {
       registerGsapPlugins();
+      const root = rootRef.current;
+      if (!root) return;
       const orbs = gsap.utils.toArray<HTMLElement>("[data-orb]");
       const parallaxLayers = gsap.utils.toArray<HTMLElement>("[data-parallax]");
-      const cursorGlowPrimary = rootRef.current?.querySelector<HTMLElement>("[data-cursor-glow='primary']");
-      const cursorGlowSecondary = rootRef.current?.querySelector<HTMLElement>("[data-cursor-glow='secondary']");
+      const cursorGlowPrimary = root.querySelector<HTMLElement>("[data-cursor-glow='primary']");
+      const cursorGlowSecondary = root.querySelector<HTMLElement>("[data-cursor-glow='secondary']");
+      let isActive = true;
 
       orbs.forEach((orb, i) => {
         gsap.to(orb, {
@@ -274,7 +302,9 @@ export function AnimatedBackground() {
       });
 
       const onMouseMove = (event: MouseEvent) => {
-        const bounds = rootRef.current?.getBoundingClientRect();
+        if (!isActive) return;
+
+        const bounds = root.getBoundingClientRect();
         if (!bounds) return;
 
         const px = event.clientX - bounds.left;
@@ -293,9 +323,21 @@ export function AnimatedBackground() {
         });
       };
 
+      const stopMonitoring = monitorElementActivity(root, (nextActive) => {
+        isActive = nextActive;
+        if (!isActive) {
+          gsap.killTweensOf([
+            cursorGlowPrimary,
+            cursorGlowSecondary,
+            ...parallaxLayers,
+          ]);
+        }
+      }, { threshold: 0.05 });
+
       window.addEventListener("mousemove", onMouseMove, { passive: true });
 
       return () => {
+        stopMonitoring();
         window.removeEventListener("mousemove", onMouseMove);
       };
     },

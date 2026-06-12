@@ -19,6 +19,11 @@ type CmsTable =
 
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
 
+function extensionFromFilename(value: string) {
+  const match = /\.[a-z0-9]+$/i.exec(value);
+  return match ? match[0].toLowerCase() : "";
+}
+
 function text(formData: FormData, key: string) {
   const value = formData.get(key);
   return typeof value === "string" ? value.trim() : "";
@@ -52,6 +57,26 @@ function slugify(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
+function requiredText(formData: FormData, key: string, label: string) {
+  const value = text(formData, key);
+  if (!value) throw new Error(`${label} is required.`);
+  return value;
+}
+
+async function ensureUniqueByKey(
+  table: CmsTable,
+  key: string,
+  nextValue: string,
+  currentValue?: string | null,
+) {
+  if (!nextValue || (currentValue && currentValue === nextValue)) return;
+
+  const admin = await requireAdmin();
+  const { data, error } = await admin.from(table).select(key).eq(key, nextValue).maybeSingle();
+  if (error) throw error;
+  if (data) throw new Error(`${table.replace(/_/g, " ")} already has a record using this ${key}.`);
+}
+
 function safeFilename(value: string) {
   return value
     .toLowerCase()
@@ -77,7 +102,8 @@ async function requireAdmin() {
 async function uploadAssetIfPresent(
   formData: FormData,
   field: string,
-  folder: string,
+  objectBasePath: string,
+  existingPath?: string | null,
 ) {
   const file = formData.get(field);
   if (!(file instanceof File) || file.size === 0) return null;
@@ -91,16 +117,25 @@ async function uploadAssetIfPresent(
   const admin = createSupabaseAdminClient();
   if (!admin) throw new Error("Supabase service role is not configured.");
 
-  const path = `${folder}/${Date.now()}-${safeFilename(file.name)}`;
+  const extension = extensionFromFilename(file.name);
+  const path = `${objectBasePath}${extension}`;
   const { error } = await admin.storage
     .from(SUPABASE_BUCKET)
     .upload(path, file, {
       cacheControl: "31536000",
-      upsert: false,
+      upsert: true,
       contentType: file.type,
     });
 
   if (error) throw error;
+
+  if (existingPath && existingPath.includes(`/storage/v1/object/public/${SUPABASE_BUCKET}/`)) {
+    const marker = `/storage/v1/object/public/${SUPABASE_BUCKET}/`;
+    const previousObjectPath = existingPath.split(marker)[1];
+    if (previousObjectPath && previousObjectPath !== path) {
+      await admin.storage.from(SUPABASE_BUCKET).remove([previousObjectPath]);
+    }
+  }
 
   const { data } = admin.storage.from(SUPABASE_BUCKET).getPublicUrl(path);
   return data.publicUrl;
@@ -127,6 +162,7 @@ export async function signInWithMagicLink(formData: FormData) {
   const email = text(formData, "email").toLowerCase();
   const supabase = await createSupabaseServerClient();
   if (!supabase) redirect("/admin/login?error=env");
+  if (!isAllowedAdminEmail(email)) redirect("/admin/login?error=forbidden");
 
   const origin = (await headers()).get("origin") ?? "";
   const { error } = await supabase.auth.signInWithOtp({
@@ -148,23 +184,35 @@ export async function signOut() {
 
 export async function saveProject(formData: FormData) {
   await requireAdmin();
-  const image = await uploadAssetIfPresent(formData, "image_file", "projects/thumbnails");
-  const slug = text(formData, "slug") || slugify(text(formData, "title"));
+  const title = requiredText(formData, "title", "Title");
+  const slug = text(formData, "slug") || slugify(title);
+  const currentSlug = optionalText(formData, "current_slug");
+  const year = requiredText(formData, "year", "Year");
+  const role = requiredText(formData, "role", "Role");
+  const description = requiredText(formData, "description", "Description");
+  await ensureUniqueByKey("projects", "slug", slug, currentSlug);
+  const existingImagePath = optionalText(formData, "existing_image_path");
+  const image = await uploadAssetIfPresent(
+    formData,
+    "image_file",
+    `projects/${slug}/preview`,
+    existingImagePath,
+  );
 
   await mutateAndRefresh(
     "projects",
     {
       slug,
-      title: text(formData, "title"),
-      description: text(formData, "description"),
+      title,
+      description,
       long_description: optionalText(formData, "long_description"),
       tags: tags(formData, "tags"),
       github_url: optionalText(formData, "github_url"),
       live_url: optionalText(formData, "live_url"),
-      image_path: image ?? optionalText(formData, "image_path"),
-      image_seed: optionalText(formData, "image_seed") ?? slug,
-      year: text(formData, "year"),
-      role: text(formData, "role"),
+      image_path: image ?? existingImagePath,
+      image_seed: slug,
+      year,
+      role,
       featured: bool(formData, "featured"),
       status: optionalText(formData, "status"),
       sort_order: numberOrZero(formData, "sort_order"),
@@ -175,16 +223,23 @@ export async function saveProject(formData: FormData) {
 }
 
 export async function saveExperience(formData: FormData) {
-  const slug = text(formData, "slug") || slugify(text(formData, "organization"));
+  const organization = requiredText(formData, "organization", "Organization");
+  const slug = text(formData, "slug") || slugify(organization);
+  const currentSlug = optionalText(formData, "current_slug");
+  const role = requiredText(formData, "role", "Role");
+  const period = requiredText(formData, "period", "Period");
+  const description = requiredText(formData, "description", "Description");
+  const type = requiredText(formData, "type", "Type");
+  await ensureUniqueByKey("experience_items", "slug", slug, currentSlug);
   await mutateAndRefresh(
     "experience_items",
     {
       slug,
-      organization: text(formData, "organization"),
-      role: text(formData, "role"),
-      period: text(formData, "period"),
-      description: text(formData, "description"),
-      type: text(formData, "type"),
+      organization,
+      role,
+      period,
+      description,
+      type,
       sort_order: numberOrZero(formData, "sort_order"),
       published: bool(formData, "published"),
     },
@@ -194,16 +249,24 @@ export async function saveExperience(formData: FormData) {
 
 export async function saveCertification(formData: FormData) {
   await requireAdmin();
-  const image = await uploadAssetIfPresent(formData, "image_file", "certifications");
-  const id = optionalText(formData, "id");
+  const name = requiredText(formData, "name", "Name");
+  const issuer = requiredText(formData, "issuer", "Issuer");
+  const id = optionalText(formData, "id") ?? crypto.randomUUID();
+  const existingImagePath = optionalText(formData, "existing_image_path");
+  const image = await uploadAssetIfPresent(
+    formData,
+    "image_file",
+    `certifications/${id}/asset`,
+    existingImagePath,
+  );
 
   await mutateAndRefresh("certifications", {
-    ...(id ? { id } : {}),
-    name: text(formData, "name"),
-    issuer: text(formData, "issuer"),
+    id,
+    name,
+    issuer,
     issued: optionalText(formData, "issued"),
     expires: optionalText(formData, "expires"),
-    image_path: image ?? optionalText(formData, "image_path"),
+    image_path: image ?? existingImagePath,
     sort_order: numberOrZero(formData, "sort_order"),
     published: bool(formData, "published"),
   });
@@ -211,22 +274,32 @@ export async function saveCertification(formData: FormData) {
 
 export async function saveEvent(formData: FormData) {
   await requireAdmin();
-  const image = await uploadAssetIfPresent(formData, "image_file", "events");
-  const slug = text(formData, "slug") || slugify(text(formData, "title"));
-  const eventDate = text(formData, "event_date");
+  const title = requiredText(formData, "title", "Title");
+  const slug = text(formData, "slug") || slugify(title);
+  const currentSlug = optionalText(formData, "current_slug");
+  const eventDate = requiredText(formData, "event_date", "Date");
+  const venue = requiredText(formData, "venue", "Venue");
+  await ensureUniqueByKey("events", "slug", slug, currentSlug);
+  const existingImagePath = optionalText(formData, "existing_image_path");
+  const image = await uploadAssetIfPresent(
+    formData,
+    "image_file",
+    `events/${slug}/image`,
+    existingImagePath,
+  );
 
   await mutateAndRefresh(
     "events",
     {
       slug,
-      title: text(formData, "title"),
+      title,
       event_date: eventDate,
       year: eventDate ? new Date(`${eventDate}T00:00:00`).getFullYear().toString() : null,
-      venue: text(formData, "venue"),
+      venue,
       organizers: optionalText(formData, "organizers"),
       role: optionalText(formData, "role"),
       category: optionalText(formData, "category"),
-      image_path: image ?? optionalText(formData, "image_path"),
+      image_path: image ?? existingImagePath,
       sort_order: numberOrZero(formData, "sort_order"),
       published: bool(formData, "published"),
     },
@@ -238,7 +311,7 @@ export async function saveSkillCategory(formData: FormData) {
   const id = optionalText(formData, "id");
   await mutateAndRefresh("skill_categories", {
     ...(id ? { id } : {}),
-    name: text(formData, "name"),
+    name: requiredText(formData, "name", "Name"),
     sort_order: numberOrZero(formData, "sort_order"),
     published: bool(formData, "published"),
   });
@@ -248,16 +321,16 @@ export async function saveSkill(formData: FormData) {
   const id = optionalText(formData, "id");
   await mutateAndRefresh("skills", {
     ...(id ? { id } : {}),
-    category_id: text(formData, "category_id"),
-    name: text(formData, "name"),
+    category_id: requiredText(formData, "category_id", "Category"),
+    name: requiredText(formData, "name", "Name"),
     sort_order: numberOrZero(formData, "sort_order"),
   });
 }
 
 export async function saveSiteContent(formData: FormData) {
   const admin = await requireAdmin();
-  const key = text(formData, "key");
-  const rawValue = text(formData, "value");
+  const key = requiredText(formData, "key", "Key");
+  const rawValue = requiredText(formData, "value", "Value");
   const value = JSON.parse(rawValue);
   const { error } = await admin.from("site_content").upsert({ key, value }, { onConflict: "key" });
   if (error) throw error;

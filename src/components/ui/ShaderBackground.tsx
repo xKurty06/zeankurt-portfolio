@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { monitorElementActivity } from "@/lib/animationActivity";
 
 const VERTEX_SHADER = `
   attribute vec4 aVertexPosition;
@@ -185,6 +186,7 @@ export default function ShaderBackground() {
 
     let animationFrame = 0;
     let startTime = performance.now();
+    let isActive = true;
 
     const resizeCanvas = () => {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -198,6 +200,11 @@ export default function ShaderBackground() {
     };
 
     const render = () => {
+      if (!isActive) {
+        animationFrame = 0;
+        return;
+      }
+
       const currentTime = (performance.now() - startTime) / 1000;
 
       gl.clearColor(0, 0, 0, 0);
@@ -215,13 +222,26 @@ export default function ShaderBackground() {
       animationFrame = window.requestAnimationFrame(render);
     };
 
+    const stopMonitoring = monitorElementActivity(canvas, (nextActive) => {
+      isActive = nextActive;
+      if (isActive) {
+        startTime = performance.now();
+        if (animationFrame === 0) {
+          animationFrame = window.requestAnimationFrame(render);
+        }
+      }
+    }, { threshold: 0.05 });
+
     resizeCanvas();
     window.addEventListener("resize", resizeCanvas);
     animationFrame = window.requestAnimationFrame(render);
 
     return () => {
+      stopMonitoring();
       window.removeEventListener("resize", resizeCanvas);
       window.cancelAnimationFrame(animationFrame);
+      gl.deleteBuffer(positionBuffer);
+      gl.deleteProgram(shaderProgram);
     };
   }, []);
 

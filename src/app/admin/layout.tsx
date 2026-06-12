@@ -1,4 +1,3 @@
-import { CustomCursor } from "@/components/animation/CustomCursor";
 import { ScrollProgressBar } from "@/components/animation/ScrollProgressBar";
 import { GsapInit } from "@/lib/gsap";
 // Loader intentionally omitted from admin layout to avoid blocking scroll

@@ -4,11 +4,6 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { useGSAP } from "@gsap/react";
 import { MapPin, Sparkles, Users, X } from "lucide-react";
-import {
-  experience as fallbackExperience,
-  certifications as fallbackCertifications,
-  eventHighlights as fallbackEventHighlights,
-} from "@/data/skills";
 import { RevealOnScroll } from "@/components/animation/RevealOnScroll";
 import { GlowCard } from "@/components/animation/GlowCard";
 import { Badge } from "@/components/ui/Badge";
@@ -19,15 +14,15 @@ import { gsap, registerGsapPlugins, ScrollTrigger } from "@/lib/gsap";
 import type { Certification, EventHighlight, ExperienceItem } from "@/types";
 
 interface ExperienceSectionProps {
-  experience?: ExperienceItem[];
-  certifications?: Certification[];
-  eventHighlights?: EventHighlight[];
+  experience: ExperienceItem[];
+  certifications: Certification[];
+  eventHighlights: EventHighlight[];
 }
 
 export function ExperienceSection({
-  experience = fallbackExperience,
-  certifications = fallbackCertifications,
-  eventHighlights = fallbackEventHighlights,
+  experience,
+  certifications,
+  eventHighlights,
 }: ExperienceSectionProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const [activeCert, setActiveCert] = useState<{ name: string; image: string } | null>(null);
@@ -80,6 +75,7 @@ export function ExperienceSection({
   useGSAP(
     () => {
       registerGsapPlugins();
+      const cleanups: Array<() => void> = [];
 
       const line = sectionRef.current?.querySelector<HTMLElement>("[data-timeline-line]");
       if (line) {
@@ -140,6 +136,10 @@ export function ExperienceSection({
 
         card.addEventListener("mouseenter", onEnter);
         card.addEventListener("mouseleave", onLeave);
+        cleanups.push(() => {
+          card.removeEventListener("mouseenter", onEnter);
+          card.removeEventListener("mouseleave", onLeave);
+        });
       });
 
       const certRows = gsap.utils.toArray<HTMLElement>("[data-cert-row]");
@@ -149,6 +149,10 @@ export function ExperienceSection({
 
         row.addEventListener("mouseenter", onEnter);
         row.addEventListener("mouseleave", onLeave);
+        cleanups.push(() => {
+          row.removeEventListener("mouseenter", onEnter);
+          row.removeEventListener("mouseleave", onLeave);
+        });
       });
 
       const traveller = sectionRef.current?.querySelector<HTMLElement>("[data-timeline-traveller]");
@@ -205,8 +209,13 @@ export function ExperienceSection({
           if (stopTimer) {
             window.clearTimeout(stopTimer);
           }
+          cleanups.forEach((cleanup) => cleanup());
         };
       }
+
+      return () => {
+        cleanups.forEach((cleanup) => cleanup());
+      };
     },
     { scope: sectionRef },
   );

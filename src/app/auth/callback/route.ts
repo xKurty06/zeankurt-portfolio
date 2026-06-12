@@ -1,10 +1,18 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
+function safeNextPath(next: string | null) {
+  if (!next) return "/admin";
+  if (!next.startsWith("/")) return "/admin";
+  if (next.startsWith("//")) return "/admin";
+  if (!next.startsWith("/admin")) return "/admin";
+  return next;
+}
+
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
-  const next = url.searchParams.get("next") ?? "/admin";
+  const next = safeNextPath(url.searchParams.get("next"));
 
   if (code) {
     const supabase = await createSupabaseServerClient();
@@ -13,10 +21,6 @@ export async function GET(request: NextRequest) {
     if (error) {
       const errorUrl = new URL(`/admin/login`, url.origin);
       errorUrl.searchParams.set("error", "callback");
-      errorUrl.searchParams.set(
-        "reason",
-        error.message ?? "Unable to complete sign-in.",
-      );
       return NextResponse.redirect(errorUrl);
     }
   }

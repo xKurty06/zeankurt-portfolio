@@ -107,67 +107,55 @@ export const certifications: Certification[] = [
     issuer: "TESDA",
     issued: "Oct 2024",
     expires: "Oct 2029",
-    image: "/images/certifications/tesda/computer-systems-servicing-nc2.png",
   },
   {
     name: "Installing and Configuring Computer Systems",
     issuer: "TESDA",
     issued: "Aug 2024",
-    image: "/images/certifications/tesda/installing-and-configuring-computer-systems.png",
   },
   {
     name: "Maintaining Computer Systems and Networks",
     issuer: "TESDA",
     issued: "Aug 2024",
-    image: "/images/certifications/tesda/maintaining-computer-systems-and-networks.png",
   },
   {
     name: "Setting Up Computer Networks",
     issuer: "TESDA",
     issued: "Aug 2024",
-    image: "/images/certifications/tesda/setting-up-computer-networks.png",
   },
   {
     name: "Setting Up Computer Servers",
     issuer: "TESDA",
     issued: "Aug 2024",
-    image: "/images/certifications/tesda/setting-up-computer-servers.png",
   },
   {
     name: "CSS Certificate 5",
     issuer: "TESDA",
     issued: "Aug 2024",
-    image: "/images/certifications/tesda/css-certificate-5.png",
   },
   {
     name: "GitHub Certificate",
     issuer: "GitHub",
-    image: "/images/certifications/others/github-certificate.png",
   },
   {
     name: "Module 1 - Introduction to Intelligent Embedded Systems",
     issuer: "Course Certificate",
-    image: "/images/certifications/others/intelligent-embedded-systems-certificate.png",
   },
   {
     name: "OJT Certificate",
     issuer: "On-the-Job Training",
-    image: "/images/certifications/tesda/ojt-certificate.jpg",
   },
   {
     name: "Tech Nexus Certificate of Recognition",
     issuer: "Tech Nexus",
-    image: "/images/certifications/events/tech-nexus-certificate-of-recognition.png",
   },
   {
     name: "eGov Certificate",
     issuer: "eGov",
-    image: "/images/certifications/others/egov-certificate.png",
   },
   {
     name: "CSSO Blockchain Certificate",
     issuer: "CSSO",
-    image: "/images/certifications/events/csso-blockchain-certificate.png",
   },
 ];
 

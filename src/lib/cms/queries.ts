@@ -1,6 +1,5 @@
 import { unstable_cache } from "next/cache";
 import { createClient } from "@supabase/supabase-js";
-import { fallbackPortfolioContent } from "@/lib/cms/fallback";
 import {
   getSupabaseAnonKey,
   getSupabaseUrl,
@@ -36,7 +35,9 @@ function uniqueBy<T>(items: T[], getKey: (item: T) => string) {
 }
 
 async function fetchPortfolioContent(): Promise<PortfolioContent> {
-  if (!hasSupabasePublicEnv()) return fallbackPortfolioContent;
+  if (!hasSupabasePublicEnv()) {
+    throw new Error("Supabase public environment variables are required.");
+  }
 
   const supabase = createClient(getSupabaseUrl()!, getSupabaseAnonKey()!, {
     auth: {
@@ -84,24 +85,20 @@ async function fetchPortfolioContent(): Promise<PortfolioContent> {
       supabase.from("site_content").select("key,value"),
     ]);
 
-    if (
-      projectsResult.error ||
-      experienceResult.error ||
-      certificationsResult.error ||
-      eventsResult.error ||
-      skillCategoriesResult.error ||
-      siteContentResult.error
-    ) {
-      return fallbackPortfolioContent;
-    }
+    if (projectsResult.error) throw projectsResult.error;
+    if (experienceResult.error) throw experienceResult.error;
+    if (certificationsResult.error) throw certificationsResult.error;
+    if (eventsResult.error) throw eventsResult.error;
+    if (skillCategoriesResult.error) throw skillCategoriesResult.error;
+    if (siteContentResult.error) throw siteContentResult.error;
 
     const siteRows = (siteContentResult.data ?? []) as Array<{ key: string; value: unknown }>;
-    const siteConfig =
-      (siteRows.find((row) => row.key === "site_config")?.value as PortfolioContent["siteConfig"] | undefined) ??
-      fallbackPortfolioContent.siteConfig;
-    const aboutContent =
-      (siteRows.find((row) => row.key === "about_content")?.value as PortfolioContent["aboutContent"] | undefined) ??
-      fallbackPortfolioContent.aboutContent;
+    const siteConfig = siteRows.find((row) => row.key === "site_config")?.value as PortfolioContent["siteConfig"] | undefined;
+    const aboutContent = siteRows.find((row) => row.key === "about_content")?.value as PortfolioContent["aboutContent"] | undefined;
+
+    if (!siteConfig || !aboutContent) {
+      throw new Error("Required site content keys are missing from Supabase.");
+    }
 
     const projects = uniqueBy(
       ((projectsResult.data ?? []) as CmsProjectRow[]).map(mapProject),
@@ -133,8 +130,8 @@ async function fetchPortfolioContent(): Promise<PortfolioContent> {
       eventHighlights,
       skillCategories,
     };
-  } catch {
-    return fallbackPortfolioContent;
+  } catch (error) {
+    throw error;
   }
 }
 

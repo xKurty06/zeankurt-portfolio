@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "seed:supabase": "node scripts/seed-supabase.mjs"
+    "seed:supabase": "node scripts/seed-supabase.mjs",
+    "migrate:supabase-assets": "node scripts/migrate-assets-to-supabase.mjs",
+    "dedupe:certifications": "node scripts/dedupe-certifications.mjs"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",

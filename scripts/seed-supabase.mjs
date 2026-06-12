@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
 import { createRequire } from "node:module";
+import crypto from "node:crypto";
 import ts from "typescript";
 import { createClient } from "@supabase/supabase-js";
 
@@ -78,6 +79,21 @@ function requiredEnv(name) {
   return value;
 }
 
+function deterministicUuid(parts) {
+  const hex = crypto.createHash("sha256").update(parts.join("|")).digest("hex").slice(0, 32);
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
+}
+
+function isRemoteAssetPath(value) {
+  return typeof value === "string" && /^https?:\/\//i.test(value);
+}
+
+function pickSeedImagePath(source, existing) {
+  if (isRemoteAssetPath(existing)) return existing;
+  if (isRemoteAssetPath(source)) return source;
+  return null;
+}
+
 const supabaseUrl = requiredEnv("NEXT_PUBLIC_SUPABASE_URL");
 const serviceKey =
   process.env.SUPABASE_SERVICE_ROLE_KEY ||
@@ -95,6 +111,27 @@ const {
   skillCategories,
 } = loadTsModule("src/data/skills.ts");
 const { siteConfig, aboutContent } = loadTsModule("src/data/site.ts");
+
+const [
+  existingProjectsResult,
+  existingCertificationsResult,
+] = await Promise.all([
+  admin.from("projects").select("slug,image_path"),
+  admin.from("certifications").select("id,name,issuer,issued,expires,image_path"),
+]);
+
+if (existingProjectsResult.error) throw existingProjectsResult.error;
+if (existingCertificationsResult.error) throw existingCertificationsResult.error;
+
+const existingProjectImages = new Map(
+  (existingProjectsResult.data ?? []).map((row) => [row.slug, row.image_path]),
+);
+const existingCertificationImages = new Map(
+  (existingCertificationsResult.data ?? []).map((row) => [
+    deterministicUuid([row.name, row.issuer, row.issued ?? "", row.expires ?? ""]),
+    row.image_path,
+  ]),
+);
 
 async function upsert(table, rows, onConflict) {
   if (!rows.length) return [];
@@ -125,7 +162,7 @@ await upsert(
     tags: project.tags,
     github_url: project.githubUrl ?? null,
     live_url: project.liveUrl ?? null,
-    image_path: project.image ?? null,
+    image_path: pickSeedImagePath(project.image, existingProjectImages.get(project.slug)),
     image_seed: project.imageSeed ?? project.slug,
     year: project.year,
     role: project.role,
@@ -154,15 +191,19 @@ await upsert(
 
 await upsert(
   "certifications",
-  certifications.map((cert, index) => ({
+  certifications.map((cert, index) => {
+    const id = deterministicUuid([cert.name, cert.issuer, cert.issued ?? "", cert.expires ?? ""]);
+    return {
+    id,
     name: cert.name,
     issuer: cert.issuer,
     issued: cert.issued ?? null,
     expires: cert.expires ?? null,
-    image_path: cert.image ?? null,
+    image_path: pickSeedImagePath(cert.image, existingCertificationImages.get(id)),
     sort_order: index,
     published: true,
-  })),
+  }}),
+  "id",
 );
 
 await upsert(

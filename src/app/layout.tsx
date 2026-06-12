@@ -3,7 +3,6 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Syne } from "next/font/google";
 import { Footer } from "@/components/layout/Footer";
 import ConditionalHeader from "@/components/layout/ConditionalHeader";
-import { CustomCursor } from "@/components/animation/CustomCursor";
 import { ScrollProgressBar } from "@/components/animation/ScrollProgressBar";
 import { GsapInit } from "@/lib/gsap";
 import { LoaderWrapper } from "@/components/animation/LoaderWrapper";
@@ -47,8 +46,6 @@ export default function RootLayout({
           <GsapInit />
           {/* Page loader */}
           <LoaderWrapper />
-          {/* Global interactive overlays */}
-          <CustomCursor />
           <ScrollProgressBar />
           <ConditionalHeader />
           <main className="flex-1">{children}</main>

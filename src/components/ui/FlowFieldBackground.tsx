@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef } from "react";
 import { cn } from "@/lib/cn";
+import { monitorElementActivity } from "@/lib/animationActivity";
 
 interface FlowFieldBackgroundProps {
   className?: string;
@@ -34,6 +35,7 @@ export default function FlowFieldBackground({
     let particles: Particle[] = [];
     let animationFrameId = 0;
     let mouse = { x: -1000, y: -1000 };
+    let isActive = true;
 
     class Particle {
       x: number;
@@ -118,6 +120,11 @@ export default function FlowFieldBackground({
     };
 
     const animate = () => {
+      if (!isActive) {
+        animationFrameId = 0;
+        return;
+      }
+
       ctx.fillStyle = `rgba(3, 7, 18, ${trailOpacity})`;
       ctx.fillRect(0, 0, width, height);
 
@@ -145,6 +152,14 @@ export default function FlowFieldBackground({
     };
 
     init();
+
+    const stopMonitoring = monitorElementActivity(container, (nextActive) => {
+      isActive = nextActive;
+      if (isActive && animationFrameId === 0) {
+        animate();
+      }
+    }, { threshold: 0.05 });
+
     animate();
 
     window.addEventListener("resize", handleResize);
@@ -152,6 +167,7 @@ export default function FlowFieldBackground({
     container.addEventListener("mouseleave", handleMouseLeave);
 
     return () => {
+      stopMonitoring();
       window.removeEventListener("resize", handleResize);
       container.removeEventListener("mousemove", handleMouseMove);
       container.removeEventListener("mouseleave", handleMouseLeave);

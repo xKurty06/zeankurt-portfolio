@@ -22,6 +22,7 @@ export function PhotographyTeaser() {
       registerGsapPlugins();
 
       const photos = gsap.utils.toArray<HTMLElement>("[data-photo-card]");
+      const cleanups: Array<() => void> = [];
 
       photos.forEach((card, i) => {
         // Staggered reveal with vertical clip
@@ -73,7 +74,15 @@ export function PhotographyTeaser() {
 
         card.addEventListener("mouseenter", onEnter);
         card.addEventListener("mouseleave", onLeave);
+        cleanups.push(() => {
+          card.removeEventListener("mouseenter", onEnter);
+          card.removeEventListener("mouseleave", onLeave);
+        });
       });
+
+      return () => {
+        cleanups.forEach((cleanup) => cleanup());
+      };
     },
     { scope: sectionRef },
   );

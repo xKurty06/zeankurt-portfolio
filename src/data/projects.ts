@@ -1,7 +1,5 @@
 import type { Project } from "@/types";
 
-// Add project preview images under /public/images/projects/featured or /public/images/projects/thumbnails,
-// then set image to a public path like "/images/projects/featured/salikop.png".
 export const projects: Project[] = [
   {
     slug: "salikop",
@@ -12,7 +10,6 @@ export const projects: Project[] = [
       "Built to streamline how student organizations plan and run events at university scale. TypeScript-first architecture designed for maintainability and future CMS integration.",
     tags: ["TypeScript", "Next.js", "Event Management", "Campus"],
     githubUrl: "https://github.com/xKurty06/Centralized-Campus-Org-Event-Management",
-    image: "/images/projects/featured/salikop.png",
     imageSeed: "campus-events",
     year: "2026",
     role: "Lead Developer",
