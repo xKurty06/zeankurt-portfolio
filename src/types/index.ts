@@ -87,7 +87,6 @@ export interface PhotoAlbum {
   title: string;
   description: string;
   category: string;
-  coverSeed: string;
   coverImage?: string;
   photoCount: number;
 }

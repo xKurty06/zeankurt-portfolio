@@ -450,15 +450,15 @@ export default async function AdminPage() {
   if (skillsResult.error) throw skillsResult.error;
   if (siteContentResult.error) throw siteContentResult.error;
 
-  const creativeTablesMissing =
-    isMissingTableError(creativeCategoriesResult.error) ||
-    isMissingTableError(creativePhotosResult.error);
+  const creativeCategoriesMissing = isMissingTableError(creativeCategoriesResult.error);
+  const creativePhotosMissing = isMissingTableError(creativePhotosResult.error);
+  const creativeTablesMissing = creativeCategoriesMissing;
 
-  if (creativeCategoriesResult.error && !isMissingTableError(creativeCategoriesResult.error)) {
+  if (creativeCategoriesResult.error && !creativeCategoriesMissing) {
     throw creativeCategoriesResult.error;
   }
 
-  if (creativePhotosResult.error && !isMissingTableError(creativePhotosResult.error)) {
+  if (creativePhotosResult.error && !creativePhotosMissing) {
     throw creativePhotosResult.error;
   }
 
@@ -468,8 +468,8 @@ export default async function AdminPage() {
   const events = (eventsResult.data ?? []) as Row[];
   const skillCategories = (skillCategoriesResult.data ?? []) as Row[];
   const skills = (skillsResult.data ?? []) as Row[];
-  const creativeCategories = creativeTablesMissing ? [] : (creativeCategoriesResult.data ?? []) as Row[];
-  const creativePhotos = creativeTablesMissing ? [] : (creativePhotosResult.data ?? []) as Row[];
+  const creativeCategories = creativeCategoriesMissing ? [] : (creativeCategoriesResult.data ?? []) as Row[];
+  const creativePhotos = creativePhotosMissing ? [] : (creativePhotosResult.data ?? []) as Row[];
   const siteRows = (siteContentResult.data ?? []) as Row[];
   const creativeSidebarItems = creativeCategories.map((category) => {
     const slug = value(category, "slug");
@@ -1053,15 +1053,15 @@ export default async function AdminPage() {
                   <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div className="max-w-2xl">
                       <p className="text-sm font-semibold text-white">
-                        {creativeTablesMissing ? "Creative CMS tables are not available yet" : "No creative categories yet"}
+                        {creativeCategoriesMissing ? "Creative CMS tables are not available yet" : "No creative categories yet"}
                       </p>
                       <p className="mt-1 text-sm leading-relaxed text-[var(--foreground-muted)]">
-                        {creativeTablesMissing
-                          ? "Run the latest Supabase schema for creative categories and photos, then refresh this page to manage photography categories here."
+                        {creativeCategoriesMissing
+                          ? "Run the latest Supabase schema for creative categories, then refresh this page to manage photography categories here."
                           : "Create them one by one, or add the default set used across the portfolio: Portrait, Event, Street, Creative, and Astrophotography."}
                       </p>
                     </div>
-                    {!creativeTablesMissing ? (
+                    {!creativeCategoriesMissing ? (
                       <form action={seedDefaultCreativeCategories}>
                         <button
                           type="submit"
@@ -1072,6 +1072,12 @@ export default async function AdminPage() {
                       </form>
                     ) : null}
                   </div>
+                </div>
+              ) : null}
+
+              {creativePhotosMissing ? (
+                <div className="rounded-2xl border border-yellow-500/20 bg-yellow-500/5 px-5 py-4 text-sm text-yellow-100">
+                  The creative_photos table is not available in Supabase. Category management still works, but photo upload and listings require the full creative schema.
                 </div>
               ) : null}
 
@@ -1121,27 +1127,35 @@ export default async function AdminPage() {
                             <PublishControls row={category} />
                           </RowForm>
                         </AdminDialog>
-                        <AdminDialog title={`Upload photos to ${value(category, "name")}`} description="Upload a single image, multiple selected images, or choose a folder." triggerLabel="Upload Photos">
-                          <RowForm action={uploadCreativePhotos}>
-                            <input type="hidden" name="category_id" value={value(category, "id")} />
-                            <input type="hidden" name="category_slug" value={value(category, "slug")} />
-                            <UploadField label="Upload single or multiple images" name="image_files" accept="image/*" multiple />
-                            <UploadField label="Upload a folder of images" name="image_files" accept="image/*" multiple directory />
-                            <p className="text-xs leading-relaxed text-[var(--foreground-muted)]">
-                              Folder upload keeps all image files in this category. Each file becomes a photo record using the filename as the title.
-                            </p>
-                          </RowForm>
-                        </AdminDialog>
-                        <AdminDialog title={`Add one photo to ${value(category, "name")}`} description="Create a single editable photo record." triggerLabel="Add Photo">
-                          <RowForm action={saveCreativePhoto}>
-                            <input type="hidden" name="category_id" value={value(category, "id")} />
-                            <Field label="Title" name="title" required />
-                            <Field label="Aspect ratio" name="aspect_ratio" options={PHOTO_ASPECT_OPTIONS} />
-                            <UploadField label="Upload photo image" name="image_file" accept="image/*" />
-                            <AdminCheckbox name="featured" label="Featured" />
-                            <PublishControls />
-                          </RowForm>
-                        </AdminDialog>
+                        {!creativePhotosMissing ? (
+                          <>
+                            <AdminDialog title={`Upload photos to ${value(category, "name")}`} description="Upload a single image, multiple selected images, or choose a folder." triggerLabel="Upload Photos">
+                              <RowForm action={uploadCreativePhotos}>
+                                <input type="hidden" name="category_id" value={value(category, "id")} />
+                                <input type="hidden" name="category_slug" value={value(category, "slug")} />
+                                <UploadField label="Upload single or multiple images" name="image_files" accept="image/*" multiple />
+                                <UploadField label="Upload a folder of images" name="image_files" accept="image/*" multiple directory />
+                                <p className="text-xs leading-relaxed text-[var(--foreground-muted)]">
+                                  Folder upload keeps all image files in this category. Each file becomes a photo record using the filename as the title.
+                                </p>
+                              </RowForm>
+                            </AdminDialog>
+                            <AdminDialog title={`Add one photo to ${value(category, "name")}`} description="Create a single editable photo record." triggerLabel="Add Photo">
+                              <RowForm action={saveCreativePhoto}>
+                                <input type="hidden" name="category_id" value={value(category, "id")} />
+                                <Field label="Title" name="title" required />
+                                <Field label="Aspect ratio" name="aspect_ratio" options={PHOTO_ASPECT_OPTIONS} />
+                                <UploadField label="Upload photo image" name="image_file" accept="image/*" />
+                                <AdminCheckbox name="featured" label="Featured" />
+                                <PublishControls />
+                              </RowForm>
+                            </AdminDialog>
+                          </>
+                        ) : (
+                          <div className="rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-3 text-sm text-yellow-100">
+                            Photo uploads are unavailable because the creative_photos table is missing.
+                          </div>
+                        )}
                       </>
                     ),
                   };

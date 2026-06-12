@@ -5,21 +5,17 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import type { PhotoAlbum, PhotoItem } from "@/types";
-import { getPhotosByAlbum, getPhotoImageUrl } from "@/data/photography";
 import { GalleryGrid } from "@/components/photography/GalleryGrid";
 import { Lightbox } from "@/components/photography/Lightbox";
 import { Container } from "@/components/ui/Container";
 
 interface AlbumPageContentProps {
-  album: Pick<PhotoAlbum, "slug" | "title" | "description" | "category" | "coverImage" | "coverSeed">;
+  album: Pick<PhotoAlbum, "slug" | "title" | "description" | "category" | "coverImage">;
   photos?: PhotoItem[];
 }
 
 export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
-  const albumPhotos = useMemo(
-    () => photos ?? getPhotosByAlbum(album.slug),
-    [album.slug, photos],
-  );
+  const albumPhotos = useMemo(() => photos ?? [], [photos]);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   return (
@@ -56,14 +52,22 @@ export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
             </div>
 
             <div className="relative aspect-[16/10] overflow-hidden rounded-2xl border border-white/10">
-              <Image
-                src={album.coverImage ?? getPhotoImageUrl(album.coverSeed, 1200, 750)}
-                alt={album.title}
-                fill
-                className="object-cover"
-                sizes="(max-width: 1024px) 100vw, 40vw"
-                priority
-              />
+              {album.coverImage ? (
+                <Image
+                  src={album.coverImage}
+                  alt={album.title}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 1024px) 100vw, 40vw"
+                  priority
+                />
+              ) : (
+                <div className="flex h-full items-end bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))] p-6">
+                  <p className="text-sm uppercase tracking-[0.2em] text-white/45">
+                    No showcase image uploaded
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 

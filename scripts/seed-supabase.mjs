@@ -112,6 +112,34 @@ const {
 } = loadTsModule("src/data/skills.ts");
 const { siteConfig, aboutContent } = loadTsModule("src/data/site.ts");
 
+const defaultCreativeCategories = [
+  {
+    slug: "portraits",
+    name: "Portrait",
+    description: "Portrait sessions, editorials, and expression-led frames.",
+  },
+  {
+    slug: "events",
+    name: "Event",
+    description: "Community events, campus activations, and live coverage.",
+  },
+  {
+    slug: "street-photography",
+    name: "Street",
+    description: "Candid public-space moments, urban detail, and everyday rhythm.",
+  },
+  {
+    slug: "creative-shots",
+    name: "Creative",
+    description: "Experimental compositions, concepts, and stylized visual studies.",
+  },
+  {
+    slug: "astrophotography",
+    name: "Astrophotography",
+    description: "Night-sky studies, moon captures, and long-exposure celestial work.",
+  },
+];
+
 const [
   existingProjectsResult,
   existingCertificationsResult,
@@ -253,6 +281,16 @@ await upsert(
     { key: "about_content", value: aboutContent },
   ],
   "key",
+);
+
+await upsert(
+  "creative_categories",
+  defaultCreativeCategories.map((category, index) => ({
+    ...category,
+    sort_order: index,
+    published: true,
+  })),
+  "slug",
 );
 
 console.log("Seeded Supabase portfolio content.");

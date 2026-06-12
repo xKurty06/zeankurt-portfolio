@@ -103,7 +103,10 @@ async function fetchPortfolioContent(): Promise<PortfolioContent> {
     if (certificationsResult.error) throw certificationsResult.error;
     if (eventsResult.error) throw eventsResult.error;
     if (skillCategoriesResult.error) throw skillCategoriesResult.error;
-    if (creativeCategoriesResult.error && !isMissingTableError(creativeCategoriesResult.error)) {
+
+    const creativeCategoriesMissing = creativeCategoriesResult.error && isMissingTableError(creativeCategoriesResult.error);
+
+    if (creativeCategoriesResult.error && !creativeCategoriesMissing) {
       throw creativeCategoriesResult.error;
     }
     if (siteContentResult.error) throw siteContentResult.error;

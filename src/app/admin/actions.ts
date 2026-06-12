@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
+import sharp from "sharp";
 import {
   createSupabaseAdminClient,
   createSupabaseServerClient,
@@ -149,6 +150,51 @@ function titleFromFilename(value: string) {
     .trim();
 }
 
+async function optimizeImageUpload(file: File) {
+  const arrayBuffer = await file.arrayBuffer();
+  const input = Buffer.from(arrayBuffer);
+  const contentType = file.type || "application/octet-stream";
+
+  if (!contentType.startsWith("image/")) {
+    return { bytes: input, contentType };
+  }
+
+  const image = sharp(input).rotate();
+  const metadata = await image.metadata();
+  const resizeOptions = {
+    width: 2048,
+    height: 2048,
+    fit: "inside" as const,
+    withoutEnlargement: true,
+  };
+
+  switch (metadata.format) {
+    case "jpeg":
+    case "jpg": {
+      const bytes = await image.resize(resizeOptions).jpeg({ quality: 82, mozjpeg: true }).toBuffer();
+      return { bytes, contentType: "image/jpeg" };
+    }
+    case "png": {
+      const bytes = await image
+        .resize(resizeOptions)
+        .png({ compressionLevel: 8, adaptiveFiltering: true, effort: 6 })
+        .toBuffer();
+      return { bytes, contentType: "image/png" };
+    }
+    case "webp": {
+      const bytes = await image.resize(resizeOptions).webp({ quality: 80 }).toBuffer();
+      return { bytes, contentType: "image/webp" };
+    }
+    case "avif": {
+      const bytes = await image.resize(resizeOptions).avif({ quality: 60 }).toBuffer();
+      return { bytes, contentType: "image/avif" };
+    }
+    default: {
+      return { bytes: input, contentType };
+    }
+  }
+}
+
 async function requireAdmin() {
   const supabase = await createSupabaseServerClient();
   const admin = createSupabaseAdminClient();
@@ -182,15 +228,16 @@ async function uploadAssetIfPresent(
   const admin = createSupabaseAdminClient();
   if (!admin) throw new Error("Supabase service role is not configured.");
 
+  const processed = file.type.startsWith("image/") ? await optimizeImageUpload(file) : { bytes: await file.arrayBuffer(), contentType: file.type };
   const extension = extensionFromFilename(file.name);
   const version = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
   const path = `${objectBasePath}-${safeFilename(version)}${extension}`;
   const { error } = await admin.storage
     .from(SUPABASE_BUCKET)
-    .upload(path, file, {
+    .upload(path, processed.bytes, {
       cacheControl: "31536000",
       upsert: false,
-      contentType: file.type,
+      contentType: processed.contentType,
     });
 
   if (error) throw error;
@@ -219,13 +266,14 @@ async function uploadImageFile(
   const admin = createSupabaseAdminClient();
   if (!admin) throw new Error("Supabase service role is not configured.");
 
+  const processed = await optimizeImageUpload(file);
   const extension = extensionFromFilename(file.name);
   const version = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
   const path = `${objectBasePath}-${safeFilename(version)}${extension}`;
-  const { error } = await admin.storage.from(SUPABASE_BUCKET).upload(path, file, {
+  const { error } = await admin.storage.from(SUPABASE_BUCKET).upload(path, processed.bytes, {
     cacheControl: "31536000",
     upsert: false,
-    contentType: file.type,
+    contentType: processed.contentType,
   });
 
   if (error) throw error;
@@ -649,22 +697,22 @@ export async function saveCreativeCategory(formData: FormData) {
 
 const DEFAULT_CREATIVE_CATEGORIES = [
   {
-    slug: "portrait",
+    slug: "portraits",
     name: "Portrait",
     description: "Portrait sessions, editorials, and expression-led frames.",
   },
   {
-    slug: "event",
+    slug: "events",
     name: "Event",
     description: "Community events, campus activations, and live coverage.",
   },
   {
-    slug: "street",
+    slug: "street-photography",
     name: "Street",
     description: "Candid public-space moments, urban detail, and everyday rhythm.",
   },
   {
-    slug: "creative",
+    slug: "creative-shots",
     name: "Creative",
     description: "Experimental compositions, concepts, and stylized visual studies.",
   },

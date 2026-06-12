@@ -6,6 +6,7 @@ import { PhotographyTeaser } from "@/components/sections/PhotographyTeaser";
 import { ProjectsSection } from "@/components/sections/ProjectsSection";
 import { SkillsSection } from "@/components/sections/SkillsSection";
 import { getPortfolioContent } from "@/lib/cms/queries";
+import { getCreativePhotoCount } from "@/lib/photography";
 
 export default async function HomePage() {
   const content = await getPortfolioContent();
@@ -18,6 +19,7 @@ export default async function HomePage() {
         certifications={content.certifications}
         eventHighlights={content.eventHighlights}
         skillCategories={content.skillCategories}
+        creativePhotoCount={getCreativePhotoCount(content.creativeCategories)}
       />
       <ProjectsSection projects={content.projects} />
       <ExperienceSection

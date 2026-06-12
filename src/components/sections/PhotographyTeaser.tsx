@@ -5,7 +5,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { useGSAP } from "@gsap/react";
-import { getPhotoImageUrl, photoAlbums } from "@/data/photography";
 import { siteConfig } from "@/data/site";
 import type { CreativeCategory } from "@/types";
 import { RevealOnScroll } from "@/components/animation/RevealOnScroll";
@@ -27,18 +26,11 @@ export function PhotographyTeaser({ creativeCategories = [] }: PhotographyTeaser
       id: category.id,
       title: category.name,
       description: category.description,
-      image: category.showcaseImage ?? category.photos[0]?.image ?? getPhotoImageUrl(category.slug, 900, 1100),
+      image: category.showcaseImage ?? category.photos[0]?.image,
       href: `/photography/${category.slug}`,
       meta: `${category.photos.length} ${category.photos.length === 1 ? "frame" : "frames"}`,
     }))
-    : photoAlbums.map((album) => ({
-      id: album.slug,
-      title: album.category,
-      description: album.description,
-      image: getPhotoImageUrl(album.coverSeed, 900, 1100),
-      href: `/photography/${album.slug}`,
-      meta: `${album.photoCount} frames`,
-    }));
+    : [];
   const uniqueCategoryCards = categoryCards.filter(
     (card, index, cards) => cards.findIndex((item) => item.title === card.title) === index,
   );
@@ -167,15 +159,19 @@ export function PhotographyTeaser({ creativeCategories = [] }: PhotographyTeaser
                 : "photo-card group relative block overflow-hidden rounded-2xl border border-[var(--border)] bg-black"}
             >
               <div className="relative aspect-[4/5] overflow-hidden">
-                <div data-photo-img className="absolute inset-0">
-                  <Image
-                    src={card.image}
-                    alt={`${card.title} category showcase`}
-                    fill
-                    className="object-cover"
-                    sizes={shouldMarquee ? "(max-width: 640px) 78vw, 320px" : "(max-width: 640px) 100vw, 25vw"}
-                  />
-                </div>
+                {card.image ? (
+                  <div data-photo-img className="absolute inset-0">
+                    <Image
+                      src={card.image}
+                      alt={`${card.title} category showcase`}
+                      fill
+                      className="object-cover"
+                      sizes={shouldMarquee ? "(max-width: 640px) 78vw, 320px" : "(max-width: 640px) 100vw, 25vw"}
+                    />
+                  </div>
+                ) : (
+                  <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,14,28,0.9),rgba(4,8,18,0.96))]" />
+                )}
                 {/* Gradient overlay */}
                 <div
                   data-photo-overlay
@@ -204,6 +200,11 @@ export function PhotographyTeaser({ creativeCategories = [] }: PhotographyTeaser
                   <p className="mt-1 text-lg font-semibold text-white">{card.title}</p>
                   {card.description ? (
                     <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-white/65">{card.description}</p>
+                  ) : null}
+                  {!card.image ? (
+                    <p className="mt-3 text-[11px] uppercase tracking-[0.18em] text-white/45">
+                      Upload showcase image in admin CMS
+                    </p>
                   ) : null}
                 </div>
               </div>

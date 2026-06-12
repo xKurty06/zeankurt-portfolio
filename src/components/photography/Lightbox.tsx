@@ -4,7 +4,6 @@ import Image from "next/image";
 import { useEffect } from "react";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import type { PhotoItem } from "@/types";
-import { getPhotoImageUrl } from "@/data/photography";
 
 interface LightboxProps {
   photos: PhotoItem[];
@@ -84,14 +83,22 @@ export function Lightbox({
 
       <div className="max-h-[85vh] w-full max-w-5xl">
         <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl">
-          <Image
-            src={photo.image ?? getPhotoImageUrl(photo.imageSeed, 1600, 1000)}
-            alt={photo.title}
-            fill
-            className="object-contain"
-            sizes="100vw"
-            priority
-          />
+          {photo.image ? (
+            <Image
+              src={photo.image}
+              alt={photo.title}
+              fill
+              className="object-contain"
+              sizes="100vw"
+              priority
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))]">
+              <p className="text-sm uppercase tracking-[0.22em] text-white/45">
+                No image uploaded
+              </p>
+            </div>
+          )}
         </div>
         <div className="mt-4 text-center">
           <p className="font-mono text-xs uppercase tracking-[0.2em] text-white/60">

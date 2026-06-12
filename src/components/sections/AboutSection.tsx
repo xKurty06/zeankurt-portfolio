@@ -2,7 +2,6 @@
 
 import { useRef } from "react";
 import { useGSAP } from "@gsap/react";
-import { photos } from "@/data/photography";
 import { RevealOnScroll } from "@/components/animation/RevealOnScroll";
 import { AnimatedCounter } from "@/components/animation/AnimatedCounter";
 import { GlowCard } from "@/components/animation/GlowCard";
@@ -28,6 +27,7 @@ interface AboutSectionProps {
   skillCategories: SkillCategory[];
   certifications: Certification[];
   eventHighlights: EventHighlight[];
+  creativePhotoCount: number;
 }
 
 export function AboutSection({
@@ -35,13 +35,14 @@ export function AboutSection({
   skillCategories,
   certifications,
   eventHighlights,
+  creativePhotoCount,
 }: AboutSectionProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const counterMap: Record<CounterLabel, CounterData> = {
     Focus: { to: skillCategories.length, suffix: "+ stacks" },
     Events: { to: eventHighlights.length, suffix: "+ events" },
     Education: { to: certifications.length, suffix: "+ certs" },
-    Creative: { to: photos.length, suffix: "+ shoots" },
+    Creative: { to: creativePhotoCount, suffix: "+ shoots" },
   };
 
   useGSAP(

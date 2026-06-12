@@ -2,25 +2,41 @@
 
 import { useMemo, useRef, useState } from "react";
 import { useGSAP } from "@gsap/react";
-import {
-  photoAlbums,
-  photoCategories,
-  photos,
-  type PhotoCategory,
-} from "@/data/photography";
 import { siteConfig } from "@/data/site";
 import { socialGroups } from "@/data/social";
 import { gsap, registerGsapPlugins } from "@/lib/gsap";
+import {
+  buildPhotoCategories,
+  buildPhotographyAlbums,
+  buildPhotographyPhotos,
+} from "@/lib/photography";
 import { AlbumCard } from "@/components/photography/AlbumCard";
 import { GalleryGrid } from "@/components/photography/GalleryGrid";
 import { Lightbox } from "@/components/photography/Lightbox";
 import { Container } from "@/components/ui/Container";
 import { BackgroundBoxes } from "@/components/ui/BackgroundBoxes";
 import { SocialLinks } from "@/components/ui/SocialLinks";
+import type { CreativeCategory } from "@/types";
 
-export function PhotographyPageContent() {
+interface PhotographyPageContentProps {
+  creativeCategories: CreativeCategory[];
+}
+
+export function PhotographyPageContent({ creativeCategories }: PhotographyPageContentProps) {
   const heroRef = useRef<HTMLDivElement>(null);
-  const [activeCategory, setActiveCategory] = useState<PhotoCategory>("All");
+  const photoAlbums = useMemo(
+    () => buildPhotographyAlbums(creativeCategories),
+    [creativeCategories],
+  );
+  const photoCategories = useMemo(
+    () => buildPhotoCategories(creativeCategories),
+    [creativeCategories],
+  );
+  const photos = useMemo(
+    () => buildPhotographyPhotos(creativeCategories),
+    [creativeCategories],
+  );
+  const [activeCategory, setActiveCategory] = useState<string>("All");
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   const filteredPhotos = useMemo(() => {
@@ -109,11 +125,17 @@ export function PhotographyPageContent() {
                 </h2>
               </div>
             </div>
-            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-              {photoAlbums.map((album) => (
-                <AlbumCard key={album.slug} album={album} />
-              ))}
-            </div>
+            {photoAlbums.length > 0 ? (
+              <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+                {photoAlbums.map((album) => (
+                  <AlbumCard key={album.slug} album={album} />
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 text-sm text-white/65">
+                No photography categories are published yet.
+              </div>
+            )}
           </section>
 
           <section className="mt-20">
@@ -126,20 +148,28 @@ export function PhotographyPageContent() {
                   All frames
                 </h2>
               </div>
-              <GalleryFilter
-                categories={photoCategories}
-                active={activeCategory}
-                onChange={setActiveCategory}
-              />
+              {photos.length > 0 ? (
+                <GalleryFilter
+                  categories={photoCategories}
+                  active={activeCategory}
+                  onChange={setActiveCategory}
+                />
+              ) : null}
             </div>
 
-            <GalleryGrid
-              photos={filteredPhotos}
-              onPhotoClick={(photo) => {
-                const index = filteredPhotos.findIndex((item) => item.id === photo.id);
-                setLightboxIndex(index);
-              }}
-            />
+            {filteredPhotos.length > 0 ? (
+              <GalleryGrid
+                photos={filteredPhotos}
+                onPhotoClick={(photo) => {
+                  const index = filteredPhotos.findIndex((item) => item.id === photo.id);
+                  setLightboxIndex(index);
+                }}
+              />
+            ) : (
+              <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 text-sm text-white/65">
+                No published photos available yet.
+              </div>
+            )}
           </section>
         </Container>
       </section>
@@ -159,9 +189,9 @@ function GalleryFilter({
   active,
   onChange,
 }: {
-  categories: readonly PhotoCategory[];
-  active: PhotoCategory;
-  onChange: (category: PhotoCategory) => void;
+  categories: readonly string[];
+  active: string;
+  onChange: (category: string) => void;
 }) {
   return (
     <div className="flex flex-wrap gap-2">
