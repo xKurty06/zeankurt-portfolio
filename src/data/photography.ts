@@ -2,10 +2,11 @@ import type { PhotoAlbum, PhotoItem } from "@/types";
 
 export const photoCategories = [
   "All",
-  "Events",
-  "Portraits",
+  "Event",
+  "Portrait",
   "Street",
   "Creative",
+  "Astrophotography",
 ] as const;
 
 export type PhotoCategory = (typeof photoCategories)[number];
@@ -16,7 +17,7 @@ export const photoAlbums: PhotoAlbum[] = [
     title: "Campus & Community Events",
     description:
       "Web3 meetups, hackathons, and campus tours across the Philippines — capturing the energy of builder communities.",
-    category: "Events",
+    category: "Event",
     coverSeed: "album-campus",
     photoCount: 12,
   },
@@ -25,7 +26,7 @@ export const photoAlbums: PhotoAlbum[] = [
     title: "Portraits",
     description:
       "Natural-light and editorial portraits — focused on expression, mood, and clean composition.",
-    category: "Portraits",
+    category: "Portrait",
     coverSeed: "album-portraits",
     photoCount: 8,
   },
@@ -43,7 +44,7 @@ export const photoAlbums: PhotoAlbum[] = [
     title: "Studio Nomads Selects",
     description:
       "Selected work produced with Studio Nomads — events, brand coverage, and collaborative shoots.",
-    category: "Events",
+    category: "Event",
     coverSeed: "album-nomads",
     photoCount: 14,
   },
@@ -54,6 +55,15 @@ export const photoAlbums: PhotoAlbum[] = [
       "Personal explorations in color, motion blur, and experimental framing under shot.by.zk.",
     category: "Creative",
     coverSeed: "album-creative",
+    photoCount: 6,
+  },
+  {
+    slug: "astro-nights",
+    title: "Astrophotography",
+    description:
+      "Night-sky frames, moon studies, and long-exposure experiments focused on stars, atmosphere, and low-light detail.",
+    category: "Astrophotography",
+    coverSeed: "album-astro",
     photoCount: 6,
   },
 ];

@@ -7,6 +7,7 @@ import {
 } from "@/lib/supabase/config";
 import {
   mapCertification,
+  mapCreativeCategory,
   mapEvent,
   mapExperience,
   mapProject,
@@ -14,6 +15,7 @@ import {
 } from "@/lib/cms/mappers";
 import type {
   CmsCertificationRow,
+  CmsCreativeCategoryRow,
   CmsEventRow,
   CmsExperienceRow,
   CmsProjectRow,
@@ -22,6 +24,10 @@ import type {
 } from "@/lib/cms/types";
 
 const REVALIDATE_SECONDS = 300;
+
+function isMissingTableError(error: { code?: string; message?: string } | null) {
+  return error?.code === "PGRST205" || /Could not find the table/i.test(error?.message ?? "");
+}
 
 function uniqueBy<T>(items: T[], getKey: (item: T) => string) {
   const seen = new Set<string>();
@@ -53,6 +59,7 @@ async function fetchPortfolioContent(): Promise<PortfolioContent> {
       certificationsResult,
       eventsResult,
       skillCategoriesResult,
+      creativeCategoriesResult,
       siteContentResult,
     ] = await Promise.all([
       supabase
@@ -83,6 +90,11 @@ async function fetchPortfolioContent(): Promise<PortfolioContent> {
         .select("*, skills(*)")
         .eq("published", true)
         .order("sort_order", { ascending: true }),
+      supabase
+        .from("creative_categories")
+        .select("*, creative_photos(*)")
+        .eq("published", true)
+        .order("sort_order", { ascending: true }),
       supabase.from("site_content").select("key,value"),
     ]);
 
@@ -91,6 +103,9 @@ async function fetchPortfolioContent(): Promise<PortfolioContent> {
     if (certificationsResult.error) throw certificationsResult.error;
     if (eventsResult.error) throw eventsResult.error;
     if (skillCategoriesResult.error) throw skillCategoriesResult.error;
+    if (creativeCategoriesResult.error && !isMissingTableError(creativeCategoriesResult.error)) {
+      throw creativeCategoriesResult.error;
+    }
     if (siteContentResult.error) throw siteContentResult.error;
 
     const siteRows = (siteContentResult.data ?? []) as Array<{ key: string; value: unknown }>;
@@ -121,6 +136,12 @@ async function fetchPortfolioContent(): Promise<PortfolioContent> {
       ((skillCategoriesResult.data ?? []) as CmsSkillCategoryRow[]).map(mapSkillCategory),
       (category) => category.name,
     );
+    const creativeCategories = creativeCategoriesResult.error
+      ? []
+      : uniqueBy(
+        ((creativeCategoriesResult.data ?? []) as CmsCreativeCategoryRow[]).map(mapCreativeCategory),
+        (category) => category.slug,
+      );
 
     return {
       siteConfig,
@@ -130,6 +151,7 @@ async function fetchPortfolioContent(): Promise<PortfolioContent> {
       certifications,
       eventHighlights,
       skillCategories,
+      creativeCategories,
     };
   } catch (error) {
     throw error;

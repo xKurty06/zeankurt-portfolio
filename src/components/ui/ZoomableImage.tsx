@@ -106,7 +106,7 @@ export function ZoomableImage({
       {visible && mounted ? createPortal(
         <div
           className={cn(
-            "fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-sm",
+            "fixed inset-0 z-[10000] flex items-center justify-center p-4 backdrop-blur-sm",
             open
               ? "motion-safe:animate-[zoomableBackdropIn_220ms_ease-out_forwards]"
               : "motion-safe:animate-[zoomableBackdropOut_220ms_ease-out_forwards]",

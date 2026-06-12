@@ -1,12 +1,13 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { useGSAP } from "@gsap/react";
-import { featuredPhotos, getPhotoImageUrl } from "@/data/photography";
+import { getPhotoImageUrl, photoAlbums } from "@/data/photography";
 import { siteConfig } from "@/data/site";
+import type { CreativeCategory } from "@/types";
 import { RevealOnScroll } from "@/components/animation/RevealOnScroll";
 import { Button } from "@/components/ui/Button";
 import { Container, Section } from "@/components/ui/Container";
@@ -14,8 +15,35 @@ import { DottedSurface } from "@/components/ui/DottedSurface";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { gsap, registerGsapPlugins } from "@/lib/gsap";
 
-export function PhotographyTeaser() {
+interface PhotographyTeaserProps {
+  creativeCategories?: CreativeCategory[];
+}
+
+export function PhotographyTeaser({ creativeCategories = [] }: PhotographyTeaserProps) {
   const sectionRef = useRef<HTMLElement>(null);
+  const [isMarqueePaused, setIsMarqueePaused] = useState(false);
+  const categoryCards = creativeCategories.length > 0
+    ? creativeCategories.map((category) => ({
+      id: category.id,
+      title: category.name,
+      description: category.description,
+      image: category.showcaseImage ?? category.photos[0]?.image ?? getPhotoImageUrl(category.slug, 900, 1100),
+      href: `/photography/${category.slug}`,
+      meta: `${category.photos.length} ${category.photos.length === 1 ? "frame" : "frames"}`,
+    }))
+    : photoAlbums.map((album) => ({
+      id: album.slug,
+      title: album.category,
+      description: album.description,
+      image: getPhotoImageUrl(album.coverSeed, 900, 1100),
+      href: `/photography/${album.slug}`,
+      meta: `${album.photoCount} frames`,
+    }));
+  const uniqueCategoryCards = categoryCards.filter(
+    (card, index, cards) => cards.findIndex((item) => item.title === card.title) === index,
+  );
+  const shouldMarquee = uniqueCategoryCards.length > 4;
+  const renderedCards = shouldMarquee ? [...uniqueCategoryCards, ...uniqueCategoryCards] : uniqueCategoryCards;
 
   useGSAP(
     () => {
@@ -117,23 +145,35 @@ export function PhotographyTeaser() {
           </RevealOnScroll>
         </div>
 
-        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {featuredPhotos.map((photo) => (
+        <div className="mt-10 overflow-hidden">
+          <div
+            onMouseEnter={() => setIsMarqueePaused(true)}
+            onMouseLeave={() => setIsMarqueePaused(false)}
+            className={
+              shouldMarquee
+                ? "photo-category-marquee flex w-max gap-4"
+                : "grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+            }
+            style={shouldMarquee ? { animationPlayState: isMarqueePaused ? "paused" : "running" } : undefined}
+          >
+          {renderedCards.map((card, index) => (
             <Link
-              key={photo.id}
-              href="/photography"
+              key={`${card.id}-${index}`}
+              href={card.href}
               data-photo-card
               data-interactive
-              className="photo-card group relative block overflow-hidden rounded-2xl border border-[var(--border)] bg-black"
+              className={shouldMarquee
+                ? "photo-card group relative block w-[78vw] shrink-0 overflow-hidden rounded-2xl border border-[var(--border)] bg-black sm:w-72 lg:w-80"
+                : "photo-card group relative block overflow-hidden rounded-2xl border border-[var(--border)] bg-black"}
             >
               <div className="relative aspect-[4/5] overflow-hidden">
                 <div data-photo-img className="absolute inset-0">
                   <Image
-                    src={getPhotoImageUrl(photo.imageSeed, 800, 1000)}
-                    alt={photo.title}
+                    src={card.image}
+                    alt={`${card.title} category showcase`}
                     fill
                     className="object-cover"
-                    sizes="(max-width: 640px) 100vw, 25vw"
+                    sizes={shouldMarquee ? "(max-width: 640px) 78vw, 320px" : "(max-width: 640px) 100vw, 25vw"}
                   />
                 </div>
                 {/* Gradient overlay */}
@@ -159,14 +199,41 @@ export function PhotographyTeaser() {
                   style={{ opacity: 0.85, transform: "translateY(6px)" }}
                 >
                   <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--blue-300)]">
-                    {photo.category}
+                    {card.meta}
                   </p>
-                  <p className="mt-1 text-sm font-medium text-white">{photo.title}</p>
+                  <p className="mt-1 text-lg font-semibold text-white">{card.title}</p>
+                  {card.description ? (
+                    <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-white/65">{card.description}</p>
+                  ) : null}
                 </div>
               </div>
             </Link>
           ))}
+          </div>
         </div>
+
+        <style jsx>{`
+          .photo-category-marquee {
+            animation: photo-category-marquee 34s linear infinite;
+          }
+
+          @keyframes photo-category-marquee {
+            from {
+              transform: translateX(0);
+            }
+            to {
+              transform: translateX(-50%);
+            }
+          }
+
+          @media (prefers-reduced-motion: reduce) {
+            .photo-category-marquee {
+              animation: none;
+              overflow-x: auto;
+              max-width: 100%;
+            }
+          }
+        `}</style>
 
         <RevealOnScroll delay={0.12}>
           <p className="mt-6 text-sm text-[var(--foreground-muted)]">

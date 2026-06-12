@@ -11,7 +11,9 @@ type SortableTable =
   | "experience_items"
   | "certifications"
   | "events"
-  | "skill_categories";
+  | "skill_categories"
+  | "creative_categories"
+  | "creative_photos";
 
 type SortDirection = "asc" | "desc";
 type SortField = "custom" | "name" | "date" | "year" | "issuer" | "venue" | "featured";
@@ -24,6 +26,7 @@ interface SortOption {
 
 interface SortableItem {
   id: string;
+  anchorId?: string;
   title: string;
   subtitle?: string;
   meta?: string;
@@ -288,6 +291,7 @@ export function AdminSortableList({
           return (
           <div
             key={item.id}
+            id={item.anchorId}
             draggable
             onDragStart={() => setDraggedId(item.id)}
             onDragEnd={() => {

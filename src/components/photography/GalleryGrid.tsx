@@ -57,7 +57,7 @@ export function GalleryGrid({ photos, onPhotoClick }: GalleryGridProps) {
             )}
           >
             <Image
-              src={getPhotoImageUrl(
+              src={photo.image ?? getPhotoImageUrl(
                 photo.imageSeed,
                 photo.aspectRatio === "portrait" ? 800 : 1200,
                 photo.aspectRatio === "portrait" ? 1000 : 800,

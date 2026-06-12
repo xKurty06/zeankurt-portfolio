@@ -85,7 +85,7 @@ export function Lightbox({
       <div className="max-h-[85vh] w-full max-w-5xl">
         <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl">
           <Image
-            src={getPhotoImageUrl(photo.imageSeed, 1600, 1000)}
+            src={photo.image ?? getPhotoImageUrl(photo.imageSeed, 1600, 1000)}
             alt={photo.title}
             fill
             className="object-contain"

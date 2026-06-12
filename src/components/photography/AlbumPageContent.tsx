@@ -4,18 +4,22 @@ import { useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import type { PhotoAlbum } from "@/types";
+import type { PhotoAlbum, PhotoItem } from "@/types";
 import { getPhotosByAlbum, getPhotoImageUrl } from "@/data/photography";
 import { GalleryGrid } from "@/components/photography/GalleryGrid";
 import { Lightbox } from "@/components/photography/Lightbox";
 import { Container } from "@/components/ui/Container";
 
 interface AlbumPageContentProps {
-  album: PhotoAlbum;
+  album: Pick<PhotoAlbum, "slug" | "title" | "description" | "category" | "coverImage" | "coverSeed">;
+  photos?: PhotoItem[];
 }
 
-export function AlbumPageContent({ album }: AlbumPageContentProps) {
-  const albumPhotos = useMemo(() => getPhotosByAlbum(album.slug), [album.slug]);
+export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
+  const albumPhotos = useMemo(
+    () => photos ?? getPhotosByAlbum(album.slug),
+    [album.slug, photos],
+  );
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   return (
@@ -53,7 +57,7 @@ export function AlbumPageContent({ album }: AlbumPageContentProps) {
 
             <div className="relative aspect-[16/10] overflow-hidden rounded-2xl border border-white/10">
               <Image
-                src={getPhotoImageUrl(album.coverSeed, 1200, 750)}
+                src={album.coverImage ?? getPhotoImageUrl(album.coverSeed, 1200, 750)}
                 alt={album.title}
                 fill
                 className="object-cover"

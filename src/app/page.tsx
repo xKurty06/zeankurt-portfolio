@@ -26,7 +26,7 @@ export default async function HomePage() {
         experience={content.experience}
       />
       <SkillsSection skillCategories={content.skillCategories} />
-      <PhotographyTeaser />
+      <PhotographyTeaser creativeCategories={content.creativeCategories} />
       <ContactSection siteConfig={content.siteConfig} />
     </>
   );

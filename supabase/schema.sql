@@ -92,12 +92,39 @@ create table if not exists public.site_content (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.creative_categories (
+  id uuid primary key default gen_random_uuid(),
+  slug text not null unique,
+  name text not null,
+  description text,
+  showcase_image_path text,
+  sort_order integer not null default 0,
+  published boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.creative_photos (
+  id uuid primary key default gen_random_uuid(),
+  category_id uuid not null references public.creative_categories(id) on delete cascade,
+  title text not null,
+  image_path text not null,
+  aspect_ratio text not null default 'landscape' check (aspect_ratio in ('portrait', 'landscape', 'square')),
+  featured boolean not null default false,
+  sort_order integer not null default 0,
+  published boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create index if not exists projects_public_idx on public.projects (published, featured desc, sort_order, year desc);
 create index if not exists experience_public_idx on public.experience_items (published, sort_order);
 create index if not exists certifications_public_idx on public.certifications (published, sort_order);
 create index if not exists events_public_idx on public.events (published, event_date desc);
 create index if not exists skill_categories_public_idx on public.skill_categories (published, sort_order);
 create index if not exists skills_category_sort_idx on public.skills (category_id, sort_order);
+create index if not exists creative_categories_public_idx on public.creative_categories (published, sort_order);
+create index if not exists creative_photos_category_sort_idx on public.creative_photos (category_id, published, sort_order);
 
 create or replace function public.set_updated_at()
 returns trigger
@@ -144,6 +171,16 @@ create trigger site_content_updated_at
 before update on public.site_content
 for each row execute function public.set_updated_at();
 
+drop trigger if exists creative_categories_updated_at on public.creative_categories;
+create trigger creative_categories_updated_at
+before update on public.creative_categories
+for each row execute function public.set_updated_at();
+
+drop trigger if exists creative_photos_updated_at on public.creative_photos;
+create trigger creative_photos_updated_at
+before update on public.creative_photos
+for each row execute function public.set_updated_at();
+
 alter table public.admin_users enable row level security;
 alter table public.projects enable row level security;
 alter table public.experience_items enable row level security;
@@ -152,6 +189,8 @@ alter table public.events enable row level security;
 alter table public.skill_categories enable row level security;
 alter table public.skills enable row level security;
 alter table public.site_content enable row level security;
+alter table public.creative_categories enable row level security;
+alter table public.creative_photos enable row level security;
 
 create policy "Public can read published projects"
 on public.projects for select
@@ -193,6 +232,23 @@ create policy "Public can read site content"
 on public.site_content for select
 to anon, authenticated
 using (true);
+
+create policy "Public can read published creative categories"
+on public.creative_categories for select
+to anon, authenticated
+using (published = true);
+
+create policy "Public can read published creative photos"
+on public.creative_photos for select
+to anon, authenticated
+using (
+  published = true
+  and exists (
+    select 1 from public.creative_categories
+    where creative_categories.id = creative_photos.category_id
+    and creative_categories.published = true
+  )
+);
 
 create policy "Admins can read admin users"
 on public.admin_users for select
@@ -253,6 +309,18 @@ with check (exists (select 1 from public.admin_users where email = ((select auth
 
 create policy "Admins can write site content"
 on public.site_content for all
+to authenticated
+using (exists (select 1 from public.admin_users where email = ((select auth.jwt()) ->> 'email')))
+with check (exists (select 1 from public.admin_users where email = ((select auth.jwt()) ->> 'email')));
+
+create policy "Admins can write creative categories"
+on public.creative_categories for all
+to authenticated
+using (exists (select 1 from public.admin_users where email = ((select auth.jwt()) ->> 'email')))
+with check (exists (select 1 from public.admin_users where email = ((select auth.jwt()) ->> 'email')));
+
+create policy "Admins can write creative photos"
+on public.creative_photos for all
 to authenticated
 using (exists (select 1 from public.admin_users where email = ((select auth.jwt()) ->> 'email')))
 with check (exists (select 1 from public.admin_users where email = ((select auth.jwt()) ->> 'email')));

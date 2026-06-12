@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import {
   deleteRecord,
   importProjectsCsv,
+  saveCreativeCategory,
+  saveCreativePhoto,
   saveCertification,
   saveEvent,
   saveExperience,
@@ -9,7 +11,9 @@ import {
   saveSiteContent,
   saveSkill,
   saveSkillCategory,
+  seedDefaultCreativeCategories,
   signOut,
+  uploadCreativePhotos,
 } from "@/app/admin/actions";
 import { AdminDialog } from "@/app/admin/AdminDialog";
 import { AdminSelect } from "@/app/admin/AdminSelect";
@@ -17,9 +21,13 @@ import { AdminSortableList } from "@/app/admin/AdminSortableList";
 import { ZoomableImage } from "@/components/ui/ZoomableImage";
 import { createSupabaseAdminClient, createSupabaseServerClient } from "@/lib/supabase/server";
 import { isAllowedAdminEmail } from "@/lib/supabase/config";
-import { Check } from "lucide-react";
+import { Camera, Check } from "lucide-react";
 
 type Row = Record<string, unknown>;
+
+function isMissingTableError(error: { code?: string; message?: string } | null) {
+  return error?.code === "PGRST205" || /Could not find the table/i.test(error?.message ?? "");
+}
 
 function parseExperiencePeriodSortValue(period: string) {
   const raw = period.trim();
@@ -204,6 +212,12 @@ const EVENT_CATEGORY_OPTIONS = [
   { label: "Workshop", value: "workshop" },
 ];
 
+const PHOTO_ASPECT_OPTIONS = [
+  { label: "Landscape", value: "landscape" },
+  { label: "Portrait", value: "portrait" },
+  { label: "Square", value: "square" },
+];
+
 function PublishControls({ row }: { row?: Row }) {
   return (
     <>
@@ -275,14 +289,41 @@ function ExistingImageField({ row }: { row?: Row }) {
   );
 }
 
+function ExistingShowcaseImageField({ row }: { row?: Row }) {
+  const current = value(row, "showcase_image_path");
+  return (
+    <>
+      <input type="hidden" name="existing_image_path" value={current} />
+      <AssetPreview src={current} alt={`${value(row, "name") || "Showcase"} preview`} compact />
+      {current ? (
+        <p className="text-xs text-[var(--foreground-muted)]">
+          Current category showcase:{" "}
+          <a
+            href={current}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[var(--blue-300)] transition hover:text-white"
+          >
+            View current file
+          </a>
+        </p>
+      ) : null}
+    </>
+  );
+}
+
 function UploadField({
   label,
   name,
   accept,
+  multiple = false,
+  directory = false,
 }: {
   label: string;
   name: string;
   accept: string;
+  multiple?: boolean;
+  directory?: boolean;
 }) {
   return (
     <label className="rounded-2xl border border-dashed border-[var(--border)] bg-white/[0.015] px-4 py-3 text-xs font-medium text-[var(--foreground-muted)]">
@@ -291,6 +332,8 @@ function UploadField({
         name={name}
         type="file"
         accept={accept}
+        multiple={multiple}
+        {...(directory ? { webkitdirectory: "" } : {})}
         className="mt-2 text-sm text-[var(--foreground-muted)] file:mr-3 file:rounded-full file:border-0 file:bg-[var(--accent-soft)] file:px-3 file:py-2 file:font-semibold file:text-[var(--blue-200)]"
       />
     </label>
@@ -384,6 +427,8 @@ export default async function AdminPage() {
     eventsResult,
     skillCategoriesResult,
     skillsResult,
+    creativeCategoriesResult,
+    creativePhotosResult,
     siteContentResult,
   ] = await Promise.all([
     admin.from("projects").select("*").order("sort_order", { ascending: true }).order("year", { ascending: false }),
@@ -392,8 +437,30 @@ export default async function AdminPage() {
     admin.from("events").select("*").order("sort_order", { ascending: true }).order("event_date", { ascending: false }),
     admin.from("skill_categories").select("*").order("sort_order", { ascending: true }),
     admin.from("skills").select("*").order("sort_order", { ascending: true }),
+    admin.from("creative_categories").select("*").order("sort_order", { ascending: true }),
+    admin.from("creative_photos").select("*").order("sort_order", { ascending: true }),
     admin.from("site_content").select("*").order("key", { ascending: true }),
   ]);
+
+  if (projectsResult.error) throw projectsResult.error;
+  if (experienceResult.error) throw experienceResult.error;
+  if (certificationsResult.error) throw certificationsResult.error;
+  if (eventsResult.error) throw eventsResult.error;
+  if (skillCategoriesResult.error) throw skillCategoriesResult.error;
+  if (skillsResult.error) throw skillsResult.error;
+  if (siteContentResult.error) throw siteContentResult.error;
+
+  const creativeTablesMissing =
+    isMissingTableError(creativeCategoriesResult.error) ||
+    isMissingTableError(creativePhotosResult.error);
+
+  if (creativeCategoriesResult.error && !isMissingTableError(creativeCategoriesResult.error)) {
+    throw creativeCategoriesResult.error;
+  }
+
+  if (creativePhotosResult.error && !isMissingTableError(creativePhotosResult.error)) {
+    throw creativePhotosResult.error;
+  }
 
   const projects = (projectsResult.data ?? []) as Row[];
   const experiences = (experienceResult.data ?? []) as Row[];
@@ -401,9 +468,24 @@ export default async function AdminPage() {
   const events = (eventsResult.data ?? []) as Row[];
   const skillCategories = (skillCategoriesResult.data ?? []) as Row[];
   const skills = (skillsResult.data ?? []) as Row[];
+  const creativeCategories = creativeTablesMissing ? [] : (creativeCategoriesResult.data ?? []) as Row[];
+  const creativePhotos = creativeTablesMissing ? [] : (creativePhotosResult.data ?? []) as Row[];
   const siteRows = (siteContentResult.data ?? []) as Row[];
+  const creativeSidebarItems = creativeCategories.map((category) => {
+    const slug = value(category, "slug");
+    const name = value(category, "name");
+    const photoCount = creativePhotos.filter((photo) => value(photo, "category_id") === value(category, "id")).length;
 
-  const navItems = [
+    return {
+      id: value(category, "id"),
+      slug,
+      name,
+      photoCount,
+      anchorId: `creative-category-${slug}`,
+    };
+  });
+
+  const navItems: Array<{ id: string; label: string; count: number; icon: React.ReactNode }> = [
     { id: "projects", label: "Projects", count: projects.length, icon: "⬡" },
     { id: "experience", label: "Experience", count: experiences.length, icon: "◈" },
     { id: "certifications", label: "Certifications", count: certifications.length, icon: "◎" },
@@ -411,6 +493,12 @@ export default async function AdminPage() {
     { id: "skills", label: "Skills", count: skills.length, icon: "◆" },
     { id: "site-content", label: "Site Copy", count: siteRows.length, icon: "◉" },
   ];
+  navItems.push({
+    id: "creative-portfolio",
+    label: "Creative CMS",
+    count: creativeCategories.length + creativePhotos.length,
+    icon: <Camera className="h-4 w-4" />,
+  });
 
   return (
     <div className="min-h-dvh bg-[var(--background)] text-white">
@@ -442,9 +530,9 @@ export default async function AdminPage() {
         <aside className="hidden w-52 shrink-0 lg:block">
           <nav className="sticky top-20 flex flex-col gap-1">
             <p className="mb-2 px-3 text-[10px] font-medium uppercase tracking-[0.15em] text-[var(--foreground-muted)]">
-              Sections
+              Dev Portfolio
             </p>
-            {navItems.map((item) => (
+            {navItems.filter((item) => item.id !== "creative-portfolio").map((item) => (
               <a
                 key={item.id}
                 href={`#${item.id}`}
@@ -460,12 +548,48 @@ export default async function AdminPage() {
               </a>
             ))}
 
+            <p className="mb-2 mt-5 px-3 text-[10px] font-medium uppercase tracking-[0.15em] text-[var(--foreground-muted)]">
+              Creative Portfolio
+            </p>
+            {navItems.filter((item) => item.id === "creative-portfolio").map((item) => (
+              <div key={item.id} className="space-y-1">
+                <a
+                  href={`#${item.id}`}
+                  className="group flex items-center justify-between rounded-xl px-3 py-2 text-sm text-[var(--foreground-muted)] transition hover:bg-white/[0.05] hover:text-white"
+                >
+                  <span className="flex items-center gap-2.5">
+                    <span className="text-base leading-none text-[var(--blue-300)] opacity-60 group-hover:opacity-100">
+                      {item.icon}
+                    </span>
+                    {item.label}
+                  </span>
+                  <span className="rounded-full bg-white/[0.07] px-1.5 py-0.5 text-[10px] tabular-nums">{item.count}</span>
+                </a>
+                {creativeSidebarItems.length > 0 ? (
+                  <div className="ml-6 flex flex-col gap-1 border-l border-[var(--border)] pl-3">
+                    {creativeSidebarItems.map((category) => (
+                      <a
+                        key={category.id}
+                        href={`#${category.anchorId}`}
+                        className="flex items-center justify-between gap-3 rounded-lg px-2 py-1.5 text-xs text-[var(--foreground-muted)] transition hover:bg-white/[0.04] hover:text-white"
+                      >
+                        <span className="truncate">{category.name}</span>
+                        <span className="shrink-0 text-[10px] tabular-nums text-[var(--blue-300)]">
+                          {category.photoCount}
+                        </span>
+                      </a>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ))}
+
             <div className="mt-6 rounded-2xl border border-[var(--border)] bg-white/[0.02] p-3">
               <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.15em] text-[var(--foreground-muted)]">
                 Total records
               </p>
               <p className="font-[family-name:var(--font-syne)] text-2xl font-semibold text-[var(--blue-300)]">
-                {projects.length + experiences.length + certifications.length + events.length + skills.length}
+                {projects.length + experiences.length + certifications.length + events.length + skills.length + creativeCategories.length + creativePhotos.length}
               </p>
             </div>
           </nav>
@@ -901,6 +1025,189 @@ export default async function AdminPage() {
                         />
                       ))}
                     </div>
+                  </div>
+                );
+              })}
+            </Section>
+
+            <Section
+              id="creative-portfolio"
+              title="Creative Portfolio"
+              count={creativeCategories.length + creativePhotos.length}
+              addDialog={
+                <AdminDialog title="Add Creative Category" description="Create a photography or creative category with an optional showcase image." triggerLabel="Add Category" triggerVariant="primary">
+                  <RowForm action={saveCreativeCategory}>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <Field label="Slug" name="slug" />
+                      <Field label="Name" name="name" required />
+                    </div>
+                    <Field label="Description" name="description" textarea />
+                    <UploadField label="Upload category showcase image" name="image_file" accept="image/*" />
+                    <PublishControls />
+                  </RowForm>
+                </AdminDialog>
+              }
+            >
+              {creativeCategories.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-[var(--border)] bg-white/[0.02] px-5 py-6">
+                  <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                    <div className="max-w-2xl">
+                      <p className="text-sm font-semibold text-white">
+                        {creativeTablesMissing ? "Creative CMS tables are not available yet" : "No creative categories yet"}
+                      </p>
+                      <p className="mt-1 text-sm leading-relaxed text-[var(--foreground-muted)]">
+                        {creativeTablesMissing
+                          ? "Run the latest Supabase schema for creative categories and photos, then refresh this page to manage photography categories here."
+                          : "Create them one by one, or add the default set used across the portfolio: Portrait, Event, Street, Creative, and Astrophotography."}
+                      </p>
+                    </div>
+                    {!creativeTablesMissing ? (
+                      <form action={seedDefaultCreativeCategories}>
+                        <button
+                          type="submit"
+                          className="rounded-full border border-[var(--border-strong)] px-4 py-2 text-sm font-medium text-white transition hover:border-[var(--blue-300)] hover:text-[var(--blue-200)]"
+                        >
+                          Add default categories
+                        </button>
+                      </form>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
+
+              <AdminSortableList
+                table="creative_categories"
+                sortOptions={[
+                  { label: "Custom", value: "custom" },
+                  { label: "Name", value: "name" },
+                ]}
+                items={creativeCategories.map((category) => {
+                  const categoryPhotos = creativePhotos.filter((photo) => value(photo, "category_id") === value(category, "id"));
+                  return {
+                    id: value(category, "id"),
+                    anchorId: `creative-category-${value(category, "slug")}`,
+                    title: value(category, "name"),
+                    subtitle: value(category, "slug"),
+                    meta: `${categoryPhotos.length} photos`,
+                    sortOrder: Number(value(category, "sort_order")) || 0,
+                    sortValues: {
+                      name: value(category, "name"),
+                    },
+                    actions: (
+                      <>
+                        <AdminDialog title={value(category, "name")} description="Creative category overview" triggerLabel="View">
+                          <ViewGrid>
+                            <AssetPreview src={value(category, "showcase_image_path")} alt={value(category, "name")} />
+                            {labelValue("Slug", value(category, "slug"))}
+                            {labelValue("Description", value(category, "description"))}
+                            {labelValue("Showcase", value(category, "showcase_image_path"))}
+                            {labelValue("Published", checked(category) ? "Yes" : "No")}
+                          </ViewGrid>
+                        </AdminDialog>
+                        <AdminDialog title={`Edit ${value(category, "name")}`} description="Update category and showcase image." triggerLabel="Edit">
+                          <RowForm action={saveCreativeCategory}>
+                            <input type="hidden" name="id" value={value(category, "id")} />
+                            <input type="hidden" name="current_slug" value={value(category, "slug")} />
+                            <div className="flex items-center justify-end gap-3">
+                              <DeleteButton table="creative_categories" id={value(category, "id")} />
+                            </div>
+                            <div className="grid gap-3 md:grid-cols-2">
+                              <Field label="Slug" name="slug" row={category} />
+                              <Field label="Name" name="name" row={category} required />
+                            </div>
+                            <Field label="Description" name="description" row={category} textarea />
+                            <ExistingShowcaseImageField row={category} />
+                            <UploadField label="Replace category showcase image" name="image_file" accept="image/*" />
+                            <PublishControls row={category} />
+                          </RowForm>
+                        </AdminDialog>
+                        <AdminDialog title={`Upload photos to ${value(category, "name")}`} description="Upload a single image, multiple selected images, or choose a folder." triggerLabel="Upload Photos">
+                          <RowForm action={uploadCreativePhotos}>
+                            <input type="hidden" name="category_id" value={value(category, "id")} />
+                            <input type="hidden" name="category_slug" value={value(category, "slug")} />
+                            <UploadField label="Upload single or multiple images" name="image_files" accept="image/*" multiple />
+                            <UploadField label="Upload a folder of images" name="image_files" accept="image/*" multiple directory />
+                            <p className="text-xs leading-relaxed text-[var(--foreground-muted)]">
+                              Folder upload keeps all image files in this category. Each file becomes a photo record using the filename as the title.
+                            </p>
+                          </RowForm>
+                        </AdminDialog>
+                        <AdminDialog title={`Add one photo to ${value(category, "name")}`} description="Create a single editable photo record." triggerLabel="Add Photo">
+                          <RowForm action={saveCreativePhoto}>
+                            <input type="hidden" name="category_id" value={value(category, "id")} />
+                            <Field label="Title" name="title" required />
+                            <Field label="Aspect ratio" name="aspect_ratio" options={PHOTO_ASPECT_OPTIONS} />
+                            <UploadField label="Upload photo image" name="image_file" accept="image/*" />
+                            <AdminCheckbox name="featured" label="Featured" />
+                            <PublishControls />
+                          </RowForm>
+                        </AdminDialog>
+                      </>
+                    ),
+                  };
+                })}
+              />
+
+              {creativeCategories.map((category) => {
+                const categoryPhotos = creativePhotos.filter((photo) => value(photo, "category_id") === value(category, "id"));
+                if (categoryPhotos.length === 0) return null;
+
+                return (
+                  <div key={`${value(category, "id")}-photos`} className="rounded-2xl border border-[var(--border)] bg-white/[0.02] p-4">
+                    <div className="mb-4 flex flex-col gap-1">
+                      <p className="text-sm font-semibold text-white">{value(category, "name")} photos</p>
+                      <p className="text-xs text-[var(--foreground-muted)]">{categoryPhotos.length} uploaded images</p>
+                    </div>
+                    <AdminSortableList
+                      table="creative_photos"
+                      sortOptions={[
+                        { label: "Custom", value: "custom" },
+                        { label: "Name", value: "name" },
+                        { label: "Featured", value: "featured" },
+                      ]}
+                      items={categoryPhotos.map((photo) => ({
+                        id: value(photo, "id"),
+                        title: value(photo, "title"),
+                        subtitle: value(category, "name"),
+                        meta: checked(photo) ? "Published" : "Draft",
+                        featured: Boolean(photo.featured),
+                        sortOrder: Number(value(photo, "sort_order")) || 0,
+                        sortValues: {
+                          name: value(photo, "title"),
+                          featured: Boolean(photo.featured),
+                        },
+                        actions: (
+                          <>
+                            <AdminDialog title={value(photo, "title")} description="Creative photo overview" triggerLabel="View">
+                              <ViewGrid>
+                                <AssetPreview src={value(photo, "image_path")} alt={value(photo, "title")} />
+                                {labelValue("Title", value(photo, "title"))}
+                                {labelValue("Category", value(category, "name"))}
+                                {labelValue("Aspect", value(photo, "aspect_ratio"))}
+                                {labelValue("Asset", value(photo, "image_path"))}
+                              </ViewGrid>
+                            </AdminDialog>
+                            <AdminDialog title={`Edit ${value(photo, "title")}`} description="Update photo details." triggerLabel="Edit">
+                              <RowForm action={saveCreativePhoto}>
+                                <input type="hidden" name="id" value={value(photo, "id")} />
+                                <input type="hidden" name="category_id" value={value(category, "id")} />
+                                <div className="flex items-center justify-end gap-3">
+                                  <DeleteButton table="creative_photos" id={value(photo, "id")} />
+                                </div>
+                                <div className="grid gap-3 md:grid-cols-2">
+                                  <Field label="Title" name="title" row={photo} required />
+                                  <Field label="Aspect ratio" name="aspect_ratio" row={photo} options={PHOTO_ASPECT_OPTIONS} />
+                                </div>
+                                <ExistingImageField row={photo} />
+                                <UploadField label="Replace photo image" name="image_file" accept="image/*" />
+                                <AdminCheckbox name="featured" label="Featured" defaultChecked={Boolean(photo.featured)} />
+                                <PublishControls row={photo} />
+                              </RowForm>
+                            </AdminDialog>
+                          </>
+                        ),
+                      }))}
+                    />
                   </div>
                 );
               })}

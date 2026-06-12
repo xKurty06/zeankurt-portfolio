@@ -77,6 +77,7 @@ export interface PhotoItem {
   category: string;
   albumSlug: string;
   imageSeed: string;
+  image?: string;
   aspectRatio: "portrait" | "landscape" | "square";
   featured?: boolean;
 }
@@ -87,5 +88,16 @@ export interface PhotoAlbum {
   description: string;
   category: string;
   coverSeed: string;
+  coverImage?: string;
   photoCount: number;
+}
+
+export interface CreativeCategory {
+  id: string;
+  slug: string;
+  name: string;
+  description?: string;
+  showcaseImage?: string;
+  sortOrder: number;
+  photos: PhotoItem[];
 }

@@ -1,5 +1,6 @@
 import type {
   CmsCertificationRow,
+  CmsCreativeCategoryRow,
   CmsEventRow,
   CmsExperienceRow,
   CmsProjectRow,
@@ -7,6 +8,7 @@ import type {
 } from "@/lib/cms/types";
 import type {
   Certification,
+  CreativeCategory,
   EventHighlight,
   ExperienceItem,
   Project,
@@ -86,5 +88,32 @@ export function mapSkillCategory(row: CmsSkillCategoryRow): SkillCategory {
       .slice()
       .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
       .map((skill) => skill.name),
+  };
+}
+
+export function mapCreativeCategory(row: CmsCreativeCategoryRow): CreativeCategory {
+  const photos = (row.creative_photos ?? [])
+    .filter((photo) => photo.published)
+    .slice()
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+    .map((photo) => ({
+      id: photo.id,
+      title: photo.title,
+      category: row.name,
+      albumSlug: row.slug,
+      imageSeed: photo.id,
+      image: photo.image_path,
+      aspectRatio: photo.aspect_ratio,
+      featured: photo.featured,
+    }));
+
+  return {
+    id: row.id,
+    slug: row.slug,
+    name: row.name,
+    description: row.description ?? undefined,
+    showcaseImage: row.showcase_image_path ?? photos[0]?.image,
+    sortOrder: row.sort_order ?? 0,
+    photos,
   };
 }

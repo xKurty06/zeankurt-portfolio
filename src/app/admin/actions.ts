@@ -15,7 +15,9 @@ type CmsTable =
   | "certifications"
   | "events"
   | "skill_categories"
-  | "skills";
+  | "skills"
+  | "creative_categories"
+  | "creative_photos";
 
 type SortableCmsTable = Exclude<CmsTable, "skills">;
 
@@ -25,9 +27,12 @@ const SORTABLE_KEYS: Record<SortableCmsTable, "slug" | "id"> = {
   certifications: "id",
   events: "slug",
   skill_categories: "id",
+  creative_categories: "id",
+  creative_photos: "id",
 };
 
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
+const MAX_CREATIVE_UPLOAD_FILES = 8;
 const MAX_CSV_UPLOAD_BYTES = 512 * 1024;
 const MAX_PROJECT_IMPORT_ROWS = 100;
 const PROJECT_IMPORT_HEADERS = [
@@ -136,6 +141,14 @@ function safeFilename(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
+function titleFromFilename(value: string) {
+  return value
+    .replace(/\.[a-z0-9]+$/i, "")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 async function requireAdmin() {
   const supabase = await createSupabaseServerClient();
   const admin = createSupabaseAdminClient();
@@ -186,6 +199,36 @@ async function uploadAssetIfPresent(
   if (previousObjectPath && previousObjectPath !== path) {
     await admin.storage.from(SUPABASE_BUCKET).remove([previousObjectPath]);
   }
+
+  const { data } = admin.storage.from(SUPABASE_BUCKET).getPublicUrl(path);
+  return data.publicUrl;
+}
+
+async function uploadImageFile(
+  file: File,
+  objectBasePath: string,
+) {
+  if (file.size === 0) throw new Error("Image file is empty.");
+  if (file.size > MAX_UPLOAD_BYTES) {
+    throw new Error("Upload is too large. Use files up to 8MB.");
+  }
+  if (!file.type.startsWith("image/")) {
+    throw new Error("Only image uploads are supported for creative photos.");
+  }
+
+  const admin = createSupabaseAdminClient();
+  if (!admin) throw new Error("Supabase service role is not configured.");
+
+  const extension = extensionFromFilename(file.name);
+  const version = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
+  const path = `${objectBasePath}-${safeFilename(version)}${extension}`;
+  const { error } = await admin.storage.from(SUPABASE_BUCKET).upload(path, file, {
+    cacheControl: "31536000",
+    upsert: false,
+    contentType: file.type,
+  });
+
+  if (error) throw error;
 
   const { data } = admin.storage.from(SUPABASE_BUCKET).getPublicUrl(path);
   return data.publicUrl;
@@ -284,6 +327,12 @@ function assertAllowedProjectStatus(value: string) {
   if (!value) return null;
   if (value === "live" || value === "wip" || value === "archived") return value;
   throw new Error(`Invalid project status "${value}". Use live, wip, or archived.`);
+}
+
+function assertAllowedPhotoAspect(value: string | null) {
+  if (!value) return "landscape";
+  if (value === "portrait" || value === "landscape" || value === "square") return value;
+  throw new Error(`Invalid photo aspect ratio "${value}".`);
 }
 
 export async function signInWithMagicLink(formData: FormData) {
@@ -569,6 +618,153 @@ export async function saveSkill(formData: FormData) {
     name: requiredText(formData, "name", "Name"),
     sort_order: await resolveSortOrder("skills", formData),
   });
+}
+
+export async function saveCreativeCategory(formData: FormData) {
+  await requireAdmin();
+  const name = requiredText(formData, "name", "Name");
+  const slug = text(formData, "slug") || slugify(name);
+  const id = optionalText(formData, "id");
+  const currentSlug = optionalText(formData, "current_slug");
+  await ensureUniqueByKey("creative_categories", "slug", slug, currentSlug);
+
+  const existingImagePath = optionalText(formData, "existing_image_path");
+  const image = await uploadAssetIfPresent(
+    formData,
+    "image_file",
+    `creative/categories/${slug}/showcase`,
+    existingImagePath,
+  );
+
+  await mutateAndRefresh("creative_categories", {
+    ...(id ? { id } : {}),
+    slug,
+    name,
+    description: optionalText(formData, "description"),
+    showcase_image_path: image ?? existingImagePath,
+    sort_order: await resolveSortOrder("creative_categories", formData),
+    published: bool(formData, "published"),
+  });
+}
+
+const DEFAULT_CREATIVE_CATEGORIES = [
+  {
+    slug: "portrait",
+    name: "Portrait",
+    description: "Portrait sessions, editorials, and expression-led frames.",
+  },
+  {
+    slug: "event",
+    name: "Event",
+    description: "Community events, campus activations, and live coverage.",
+  },
+  {
+    slug: "street",
+    name: "Street",
+    description: "Candid public-space moments, urban detail, and everyday rhythm.",
+  },
+  {
+    slug: "creative",
+    name: "Creative",
+    description: "Experimental compositions, concepts, and stylized visual studies.",
+  },
+  {
+    slug: "astrophotography",
+    name: "Astrophotography",
+    description: "Night-sky studies, moon captures, and long-exposure celestial work.",
+  },
+] as const;
+
+export async function seedDefaultCreativeCategories() {
+  const admin = await requireAdmin();
+  const payload = DEFAULT_CREATIVE_CATEGORIES.map((category, index) => ({
+    ...category,
+    sort_order: index,
+    published: true,
+  }));
+
+  const { error } = await admin
+    .from("creative_categories")
+    .upsert(payload, { onConflict: "slug" });
+
+  if (error) throw error;
+
+  revalidateTag("portfolio-content", "max");
+  redirect("/admin#creative-portfolio");
+}
+
+export async function saveCreativePhoto(formData: FormData) {
+  await requireAdmin();
+  const id = optionalText(formData, "id") ?? crypto.randomUUID();
+  const categoryId = requiredText(formData, "category_id", "Category");
+  const existingImagePath = optionalText(formData, "existing_image_path");
+  const image = await uploadAssetIfPresent(
+    formData,
+    "image_file",
+    `creative/photos/${categoryId}/${id}`,
+    existingImagePath,
+  );
+
+  if (!image && !existingImagePath) throw new Error("Photo image is required.");
+
+  await mutateAndRefresh("creative_photos", {
+    id,
+    category_id: categoryId,
+    title: requiredText(formData, "title", "Title"),
+    image_path: image ?? existingImagePath,
+    aspect_ratio: assertAllowedPhotoAspect(optionalText(formData, "aspect_ratio")),
+    featured: bool(formData, "featured"),
+    sort_order: await resolveSortOrder("creative_photos", formData),
+    published: bool(formData, "published"),
+  });
+}
+
+export async function uploadCreativePhotos(formData: FormData) {
+  const admin = await requireAdmin();
+  const categoryId = requiredText(formData, "category_id", "Category");
+  const categorySlug = requiredText(formData, "category_slug", "Category slug");
+  const files = formData
+    .getAll("image_files")
+    .filter((file): file is File => file instanceof File && file.size > 0);
+
+  if (files.length === 0) throw new Error("At least one image is required.");
+  if (files.length > MAX_CREATIVE_UPLOAD_FILES) {
+    throw new Error(`Upload up to ${MAX_CREATIVE_UPLOAD_FILES} creative photos at a time.`);
+  }
+
+  const { data: sortData, error: sortError } = await admin
+    .from("creative_photos")
+    .select("sort_order")
+    .eq("category_id", categoryId)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (sortError) throw sortError;
+
+  const nextSortOrder = typeof sortData?.sort_order === "number" ? sortData.sort_order + 1 : 0;
+  const uploaded = await Promise.all(
+    files.map(async (file, index) => {
+      const id = crypto.randomUUID();
+      const imagePath = await uploadImageFile(file, `creative/photos/${categorySlug}/${id}`);
+      return {
+        id,
+        category_id: categoryId,
+        title: titleFromFilename(file.name) || `Creative photo ${index + 1}`,
+        image_path: imagePath,
+        aspect_ratio: "landscape",
+        featured: false,
+        sort_order: nextSortOrder + index,
+        published: true,
+      };
+    }),
+  );
+
+  const { error } = await admin.from("creative_photos").insert(uploaded);
+  if (error) throw error;
+
+  revalidateTag("portfolio-content", "max");
+  redirect("/admin#creative-portfolio");
 }
 
 export async function saveSiteContent(formData: FormData) {
