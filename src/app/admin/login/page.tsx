@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { signInWithMagicLink } from "@/app/admin/actions";
+import SaveButton from "@/components/ui/SaveButton";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { hasSupabasePublicEnv, isAllowedAdminEmail } from "@/lib/supabase/config";
 
@@ -73,12 +74,7 @@ export default async function AdminLoginPage({ searchParams }: AdminLoginPagePro
               placeholder="you@example.com"
             />
           </label>
-          <button
-            type="submit"
-            className="rounded-full bg-[var(--blue-500)] px-5 py-3 text-sm font-semibold text-[#03121a] transition hover:bg-[var(--blue-300)]"
-          >
-            Send magic link
-          </button>
+          <SaveButton type="submit">Send magic link</SaveButton>
         </form>
       </div>
     </main>

@@ -7,6 +7,7 @@ import { ScrollProgressBar } from "@/components/animation/ScrollProgressBar";
 import { GsapInit } from "@/lib/gsap";
 import { LoaderWrapper } from "@/components/animation/LoaderWrapper";
 import { ThemeProvider } from "@/components/providers/theme-provider";
+import { SavingProvider } from "@/lib/saving";
 import { siteConfig } from "@/data/site";
 import "./globals.css";
 
@@ -43,13 +44,15 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <ThemeProvider>
-          <GsapInit />
-          {/* Page loader */}
-          {/* <LoaderWrapper /> */}
-          <ScrollProgressBar />
-          <ConditionalHeader />
-          <main className="flex-1">{children}</main>
-          <Footer />
+          <SavingProvider>
+            <GsapInit />
+            {/* Page loader */}
+            {/* <LoaderWrapper /> */}
+            <ScrollProgressBar />
+            <ConditionalHeader />
+            <main className="flex-1">{children}</main>
+            <Footer />
+          </SavingProvider>
         </ThemeProvider>
       </body>
     </html>

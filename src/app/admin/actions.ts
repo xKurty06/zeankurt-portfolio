@@ -776,9 +776,8 @@ export async function uploadCreativePhotos(formData: FormData) {
     .filter((file): file is File => file instanceof File && file.size > 0);
 
   if (files.length === 0) throw new Error("At least one image is required.");
-  if (files.length > MAX_CREATIVE_UPLOAD_FILES) {
-    throw new Error(`Upload up to ${MAX_CREATIVE_UPLOAD_FILES} creative photos at a time.`);
-  }
+  // Process large uploads in sequential batches to avoid request failures
+  // (client may attempt to upload entire folders — handle them gracefully).
 
   const { data: sortData, error: sortError } = await admin
     .from("creative_photos")
@@ -791,22 +790,31 @@ export async function uploadCreativePhotos(formData: FormData) {
   if (sortError) throw sortError;
 
   const nextSortOrder = typeof sortData?.sort_order === "number" ? sortData.sort_order + 1 : 0;
-  const uploaded = await Promise.all(
-    files.map(async (file, index) => {
-      const id = crypto.randomUUID();
-      const imagePath = await uploadImageFile(file, `creative/photos/${categorySlug}/${id}`);
-      return {
-        id,
-        category_id: categoryId,
-        title: titleFromFilename(file.name) || `Creative photo ${index + 1}`,
-        image_path: imagePath,
-        aspect_ratio: "landscape",
-        featured: false,
-        sort_order: nextSortOrder + index,
-        published: true,
-      };
-    }),
-  );
+  const uploaded: Array<Record<string, unknown>> = [];
+  // Choose a batch size equal to MAX_CREATIVE_UPLOAD_FILES to limit memory and
+  // processing concurrency on the server. Process batches sequentially.
+  for (let offset = 0; offset < files.length; offset += MAX_CREATIVE_UPLOAD_FILES) {
+    const batch = files.slice(offset, offset + MAX_CREATIVE_UPLOAD_FILES);
+    const batchUploaded = await Promise.all(
+      batch.map(async (file, batchIndex) => {
+        const overallIndex = offset + batchIndex;
+        const id = crypto.randomUUID();
+        const imagePath = await uploadImageFile(file, `creative/photos/${categorySlug}/${id}`);
+        return {
+          id,
+          category_id: categoryId,
+          title: titleFromFilename(file.name) || `Creative photo ${overallIndex + 1}`,
+          image_path: imagePath,
+          aspect_ratio: "landscape",
+          featured: false,
+          sort_order: nextSortOrder + overallIndex,
+          published: true,
+        };
+      }),
+    );
+
+    uploaded.push(...batchUploaded);
+  }
 
   const { error } = await admin.from("creative_photos").insert(uploaded);
   if (error) throw error;

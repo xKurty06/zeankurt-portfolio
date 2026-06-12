@@ -22,6 +22,8 @@ import { ZoomableImage } from "@/components/ui/ZoomableImage";
 import { createSupabaseAdminClient, createSupabaseServerClient } from "@/lib/supabase/server";
 import { isAllowedAdminEmail } from "@/lib/supabase/config";
 import { Camera, Check } from "lucide-react";
+import SaveButton from "@/components/ui/SaveButton";
+import UploadWithValidation from "@/components/admin/UploadWithValidationClient";
 
 type Row = Record<string, unknown>;
 
@@ -1063,12 +1065,9 @@ export default async function AdminPage() {
                     </div>
                     {!creativeCategoriesMissing ? (
                       <form action={seedDefaultCreativeCategories}>
-                        <button
-                          type="submit"
-                          className="rounded-full border border-[var(--border-strong)] px-4 py-2 text-sm font-medium text-white transition hover:border-[var(--blue-300)] hover:text-[var(--blue-200)]"
-                        >
+                        <SaveButton type="submit" className="rounded-full border border-[var(--border-strong)] px-4 py-2 text-sm font-medium text-white transition hover:border-[var(--blue-300)] hover:text-[var(--blue-200)]">
                           Add default categories
-                        </button>
+                        </SaveButton>
                       </form>
                     ) : null}
                   </div>
@@ -1133,8 +1132,9 @@ export default async function AdminPage() {
                               <RowForm action={uploadCreativePhotos}>
                                 <input type="hidden" name="category_id" value={value(category, "id")} />
                                 <input type="hidden" name="category_slug" value={value(category, "slug")} />
-                                <UploadField label="Upload single or multiple images" name="image_files" accept="image/*" multiple />
-                                <UploadField label="Upload a folder of images" name="image_files" accept="image/*" multiple directory />
+                                {/* Client-side validated upload inputs for large folders */}
+                                <UploadWithValidation label="Upload single or multiple images" name="image_files" accept="image/*" multiple maxFiles={50} />
+                                <UploadWithValidation label="Upload a folder of images" name="image_files" accept="image/*" multiple directory maxFiles={200} />
                                 <p className="text-xs leading-relaxed text-[var(--foreground-muted)]">
                                   Folder upload keeps all image files in this category. Each file becomes a photo record using the filename as the title.
                                 </p>

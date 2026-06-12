@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import SaveButton from "@/components/ui/SaveButton";
+import { useSaving } from "@/lib/saving";
 import { createPortal } from "react-dom";
 
 type AdminDialogProps = {
@@ -119,9 +121,12 @@ export function AdminDialog({
     setDirty(false);
   };
 
+  const { setSaving } = useSaving();
+
   const handleSave = () => {
     const form = contentRef.current?.querySelector("form");
     if (!form) return;
+    setSaving(true);
     form.requestSubmit();
   };
 
@@ -190,7 +195,7 @@ export function AdminDialog({
             >
               {children}
             </div>
-            <div className="flex items-center justify-end gap-2 border-t border-[var(--border)] px-5 py-4">
+              <div className="flex items-center justify-end gap-2 border-t border-[var(--border)] px-5 py-4">
               <button
                 type="button"
                 onClick={handleDiscard}
@@ -200,13 +205,9 @@ export function AdminDialog({
                 Discard
               </button>
               {hasForm ? (
-                <button
-                  type="button"
-                  onClick={handleSave}
-                  className="rounded-full bg-[var(--blue-500)] px-4 py-2 text-sm font-medium text-[#03121a] transition hover:bg-[var(--blue-300)]"
-                >
+                <SaveButton type="button" onClick={handleSave}>
                   Save
-                </button>
+                </SaveButton>
               ) : null}
             </div>
           </div>

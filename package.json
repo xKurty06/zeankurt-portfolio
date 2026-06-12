@@ -9,6 +9,7 @@
     "seed:supabase": "node scripts/seed-supabase.mjs",
     "migrate:supabase-assets": "node scripts/migrate-assets-to-supabase.mjs",
     "optimize:images": "node scripts/optimize-existing-images.mjs",
+    "setup:photography-bucket": "node scripts/create-photography-bucket.mjs",
     "dedupe:certifications": "node scripts/dedupe-certifications.mjs"
   },
   "dependencies": {
