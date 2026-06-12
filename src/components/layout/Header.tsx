@@ -54,7 +54,7 @@ export function Header({ variant }: HeaderProps) {
     <header
       ref={headerRef}
       className={cn(
-        "fixed inset-x-0 top-0 z-50 transition-all duration-500",
+        "pointer-events-none fixed inset-x-0 top-0 z-50 transition-all duration-500",
         scrolled
           ? "border-b border-[var(--border)] bg-[rgba(3,7,18,0.82)] backdrop-blur-xl shadow-[0_1px_40px_rgba(0,180,216,0.06)]"
           : "bg-transparent",
@@ -64,18 +64,18 @@ export function Header({ variant }: HeaderProps) {
         {/* Logo — hover glow */}
         <Link
           href="/"
-          className="group flex items-center gap-2 font-[family-name:var(--font-syne)] text-lg font-semibold tracking-tight text-white"
+          className="pointer-events-auto group flex items-center gap-2 font-[family-name:var(--font-syne)] text-lg font-semibold tracking-tight text-white"
         >
           {siteConfig.name}
         </Link>
 
-        <nav className="hidden items-center gap-1 lg:flex" aria-label="Primary">
+        <nav className="pointer-events-auto hidden items-center gap-1 lg:flex" aria-label="Primary">
           {navItems.map((item, i) => (
             <NavLink key={item.href} item={item} pathname={pathname} index={i} />
           ))}
         </nav>
 
-        <div className="hidden lg:block">
+        <div className="pointer-events-auto hidden lg:block">
           <Button href="/#contact" variant="secondary">
             Get in touch
           </Button>
@@ -83,7 +83,7 @@ export function Header({ variant }: HeaderProps) {
 
         <button
           type="button"
-          className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[var(--border)] text-white transition hover:border-[var(--border-strong)] hover:shadow-[0_0_16px_var(--accent-glow)] lg:hidden"
+          className="pointer-events-auto inline-flex h-10 w-10 items-center justify-center rounded-full border border-[var(--border)] text-white transition hover:border-[var(--border-strong)] hover:shadow-[0_0_16px_var(--accent-glow)] lg:hidden"
           aria-label={open ? "Close menu" : "Open menu"}
           onClick={() => setOpen((value) => !value)}
         >
@@ -92,7 +92,7 @@ export function Header({ variant }: HeaderProps) {
       </div>
 
       {open ? (
-        <div className="border-t border-[var(--border)] bg-[rgba(3,7,18,0.96)] px-4 py-4 backdrop-blur-xl lg:hidden animate-slide-down">
+        <div className="pointer-events-auto border-t border-[var(--border)] bg-[rgba(3,7,18,0.96)] px-4 py-4 backdrop-blur-xl lg:hidden animate-slide-down">
           <nav className="flex flex-col gap-2" aria-label="Mobile">
             {navItems.map((item, i) => (
               <NavLink

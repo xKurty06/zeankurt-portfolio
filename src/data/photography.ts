@@ -15,7 +15,7 @@ export const photoAlbums: PhotoAlbum[] = [
     slug: "campus-events",
     title: "Campus & Community Events",
     description:
-      "Web3 meetups, hackathons, and campus tours across CALABARZON — capturing the energy of builder communities.",
+      "Web3 meetups, hackathons, and campus tours across the Philippines — capturing the energy of builder communities.",
     category: "Events",
     coverSeed: "album-campus",
     photoCount: 12,

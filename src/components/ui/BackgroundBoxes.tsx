@@ -5,76 +5,73 @@ import { motion } from "framer-motion";
 import { Plus } from "lucide-react";
 import { cn } from "@/lib/cn";
 
-interface BoxesProps extends React.HTMLAttributes<HTMLDivElement> {
+type BackgroundBoxesProps = React.HTMLAttributes<HTMLDivElement> & {
   rows?: number;
   cols?: number;
-}
-
-const THEME_COLORS = [
-  "rgba(72, 202, 228, 0.52)",
-  "rgba(0, 180, 216, 0.44)",
-  "rgba(144, 224, 239, 0.4)",
-  "rgba(202, 240, 248, 0.32)",
-  "rgba(59, 130, 246, 0.34)",
-];
+  variant?: "default" | "full";
+};
 
 function BackgroundBoxesCore({
   className,
-  rows = 28,
-  cols = 18,
+  rows: rowCount = 150,
+  cols: colCount = 100,
+  variant = "default",
   ...rest
-}: BoxesProps) {
-  const rowItems = Array.from({ length: rows }, (_, index) => index);
-  const colItems = Array.from({ length: cols }, (_, index) => index);
+}: BackgroundBoxesProps) {
+  const rows = new Array(rowCount).fill(1);
+  const cols = new Array(colCount).fill(1);
 
-  const getRandomColor = () =>
-    THEME_COLORS[Math.floor(Math.random() * THEME_COLORS.length)];
+  const colors = [
+    "rgb(125 211 252)",
+    "rgb(249 168 212)",
+    "rgb(134 239 172)",
+    "rgb(253 224 71)",
+    "rgb(252 165 165)",
+    "rgb(216 180 254)",
+    "rgb(147 197 253)",
+    "rgb(165 180 252)",
+    "rgb(196 181 253)",
+  ];
+
+  const getRandomColor = () => {
+    return colors[Math.floor(Math.random() * colors.length)];
+  };
 
   return (
     <div
       style={{
         transform:
-          "translate(-18%,-48%) skewX(-38deg) skewY(10deg) scale(0.96) rotate(0deg) translateZ(0)",
+          variant === "full"
+            ? "translate(-50%,-50%) skewX(-48deg) skewY(14deg) scale(1.02) rotate(0deg) translateZ(0)"
+            : "translate(-40%,-60%) skewX(-48deg) skewY(14deg) scale(0.675) rotate(0deg) translateZ(0)",
       }}
       className={cn(
-        "absolute left-1/2 top-1/2 z-0 flex h-full w-full -translate-x-1/2 -translate-y-1/2 p-4 pointer-events-auto",
+        variant === "full"
+          ? "pointer-events-auto absolute left-1/2 top-1/2 z-0 flex h-[190%] w-[190%] overflow-hidden p-4"
+          : "absolute left-1/4 -top-1/4 z-0 flex h-full w-full -translate-x-1/2 -translate-y-1/2 overflow-hidden p-4",
         className,
       )}
       {...rest}
     >
-      {rowItems.map((row) => (
+      {rows.map((_, i) => (
         <motion.div
-          key={`row-${row}`}
-          className="relative h-8 w-16 border-l border-[rgba(72,202,228,0.18)]"
-          animate={{
-            opacity: [0.62, 0.82, 0.62],
-          }}
-          transition={{
-            duration: 7 + (row % 5),
-            repeat: Number.POSITIVE_INFINITY,
-            ease: "easeInOut",
-          }}
+          key={`row${i}`}
+          className="relative h-8 w-16 border-l border-slate-700"
         >
-          {colItems.map((col) => (
+          {cols.map((_, j) => (
             <motion.div
-              key={`col-${row}-${col}`}
+              key={`col${i}-${j}`}
               whileHover={{
                 backgroundColor: getRandomColor(),
                 transition: { duration: 0 },
               }}
               animate={{
-                opacity: [0.82, 1, 0.82],
+                transition: { duration: 2 },
               }}
-              transition={{
-                duration: 5 + ((row + col) % 4),
-                repeat: Number.POSITIVE_INFINITY,
-                ease: "easeInOut",
-                delay: ((row * 3 + col) % 12) * 0.12,
-              }}
-              className="relative h-8 w-16 border-r border-t border-[rgba(72,202,228,0.18)]"
+              className="relative h-8 w-16 border-r border-t border-slate-700"
             >
-              {col % 2 === 0 && row % 2 === 0 ? (
-                <Plus className="pointer-events-none absolute -left-[20px] -top-[13px] h-6 w-10 text-[rgba(72,202,228,0.22)] stroke-[1px]" />
+              {j % 2 === 0 && i % 2 === 0 ? (
+                <Plus className="pointer-events-none absolute -left-[22px] -top-[14px] h-6 w-10 text-slate-700 stroke-[1px]" />
               ) : null}
             </motion.div>
           ))}
