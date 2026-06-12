@@ -30,6 +30,7 @@ import { isAllowedAdminEmail } from "@/lib/supabase/config";
 import { Camera, Check, SquarePen, Trash2 } from "lucide-react";
 import SaveButton from "@/components/ui/SaveButton";
 import UploadWithValidation from "@/components/admin/UploadWithValidationClient";
+import UploadField from "@/components/admin/UploadFieldClient";
 
 type Row = Record<string, unknown>;
 
@@ -341,33 +342,9 @@ function ExistingShowcaseImageField({ row }: { row?: Row }) {
   );
 }
 
-function UploadField({
-  label,
-  name,
-  accept,
-  multiple = false,
-  directory = false,
-}: {
-  label: string;
-  name: string;
-  accept: string;
-  multiple?: boolean;
-  directory?: boolean;
-}) {
-  return (
-    <label className="rounded-2xl border border-dashed border-[var(--border)] bg-white/[0.015] px-4 py-3 text-xs font-medium text-[var(--foreground-muted)]">
-      {label}
-      <input
-        name={name}
-        type="file"
-        accept={accept}
-        multiple={multiple}
-        {...(directory ? { webkitdirectory: "" } : {})}
-        className="mt-2 text-sm text-[var(--foreground-muted)] file:mr-3 file:rounded-full file:border-0 file:bg-[var(--accent-soft)] file:px-3 file:py-2 file:font-semibold file:text-[var(--blue-200)]"
-      />
-    </label>
-  );
-}
+// `UploadField` is now implemented as a client component in
+// `src/components/admin/UploadFieldClient.tsx` to enable client-side
+// validation (file size checks) before server-action form submission.
 
 function RecordRow({
   title,

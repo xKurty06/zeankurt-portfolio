@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Check, FolderUp, Trash2, Upload, X } from "lucide-react";
 import { useSaving } from "@/lib/saving";
 
 type UploadProgress = {
+  error?: string;
   loaded: number;
   total: number;
-  status: "pending" | "uploading" | "done" | "error";
+  status: "pending" | "uploading" | "done" | "error" | "cancelled";
 };
 
 type DirectoryPickerWindow = Window & {
@@ -51,12 +52,16 @@ export default function UploadWithValidation({
   maxFiles?: number;
 }) {
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const currentRequestRef = useRef<XMLHttpRequest | null>(null);
+  const cancelRequestedRef = useRef(false);
   const submittingRef = useRef(false);
   const router = useRouter();
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [selectionApproved, setSelectionApproved] = useState(true);
   const [progress, setProgress] = useState<Record<string, UploadProgress>>({});
+  const [uploadErrors, setUploadErrors] = useState<string[]>([]);
+  const [uploadNotice, setUploadNotice] = useState<string | null>(null);
   const { setSaving } = useSaving();
 
   const fileCount = selectedFiles.length;
@@ -67,6 +72,13 @@ export default function UploadWithValidation({
     fileCount === 0
       ? "Uploading photos. You can close this modal and keep working."
       : `Uploading ${fileCount} photo${fileCount === 1 ? "" : "s"}. You can close this modal and keep working.`;
+  const getFileKey = (file: File) => `${file.name}-${file.size}`;
+
+  const cancelUpload = useCallback(() => {
+    if (!submittingRef.current) return;
+    cancelRequestedRef.current = true;
+    currentRequestRef.current?.abort();
+  }, []);
 
   const emitUploadState = (state: "idle" | "uploading" | "complete") => {
     const form = inputRef.current?.form;
@@ -89,9 +101,12 @@ export default function UploadWithValidation({
       setSelectedFiles(files);
       setSelectionApproved(files.length <= maxFiles);
       setProgress({});
+      setUploadErrors([]);
+      setUploadNotice(null);
       setSubmitting(false);
       setSaving(false);
       submittingRef.current = false;
+      cancelRequestedRef.current = false;
       emitUploadState("idle");
       input.value = "";
       input.setCustomValidity("");
@@ -112,8 +127,12 @@ export default function UploadWithValidation({
       setSelectedFiles([]);
       setSelectionApproved(true);
       setProgress({});
+      setUploadErrors([]);
+      setUploadNotice(null);
       setSubmitting(false);
       setSaving(false);
+      currentRequestRef.current = null;
+      cancelRequestedRef.current = false;
       emitUploadState("idle");
       if (inputRef.current) {
         inputRef.current.value = "";
@@ -139,12 +158,17 @@ export default function UploadWithValidation({
 
       event.preventDefault();
       submittingRef.current = true;
+      cancelRequestedRef.current = false;
+      currentRequestRef.current = null;
       setSubmitting(true);
+      setUploadErrors([]);
+      setUploadNotice(null);
       emitUploadState("uploading");
       setSaving(
         true,
         `Uploading ${filesList.length} photo${filesList.length === 1 ? "" : "s"}. You can close this modal and keep working.`,
         {
+          cancelAction: cancelUpload,
           completedCount: 0,
           progressPercent: 0,
           totalCount: filesList.length,
@@ -157,17 +181,19 @@ export default function UploadWithValidation({
       const categorySlug = categorySlugInput?.value ?? "";
 
       const uploadOne = (file: File) =>
-        new Promise<void>((resolve) => {
+        new Promise<UploadProgress["status"]>((resolve) => {
           const formData = new FormData();
           formData.append("file", file, file.name);
           formData.append("category_id", categoryId);
           formData.append("category_slug", categorySlug);
 
           const xhr = new XMLHttpRequest();
+          currentRequestRef.current = xhr;
           xhr.open("POST", "/api/admin/upload-file", true);
           xhr.withCredentials = true;
+          xhr.responseType = "json";
 
-          const key = `${file.name}-${file.size}`;
+          const key = getFileKey(file);
           setProgress((current) => ({
             ...current,
             [key]: { loaded: 0, total: file.size, status: "uploading" },
@@ -185,40 +211,108 @@ export default function UploadWithValidation({
           };
 
           xhr.onload = () => {
+            const isSuccess = xhr.status >= 200 && xhr.status < 300;
+            const jsonResponse =
+              typeof xhr.response === "object" && xhr.response !== null ? (xhr.response as { error?: unknown }) : null;
+            const responseError =
+              typeof jsonResponse?.error === "string" && jsonResponse.error
+                ? jsonResponse.error
+                : `Upload failed with status ${xhr.status}`;
+
             setProgress((current) => ({
               ...current,
               [key]: {
                 ...(current[key] ?? { loaded: file.size, total: file.size }),
-                status: xhr.status >= 200 && xhr.status < 300 ? "done" : "error",
+                error: isSuccess ? undefined : responseError,
+                status: isSuccess ? "done" : "error",
               },
             }));
-            resolve();
+
+            if (!isSuccess) {
+              setUploadErrors((current) => (current.includes(responseError) ? current : [...current, responseError]));
+            }
+
+            currentRequestRef.current = null;
+            resolve(isSuccess ? "done" : "error");
           };
 
           xhr.onerror = () => {
+            const errorMessage = "Network error while uploading file.";
             setProgress((current) => ({
               ...current,
               [key]: {
                 ...(current[key] ?? { loaded: 0, total: file.size }),
+                error: errorMessage,
                 status: "error",
               },
             }));
-            resolve();
+            setUploadErrors((current) => (current.includes(errorMessage) ? current : [...current, errorMessage]));
+            currentRequestRef.current = null;
+            resolve("error");
+          };
+
+          xhr.onabort = () => {
+            setProgress((current) => ({
+              ...current,
+              [key]: {
+                ...(current[key] ?? { loaded: 0, total: file.size }),
+                status: "cancelled",
+              },
+            }));
+            currentRequestRef.current = null;
+            resolve("cancelled");
           };
 
           xhr.send(formData);
         });
 
       (async () => {
-        for (const file of filesList) {
+        let allSucceeded = true;
+        let cancelled = false;
+        const remainingFiles: File[] = [];
+
+        for (const [index, file] of filesList.entries()) {
           // eslint-disable-next-line no-await-in-loop
-          await uploadOne(file);
+          const status = await uploadOne(file);
+
+          if (status !== "done") {
+            remainingFiles.push(file);
+          }
+
+          if (status === "cancelled") {
+            cancelled = true;
+            remainingFiles.push(...filesList.slice(index + 1));
+            break;
+          }
+
+          if (status !== "done") allSucceeded = false;
+          if (cancelRequestedRef.current) {
+            cancelled = true;
+            remainingFiles.push(...filesList.slice(index + 1));
+            break;
+          }
         }
 
+        currentRequestRef.current = null;
         submittingRef.current = false;
+        cancelRequestedRef.current = false;
         setSubmitting(false);
         setSaving(false);
-        emitUploadState("complete");
+        if (cancelled) {
+          setSelectedFiles(remainingFiles);
+          setProgress({});
+          setUploadErrors([]);
+          setUploadNotice(`Upload cancelled. ${remainingFiles.length} photo${remainingFiles.length === 1 ? "" : "s"} remaining.`);
+          emitUploadState("idle");
+        } else if (allSucceeded) {
+          setUploadNotice(null);
+          emitUploadState("complete");
+        } else {
+          setSelectedFiles(remainingFiles);
+          setProgress({});
+          setUploadNotice("Some uploads failed. Fix the issue and upload the remaining files again.");
+          emitUploadState("idle");
+        }
         router.refresh();
       })();
     };
@@ -235,7 +329,7 @@ export default function UploadWithValidation({
     if (!submitting || selectedFiles.length === 0) return;
 
     const trackedEntries = selectedFiles.map((file) => {
-      const key = `${file.name}-${file.size}`;
+      const key = getFileKey(file);
       return progress[key] ?? { loaded: 0, status: "pending", total: file.size };
     });
 
@@ -248,19 +342,23 @@ export default function UploadWithValidation({
     const progressPercent = Math.min(100, Math.max(0, Math.round((loadedBytes / Math.max(1, totalBytes)) * 100)));
 
     setSaving(true, uploadIndicatorLabel, {
+      cancelAction: cancelUpload,
       completedCount,
       progressPercent,
       totalCount: selectedFiles.length,
     });
-  }, [progress, selectedFiles, setSaving, submitting, uploadIndicatorLabel]);
+  }, [cancelUpload, progress, selectedFiles, setSaving, submitting, uploadIndicatorLabel]);
 
   const applySelectedFiles = (files: File[]) => {
     setSelectedFiles(files);
     setSelectionApproved(files.length <= maxFiles);
     setProgress({});
+    setUploadErrors([]);
+    setUploadNotice(null);
     setSubmitting(false);
     setSaving(false);
     submittingRef.current = false;
+    cancelRequestedRef.current = false;
     emitUploadState("idle");
   };
 
@@ -347,9 +445,12 @@ export default function UploadWithValidation({
               setSelectedFiles([]);
               setSelectionApproved(true);
               setProgress({});
+              setUploadErrors([]);
+              setUploadNotice(null);
               setSubmitting(false);
               setSaving(false);
               submittingRef.current = false;
+              cancelRequestedRef.current = false;
               emitUploadState("idle");
             }}
             className="inline-flex items-center gap-2 rounded-full border border-red-400/20 px-3 py-2 text-xs font-medium text-red-200 transition hover:bg-red-500/10"
@@ -368,7 +469,7 @@ export default function UploadWithValidation({
             </span>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-yellow-100">
-                Review this large upload before saving
+                Review this large upload before uploading
               </p>
               <p className="mt-1 text-xs leading-relaxed text-yellow-100/80">
                 {fileCount} images are queued. That is above the recommended batch size of {maxFiles}. Keep this selection only if you want to upload the full batch now.
@@ -388,9 +489,12 @@ export default function UploadWithValidation({
                     setSelectedFiles([]);
                     setSelectionApproved(true);
                     setProgress({});
+                    setUploadErrors([]);
+                    setUploadNotice(null);
                     setSubmitting(false);
                     setSaving(false);
                     submittingRef.current = false;
+                    cancelRequestedRef.current = false;
                     emitUploadState("idle");
                   }}
                   className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] px-3 py-2 text-xs font-medium text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white"
@@ -400,6 +504,25 @@ export default function UploadWithValidation({
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      ) : null}
+
+      {uploadNotice ? (
+        <div className="mt-3 rounded-2xl border border-[var(--border)] bg-white/[0.02] p-3 text-xs text-[var(--foreground-muted)]">
+          {uploadNotice}
+        </div>
+      ) : null}
+
+      {uploadErrors.length > 0 ? (
+        <div className="mt-3 rounded-2xl border border-red-400/20 bg-red-500/8 p-3 text-xs text-red-100">
+          <p className="font-semibold text-red-100">Some files failed to upload.</p>
+          <div className="mt-2 space-y-1">
+            {uploadErrors.slice(0, 3).map((error) => (
+              <p key={error} className="leading-relaxed text-red-100/85">
+                {error}
+              </p>
+            ))}
           </div>
         </div>
       ) : null}
@@ -440,12 +563,22 @@ export default function UploadWithValidation({
       ) : null}
 
       {submitting ? (
-        <div className="mt-3 flex items-center gap-2 text-xs text-[var(--foreground-muted)]">
-          <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
-            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" opacity="0.2" />
-            <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-          </svg>
-          Uploading. Large folders may take a while.
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--border)] bg-white/[0.02] px-3 py-3 text-xs text-[var(--foreground-muted)]">
+          <div className="flex items-center gap-2">
+            <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" opacity="0.2" />
+              <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+            </svg>
+            Uploading. Large folders may take a while.
+          </div>
+          <button
+            type="button"
+            onClick={cancelUpload}
+            className="inline-flex min-h-11 items-center gap-2 rounded-full border border-red-400/20 px-3 py-2 font-semibold text-red-200 transition hover:bg-red-500/10 hover:text-red-100"
+          >
+            <X className="h-3.5 w-3.5" />
+            Cancel upload
+          </button>
         </div>
       ) : null}
     </div>

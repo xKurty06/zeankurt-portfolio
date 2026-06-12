@@ -1,11 +1,11 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { LoaderCircle, Upload } from "lucide-react";
+import { LoaderCircle, Upload, X } from "lucide-react";
 import { useSaving } from "@/lib/saving";
 
 export function SavingIndicator() {
-  const { completedCount, isSaving, progressPercent, savingLabel, totalCount } = useSaving();
+  const { cancelSaving, canCancel, completedCount, isSaving, progressPercent, savingLabel, totalCount } = useSaving();
   const isUpload = (savingLabel ?? "").toLowerCase().includes("upload");
   const hasProgress = isUpload && typeof progressPercent === "number" && typeof totalCount === "number";
 
@@ -17,7 +17,7 @@ export function SavingIndicator() {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 12, scale: 0.96 }}
           transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-          className="pointer-events-none fixed bottom-5 right-5 z-[1200] w-[min(22rem,calc(100vw-2rem))] rounded-3xl border border-[var(--border-strong)] bg-[linear-gradient(180deg,rgba(10,16,30,0.96),rgba(7,11,22,0.96))] px-4 py-3 shadow-[0_20px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl"
+          className="fixed bottom-5 right-5 z-[1200] w-[min(22rem,calc(100vw-2rem))] rounded-3xl border border-[var(--border-strong)] bg-[linear-gradient(180deg,rgba(10,16,30,0.96),rgba(7,11,22,0.96))] px-4 py-3 shadow-[0_20px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl"
           aria-live="polite"
         >
           <div className="flex items-start gap-3">
@@ -56,6 +56,16 @@ export function SavingIndicator() {
                 <p className="mt-2 text-[11px] uppercase tracking-[0.14em] text-[var(--blue-300)]">
                   Safe to close the modal
                 </p>
+              ) : null}
+              {isUpload && canCancel && cancelSaving ? (
+                <button
+                  type="button"
+                  onClick={cancelSaving}
+                  className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-full border border-red-400/20 px-3 py-2 text-xs font-semibold text-red-200 transition hover:bg-red-500/10 hover:text-red-100"
+                >
+                  <X className="h-3.5 w-3.5" />
+                  Cancel upload
+                </button>
               ) : null}
             </div>
           </div>

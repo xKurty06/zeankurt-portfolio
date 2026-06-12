@@ -38,6 +38,12 @@ export function AdminDialog({
   const portalNodeRef = useRef<HTMLDivElement | null>(null);
   const [mounted, setMounted] = useState(false);
 
+  const syncFormState = () => {
+    const form = contentRef.current?.querySelector("form") ?? null;
+    setHasForm(Boolean(form));
+    setHasFileInput(Boolean(form?.querySelector('input[type="file"]')));
+  };
+
   const snapshotFields = () => {
     const root = contentRef.current;
     if (!root) return "";
@@ -92,14 +98,20 @@ export function AdminDialog({
     initialSnapshotRef.current = snapshotFields();
     setDirty(false);
     setUploadDialogState("idle");
-    const form = contentRef.current?.querySelector("form") ?? null;
-    setHasForm(Boolean(form));
-    setHasFileInput(Boolean(form?.querySelector('input[type="file"]')));
+    syncFormState();
 
     siblings.forEach((element) => {
       element.setAttribute("inert", "");
       element.setAttribute("aria-hidden", "true");
     });
+
+    const observer = new MutationObserver(() => {
+      syncFormState();
+    });
+
+    if (contentRef.current) {
+      observer.observe(contentRef.current, { childList: true, subtree: true });
+    }
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") setOpen(false);
@@ -107,12 +119,15 @@ export function AdminDialog({
 
     window.addEventListener("keydown", onKeyDown);
     return () => {
+      observer.disconnect();
       document.body.style.overflow = previousOverflow;
       document.body.style.overscrollBehavior = previousOverscroll;
       siblings.forEach((element) => {
         element.removeAttribute("inert");
         element.removeAttribute("aria-hidden");
       });
+      setHasForm(false);
+      setHasFileInput(false);
       setUploadDialogState("idle");
       window.removeEventListener("keydown", onKeyDown);
     };
@@ -134,7 +149,7 @@ export function AdminDialog({
     setUploadDialogState("idle");
   };
 
-  const { setSaving } = useSaving();
+  const { cancelSaving, canCancel, setSaving } = useSaving();
 
   useEffect(() => {
     if (open) {
@@ -254,11 +269,20 @@ export function AdminDialog({
               {children}
             </div>
             <div className="flex items-center justify-end gap-2 border-t border-[var(--border)] px-5 py-4">
+              {hasFileInput && uploadDialogState === "uploading" && canCancel && cancelSaving ? (
+                <button
+                  type="button"
+                  onClick={cancelSaving}
+                  className="rounded-full border border-red-400/20 px-4 py-2 text-sm font-medium text-red-200 transition hover:bg-red-500/10 hover:text-red-100"
+                >
+                  Cancel upload
+                </button>
+              ) : null}
               {uploadDialogState !== "complete" ? (
                 <button
                   type="button"
                   onClick={handleDiscard}
-                  disabled={!dirty}
+                  disabled={!dirty || uploadDialogState === "uploading"}
                   className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--foreground-muted)] transition enabled:hover:border-[var(--border-strong)] enabled:hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
                 >
                   Discard

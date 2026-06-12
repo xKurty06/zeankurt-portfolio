@@ -26,6 +26,20 @@ function padSequence(value: number) {
   return String(value).padStart(4, "0");
 }
 
+function isStorageConflict(error: unknown) {
+  const message =
+    typeof error === "object" && error && "message" in error ? String((error as { message?: unknown }).message ?? "") : String(error ?? "");
+  return /duplicate|already exists|conflict/i.test(message);
+}
+
+function isUniqueConstraintError(error: unknown) {
+  const code =
+    typeof error === "object" && error && "code" in error ? String((error as { code?: unknown }).code ?? "") : "";
+  const message =
+    typeof error === "object" && error && "message" in error ? String((error as { message?: unknown }).message ?? "") : String(error ?? "");
+  return code === "23505" || /duplicate key|unique constraint/i.test(message);
+}
+
 async function optimizeImage(buffer: Buffer, mime = "image/jpeg") {
   try {
     const image = sharp(buffer).rotate();
@@ -74,38 +88,63 @@ export async function POST(req: Request) {
   const input = Buffer.from(arrayBuffer);
   const processed = file.type.startsWith("image/") ? await optimizeImage(input, file.type) : { bytes: input, contentType: file.type || "application/octet-stream" };
 
-  const id = crypto.randomUUID();
-
   // determine sort_order
   const { data: sortData, error: sortError } = await admin.from("creative_photos").select("sort_order").eq("category_id", String(categoryId)).order("sort_order", { ascending: false }).limit(1).maybeSingle();
   if (sortError) return NextResponse.json({ error: sortError.message || sortError }, { status: 500 });
-  const nextSortOrder = typeof sortData?.sort_order === "number" ? sortData.sort_order + 1 : 0;
-  const nextSequence = nextSortOrder + 1;
+  const baseSortOrder = typeof sortData?.sort_order === "number" ? sortData.sort_order + 1 : 0;
   const safeCategorySlug = safeFilename(String(categorySlug || "creative"));
-  const sequenceLabel = padSequence(nextSequence);
   const extension = extensionFromFilename(file.name) || "";
-  const title = `${categoryTitleFromSlug(safeCategorySlug)} ${nextSequence}`;
-  const path = `${safeCategorySlug}/${safeCategorySlug}-${sequenceLabel}${extension}`;
 
-  const { error: uploadError } = await admin.storage.from(PHOTOGRAPHY_BUCKET).upload(path, processed.bytes, { cacheControl: "31536000", upsert: false, contentType: processed.contentType });
-  if (uploadError) return NextResponse.json({ error: uploadError.message || uploadError }, { status: 500 });
+  for (let attempt = 0; attempt < 25; attempt += 1) {
+    const nextSortOrder = baseSortOrder + attempt;
+    const nextSequence = nextSortOrder + 1;
+    const sequenceLabel = padSequence(nextSequence);
+    const title = `${categoryTitleFromSlug(safeCategorySlug)} ${nextSequence}`;
+    const path = `${safeCategorySlug}/${safeCategorySlug}-${sequenceLabel}${extension}`;
+    const id = crypto.randomUUID();
 
-  const { data: publicData } = admin.storage.from(PHOTOGRAPHY_BUCKET).getPublicUrl(path);
-  const publicUrl = publicData?.publicUrl ?? null;
+    const { error: uploadError } = await admin.storage
+      .from(PHOTOGRAPHY_BUCKET)
+      .upload(path, processed.bytes, { cacheControl: "31536000", upsert: false, contentType: processed.contentType });
 
-  const payload = {
-    id,
-    category_id: String(categoryId),
-    title,
-    image_path: publicUrl,
-    aspect_ratio: "landscape",
-    featured: false,
-    sort_order: nextSortOrder,
-    published: true,
-  } as any;
+    if (uploadError) {
+      if (isStorageConflict(uploadError)) {
+        continue;
+      }
 
-  const { error: insertError } = await admin.from("creative_photos").insert(payload);
-  if (insertError) return NextResponse.json({ error: insertError.message || insertError }, { status: 500 });
+      return NextResponse.json({ error: uploadError.message || uploadError }, { status: 500 });
+    }
 
-  return NextResponse.json({ id, image_path: publicUrl });
+    const { data: publicData } = admin.storage.from(PHOTOGRAPHY_BUCKET).getPublicUrl(path);
+    const publicUrl = publicData?.publicUrl ?? null;
+
+    const payload = {
+      id,
+      category_id: String(categoryId),
+      title,
+      image_path: publicUrl,
+      aspect_ratio: "landscape",
+      featured: false,
+      sort_order: nextSortOrder,
+      published: true,
+    } as any;
+
+    const { error: insertError } = await admin.from("creative_photos").insert(payload);
+    if (!insertError) {
+      return NextResponse.json({ id, image_path: publicUrl });
+    }
+
+    await admin.storage.from(PHOTOGRAPHY_BUCKET).remove([path]);
+
+    if (isUniqueConstraintError(insertError)) {
+      continue;
+    }
+
+    return NextResponse.json({ error: insertError.message || insertError }, { status: 500 });
+  }
+
+  return NextResponse.json(
+    { error: "Could not assign a unique filename and sequence for this upload." },
+    { status: 500 },
+  );
 }
