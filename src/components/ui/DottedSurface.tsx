@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
 import * as THREE from "three";
 import { cn } from "@/lib/cn";
@@ -10,6 +11,7 @@ type DottedSurfaceProps = Omit<React.ComponentProps<"div">, "ref">;
 
 export function DottedSurface({ className, ...props }: DottedSurfaceProps) {
   const { theme } = useTheme();
+  const pathname = usePathname();
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<{
     scene: THREE.Scene;
@@ -24,6 +26,7 @@ export function DottedSurface({ className, ...props }: DottedSurfaceProps) {
     if (!containerRef.current) return;
 
     const container = containerRef.current;
+    const activityTarget = container.parentElement ?? container;
     const SEPARATION = 120;
     const AMOUNTX = 44;
     const AMOUNTY = 64;
@@ -96,10 +99,16 @@ export function DottedSurface({ className, ...props }: DottedSurfaceProps) {
     const animate = () => {
       if (!isActive) {
         animationId = 0;
+        if (sceneRef.current) {
+          sceneRef.current.animationId = 0;
+        }
         return;
       }
 
       animationId = window.requestAnimationFrame(animate);
+      if (sceneRef.current) {
+        sceneRef.current.animationId = animationId;
+      }
 
       const positionAttribute = geometry.attributes.position;
       const coords = positionAttribute.array as Float32Array;
@@ -132,7 +141,14 @@ export function DottedSurface({ className, ...props }: DottedSurfaceProps) {
       renderer.setSize(bounds.width, bounds.height);
     };
 
-    const stopMonitoring = monitorElementActivity(container, (nextActive) => {
+    const syncScene = () => {
+      handleResize();
+      if (isActive && animationId === 0) {
+        animate();
+      }
+    };
+
+    const stopMonitoring = monitorElementActivity(activityTarget, (nextActive) => {
       isActive = nextActive;
       if (isActive && animationId === 0) {
         animate();
@@ -140,6 +156,8 @@ export function DottedSurface({ className, ...props }: DottedSurfaceProps) {
     }, { threshold: 0.05 });
 
     window.addEventListener("resize", handleResize);
+    window.addEventListener("pageshow", syncScene);
+    window.addEventListener("focus", syncScene);
     animate();
 
     sceneRef.current = {
@@ -154,6 +172,8 @@ export function DottedSurface({ className, ...props }: DottedSurfaceProps) {
     return () => {
       stopMonitoring();
       window.removeEventListener("resize", handleResize);
+      window.removeEventListener("pageshow", syncScene);
+      window.removeEventListener("focus", syncScene);
 
       if (sceneRef.current) {
         window.cancelAnimationFrame(sceneRef.current.animationId);
@@ -173,7 +193,7 @@ export function DottedSurface({ className, ...props }: DottedSurfaceProps) {
         }
       }
     };
-  }, [theme]);
+  }, [theme, pathname]);
 
   return (
     <div
