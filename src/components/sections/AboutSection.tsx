@@ -7,6 +7,7 @@ import { RevealOnScroll } from "@/components/animation/RevealOnScroll";
 import { AnimatedCounter } from "@/components/animation/AnimatedCounter";
 import { GlowCard } from "@/components/animation/GlowCard";
 import { Container, Section } from "@/components/ui/Container";
+import { FlickeringGrid } from "@/components/ui/flickering-grid-hero";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { gsap, registerGsapPlugins } from "@/lib/gsap";
 import type { Certification, EventHighlight, SkillCategory } from "@/types";
@@ -92,8 +93,21 @@ export function AboutSection({
 
   return (
     <Section id="about" surface="elevated" ref={sectionRef} className="overflow-visible">
+      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-[rgba(72,202,228,0.08)] to-transparent" />
+        <div className="absolute -left-20 top-10 h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(72,202,228,0.12),transparent_70%)] blur-2xl" />
+        <div className="absolute right-0 top-1/2 h-72 w-72 -translate-y-1/2 bg-[radial-gradient(circle,rgba(0,119,182,0.12),transparent_72%)] blur-3xl" />
+        <FlickeringGrid
+          className="absolute inset-0 opacity-70 [mask-image:radial-gradient(circle_at_center,white,transparent_78%)]"
+          color="var(--blue-400)"
+          squareSize={3}
+          gridGap={7}
+          flickerChance={0.18}
+          maxOpacity={0.18}
+        />
+      </div>
       <Container>
-        <div className="grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
+        <div className="relative z-10 grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
 
           {/* Left: heading with sweep highlight */}
           <RevealOnScroll>
