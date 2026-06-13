@@ -1,5 +1,6 @@
 "use client";
 
+import { AnimatePresence, motion } from "framer-motion";
 import { createPortal } from "react-dom";
 import { useDeferredValue, useEffect, useId, useMemo, useRef, useState } from "react";
 import {
@@ -14,8 +15,10 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { deleteCreativePhotos } from "@/app/admin/actions";
+import { deleteCreativePhotosByIds } from "@/app/admin/actions";
+import { Lightbox } from "@/components/photography/Lightbox";
 import { cn } from "@/lib/cn";
+import type { PhotoItem } from "@/types";
 
 type SortField = "custom" | "name" | "featured" | "status";
 type SortDirection = "asc" | "desc";
@@ -186,10 +189,12 @@ function PhotoManagerModal({
   category,
   open,
   onClose,
+  onCategoryChange,
 }: {
   category: PhotoBrowserCategory;
   open: boolean;
   onClose: () => void;
+  onCategoryChange: (category: PhotoBrowserCategory) => void;
 }) {
   const [mode, setMode] = useState<BrowserMode>("edit");
   const [query, setQuery] = useState("");
@@ -198,6 +203,10 @@ function PhotoManagerModal({
   const [pageSize, setPageSize] = useState<number>(24);
   const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [removingIds, setRemovingIds] = useState<string[]>([]);
   const deferredQuery = useDeferredValue(query);
   const titleId = useId();
   const descriptionId = useId();
@@ -230,6 +239,7 @@ function PhotoManagerModal({
     document.body.style.overscrollBehavior = "none";
 
     const onKeyDown = (event: KeyboardEvent) => {
+      if (lightboxIndex !== null && event.key === "Escape") return;
       if (event.key === "Escape") onClose();
     };
 
@@ -248,7 +258,7 @@ function PhotoManagerModal({
       });
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [onClose, open]);
+  }, [lightboxIndex, onClose, open]);
 
   useEffect(() => {
     if (!open) return;
@@ -259,6 +269,10 @@ function PhotoManagerModal({
     setPageSize(24);
     setPage(1);
     setSelectedIds([]);
+    setLightboxIndex(null);
+    setDeleteError(null);
+    setIsDeleting(false);
+    setRemovingIds([]);
   }, [category.id, open]);
 
   const featuredCount = useMemo(
@@ -278,12 +292,32 @@ function PhotoManagerModal({
     return [...filtered].sort((a, b) => comparePhotoItems(a, b, sortField, sortDirection));
   }, [category.photos, deferredQuery, sortDirection, sortField]);
 
+  const lightboxPhotos = useMemo<PhotoItem[]>(
+    () =>
+      filteredPhotos.map((photo) => ({
+        id: photo.id,
+        title: photo.title,
+        category: category.name,
+        albumSlug: category.slug,
+        imageSeed: photo.id,
+        image: photo.imagePath,
+        aspectRatio:
+          photo.subtitle === "portrait" || photo.subtitle === "square" || photo.subtitle === "landscape"
+            ? photo.subtitle
+            : "landscape",
+        featured: photo.featured,
+      })),
+    [category.name, category.slug, filteredPhotos],
+  );
+
   const totalPages = Math.max(1, Math.ceil(filteredPhotos.length / pageSize));
   const currentPage = Math.min(page, totalPages);
   const startIndex = (currentPage - 1) * pageSize;
   const visiblePhotos = filteredPhotos.slice(startIndex, startIndex + pageSize);
   const rangeStart = filteredPhotos.length === 0 ? 0 : startIndex + 1;
   const rangeEnd = Math.min(startIndex + pageSize, filteredPhotos.length);
+  const allFilteredSelected =
+    filteredPhotos.length > 0 && filteredPhotos.every((photo) => selectedIds.includes(photo.id));
   const allVisibleSelected = visiblePhotos.length > 0 && visiblePhotos.every((photo) => selectedIds.includes(photo.id));
 
   const toggleSelected = (id: string) => {
@@ -302,6 +336,34 @@ function PhotoManagerModal({
       visiblePhotos.forEach((photo) => next.add(photo.id));
       return Array.from(next);
     });
+  };
+
+  const handleDeleteSelected = async () => {
+    const idsToRemove = selectedIds.filter(Boolean);
+    if (idsToRemove.length === 0 || isDeleting) return;
+
+    setDeleteError(null);
+    setIsDeleting(true);
+
+    try {
+      await deleteCreativePhotosByIds(idsToRemove);
+      setRemovingIds(idsToRemove);
+      await new Promise((resolve) => window.setTimeout(resolve, 260));
+
+      const remainingPhotos = category.photos.filter((photo) => !idsToRemove.includes(photo.id));
+      onCategoryChange({
+        ...category,
+        photoCount: remainingPhotos.length,
+        photos: remainingPhotos,
+      });
+      setSelectedIds((current) => current.filter((id) => !idsToRemove.includes(id)));
+      setRemovingIds([]);
+    } catch (error) {
+      setRemovingIds([]);
+      setDeleteError(error instanceof Error ? error.message : "Failed to remove the selected photos.");
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   if (!open || !mounted || !portalNodeRef.current) return null;
@@ -441,23 +503,37 @@ function PhotoManagerModal({
                 <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
+                    onClick={() => setSelectedIds(filteredPhotos.map((photo) => photo.id))}
+                    disabled={filteredPhotos.length === 0 || allFilteredSelected || isDeleting}
+                    className="inline-flex h-10 items-center justify-center rounded-full border border-[var(--border)] px-3 text-xs font-medium text-[var(--foreground-muted)] transition enabled:hover:border-[var(--border-strong)] enabled:hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
+                  >
+                    Select all
+                  </button>
+                  <button
+                    type="button"
                     onClick={toggleSelectVisible}
-                    disabled={visiblePhotos.length === 0}
+                    disabled={visiblePhotos.length === 0 || isDeleting}
                     className="inline-flex h-10 items-center justify-center rounded-full border border-[var(--border)] px-3 text-xs font-medium text-[var(--foreground-muted)] transition enabled:hover:border-[var(--border-strong)] enabled:hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
                   >
                     {allVisibleSelected ? "Clear visible" : "Select visible"}
                   </button>
-                  <form action={deleteCreativePhotos}>
-                    <input type="hidden" name="ids" value={JSON.stringify(selectedIds)} />
-                    <button
-                      type="submit"
-                      disabled={selectedIds.length === 0}
-                      className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-red-400/20 px-4 text-xs font-medium text-red-200 transition enabled:hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-45"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      Remove selected ({selectedIds.length})
-                    </button>
-                  </form>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedIds([])}
+                    disabled={selectedIds.length === 0 || isDeleting}
+                    className="inline-flex h-10 items-center justify-center rounded-full border border-[var(--border)] px-3 text-xs font-medium text-[var(--foreground-muted)] transition enabled:hover:border-[var(--border-strong)] enabled:hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
+                  >
+                    Clear all
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDeleteSelected}
+                    disabled={selectedIds.length === 0 || isDeleting}
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-red-400/20 px-4 text-xs font-medium text-red-200 transition enabled:hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-45"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    {isDeleting ? "Removing..." : `Remove selected (${selectedIds.length})`}
+                  </button>
                 </div>
               ) : (
                 <p className="text-xs text-[var(--foreground-muted)]">
@@ -467,13 +543,30 @@ function PhotoManagerModal({
             </div>
           </div>
 
+          {deleteError ? (
+            <div className="mt-4 rounded-2xl border border-red-400/20 bg-red-500/8 px-4 py-3 text-sm text-red-100">
+              {deleteError}
+            </div>
+          ) : null}
+
           {visiblePhotos.length > 0 ? (
             <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-              {visiblePhotos.map((photo) => {
+              <AnimatePresence initial={false}>
+                {visiblePhotos.map((photo) => {
                 const selected = selectedIds.includes(photo.id);
+                const removing = removingIds.includes(photo.id);
                 return (
-                  <article
+                  <motion.article
                     key={photo.id}
+                    layout
+                    initial={{ opacity: 1, scale: 1, y: 0 }}
+                    animate={
+                      removing
+                        ? { opacity: 0, scale: 0.92, y: 24, filter: "blur(6px)" }
+                        : { opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }
+                    }
+                    exit={{ opacity: 0, scale: 0.92, y: 24, filter: "blur(6px)" }}
+                    transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
                     className={cn(
                       "group overflow-hidden rounded-3xl border bg-white/[0.02] transition",
                       selected
@@ -484,10 +577,18 @@ function PhotoManagerModal({
                     <div
                       className={cn(
                         "relative aspect-[4/5] overflow-hidden bg-black/20",
-                        mode === "select" && "cursor-pointer",
+                        mode === "select" ? "cursor-pointer" : photo.imagePath ? "cursor-zoom-in" : undefined,
                       )}
                       onClick={() => {
-                        if (mode === "select") toggleSelected(photo.id);
+                        if (mode === "select") {
+                          toggleSelected(photo.id);
+                          return;
+                        }
+
+                        if (mode === "edit" && photo.imagePath) {
+                          const index = filteredPhotos.findIndex((item) => item.id === photo.id);
+                          setLightboxIndex(index);
+                        }
                       }}
                     >
                       {photo.imagePath ? (
@@ -502,7 +603,10 @@ function PhotoManagerModal({
                       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
                       {mode === "edit" ? (
-                        <div className="absolute right-3 top-3">
+                        <div
+                          className="absolute right-3 top-3"
+                          onClick={(event) => event.stopPropagation()}
+                        >
                           {photo.editAction}
                         </div>
                       ) : (
@@ -510,6 +614,7 @@ function PhotoManagerModal({
                           type="button"
                           onClick={(event) => {
                             event.stopPropagation();
+                            if (isDeleting) return;
                             toggleSelected(photo.id);
                           }}
                           className={cn(
@@ -519,6 +624,7 @@ function PhotoManagerModal({
                               : "border-white/20 bg-black/45 text-white",
                           )}
                           aria-label={selected ? `Deselect ${photo.title}` : `Select ${photo.title}`}
+                          disabled={isDeleting}
                         >
                           <Check className="h-4 w-4" />
                         </button>
@@ -550,9 +656,10 @@ function PhotoManagerModal({
                         </div>
                       </div>
                     </div>
-                  </article>
+                  </motion.article>
                 );
-              })}
+                })}
+              </AnimatePresence>
             </div>
           ) : (
             <div className="mt-4 rounded-2xl border border-dashed border-[var(--border)] bg-white/[0.02] px-4 py-10 text-center">
@@ -591,6 +698,12 @@ function PhotoManagerModal({
             </div>
           ) : null}
         </div>
+        <Lightbox
+          photos={lightboxPhotos}
+          activeIndex={lightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+          onNavigate={setLightboxIndex}
+        />
       </div>
     </div>,
     portalNodeRef.current,
@@ -599,9 +712,15 @@ function PhotoManagerModal({
 
 function PhotoCategoryCard({ category }: { category: PhotoBrowserCategory }) {
   const [open, setOpen] = useState(false);
+  const [localCategory, setLocalCategory] = useState(category);
+
+  useEffect(() => {
+    setLocalCategory(category);
+  }, [category]);
+
   const featuredCount = useMemo(
-    () => category.photos.filter((photo) => photo.featured).length,
-    [category.photos],
+    () => localCategory.photos.filter((photo) => photo.featured).length,
+    [localCategory.photos],
   );
 
   return (
@@ -610,10 +729,10 @@ function PhotoCategoryCard({ category }: { category: PhotoBrowserCategory }) {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <p className="text-sm font-semibold text-white">{category.name}</p>
+              <p className="text-sm font-semibold text-white">{localCategory.name}</p>
               <span className="inline-flex items-center gap-1 rounded-full border border-[var(--border)] bg-[var(--background)] px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--foreground-muted)]">
                 <Images className="h-3 w-3" />
-                {category.photoCount}
+                {localCategory.photoCount}
               </span>
               {featuredCount > 0 ? (
                 <span className="inline-flex items-center gap-1 rounded-full border border-[var(--blue-400)]/30 bg-[var(--accent-soft)] px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--blue-200)]">
@@ -623,7 +742,7 @@ function PhotoCategoryCard({ category }: { category: PhotoBrowserCategory }) {
               ) : null}
             </div>
             <p className="mt-1 text-xs text-[var(--foreground-muted)]">
-              {category.description || `${category.slug} category`}
+              {localCategory.description || `${localCategory.slug} category`}
             </p>
           </div>
 
@@ -637,7 +756,12 @@ function PhotoCategoryCard({ category }: { category: PhotoBrowserCategory }) {
         </div>
       </section>
 
-      <PhotoManagerModal category={category} open={open} onClose={() => setOpen(false)} />
+      <PhotoManagerModal
+        category={localCategory}
+        open={open}
+        onClose={() => setOpen(false)}
+        onCategoryChange={setLocalCategory}
+      />
     </>
   );
 }

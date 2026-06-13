@@ -105,6 +105,7 @@ export function ZoomableImage({
 
       {visible && mounted ? createPortal(
         <div
+          data-preview-overlay="true"
           className={cn(
             "fixed inset-0 z-[10000] flex items-center justify-center p-4 backdrop-blur-sm",
             open

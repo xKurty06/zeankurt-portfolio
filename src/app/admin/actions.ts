@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import sharp from "sharp";
+import { optimizePhotographyImage } from "@/lib/photography-image";
 import {
   createSupabaseAdminClient,
   createSupabaseServerClient,
@@ -206,40 +207,8 @@ async function optimizeImageUpload(file: File) {
     return { bytes: input, contentType };
   }
 
-  const image = sharp(input).rotate();
-  const metadata = await image.metadata();
-  const resizeOptions = {
-    width: 2048,
-    height: 2048,
-    fit: "inside" as const,
-    withoutEnlargement: true,
-  };
-
-  switch (metadata.format) {
-    case "jpeg":
-    case "jpg": {
-      const bytes = await image.resize(resizeOptions).jpeg({ quality: 82, mozjpeg: true }).toBuffer();
-      return { bytes, contentType: "image/jpeg" };
-    }
-    case "png": {
-      const bytes = await image
-        .resize(resizeOptions)
-        .png({ compressionLevel: 8, adaptiveFiltering: true, effort: 6 })
-        .toBuffer();
-      return { bytes, contentType: "image/png" };
-    }
-    case "webp": {
-      const bytes = await image.resize(resizeOptions).webp({ quality: 80 }).toBuffer();
-      return { bytes, contentType: "image/webp" };
-    }
-    case "avif": {
-      const bytes = await image.resize(resizeOptions).avif({ quality: 60 }).toBuffer();
-      return { bytes, contentType: "image/avif" };
-    }
-    default: {
-      return { bytes: input, contentType };
-    }
-  }
+  const optimized = await optimizePhotographyImage(input, contentType);
+  return { bytes: optimized.bytes, contentType: optimized.contentType };
 }
 
 async function requireAdmin() {
@@ -315,7 +284,8 @@ async function uploadImageFile(
   const admin = createSupabaseAdminClient();
   if (!admin) throw new Error("Supabase service role is not configured.");
 
-  const processed = await optimizeImageUpload(file);
+  const input = Buffer.from(await file.arrayBuffer());
+  const processed = await optimizePhotographyImage(input, file.type || "application/octet-stream");
   const { error } = await admin.storage.from(bucket).upload(objectBasePath, processed.bytes, {
     cacheControl: "31536000",
     upsert: false,
@@ -325,7 +295,21 @@ async function uploadImageFile(
   if (error) throw error;
 
   const { data } = admin.storage.from(bucket).getPublicUrl(objectBasePath);
-  return data.publicUrl;
+  return { aspectRatio: processed.aspectRatio, imagePath: data.publicUrl };
+}
+
+async function uploadCreativePhotoIfPresent(
+  formData: FormData,
+  field: string,
+  objectBasePath: string,
+  bucket = PHOTOGRAPHY_BUCKET,
+) {
+  const file = formData.get(field);
+  if (!(file instanceof File) || file.size === 0) return null;
+
+  const extension = extensionFromFilename(file.name);
+  const version = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
+  return uploadImageFile(file, `${objectBasePath}-${safeFilename(version)}${extension}`, bucket);
 }
 
 async function mutateAndRefresh<T extends Record<string, unknown>>(
@@ -524,7 +508,18 @@ export async function importProjectsCsv(formData: FormData) {
   }
 
   const rows = parseCsvRows(await file.text());
-  if (rows.length < 2) throw new Error("CSV must include a header row and at least one project.");
+  if (rows.length < 2) {
+    const singleRow = rows[0] ?? [];
+    const headerCandidate = singleRow.map(normalizeHeader);
+    const isHeaderOnly = headerCandidate.length === PROJECT_IMPORT_HEADERS.length &&
+      headerCandidate.every((value) => PROJECT_IMPORT_HEADERS.includes(value as typeof PROJECT_IMPORT_HEADERS[number]));
+
+    if (rows.length === 1 && singleRow.length === PROJECT_IMPORT_HEADERS.length && !isHeaderOnly) {
+      rows.unshift(PROJECT_IMPORT_HEADERS.slice());
+    } else {
+      throw new Error("CSV must include a header row and at least one project.");
+    }
+  }
 
   const headers = rows[0].map(normalizeHeader);
   const missingHeaders = PROJECT_IMPORT_HEADERS.filter((header) => !headers.includes(header));
@@ -1169,22 +1164,21 @@ export async function saveCreativePhoto(formData: FormData) {
   const id = optionalText(formData, "id") ?? crypto.randomUUID();
   const categoryId = requiredText(formData, "category_id", "Category");
   const existingImagePath = optionalText(formData, "existing_image_path");
-  const image = await uploadAssetIfPresent(
+  const uploadedPhoto = await uploadCreativePhotoIfPresent(
     formData,
     "image_file",
     `${text(formData, "category_slug") || categoryId}/${id}`,
-    existingImagePath,
     PHOTOGRAPHY_BUCKET,
   );
 
-  if (!image && !existingImagePath) throw new Error("Photo image is required.");
+  if (!uploadedPhoto && !existingImagePath) throw new Error("Photo image is required.");
 
   await mutateAndRefresh("creative_photos", {
     id,
     category_id: categoryId,
     title: requiredText(formData, "title", "Title"),
-    image_path: image ?? existingImagePath,
-    aspect_ratio: assertAllowedPhotoAspect(optionalText(formData, "aspect_ratio")),
+    image_path: uploadedPhoto?.imagePath ?? existingImagePath,
+    aspect_ratio: uploadedPhoto?.aspectRatio ?? assertAllowedPhotoAspect(optionalText(formData, "aspect_ratio")),
     featured: bool(formData, "featured"),
     sort_order: await resolveSortOrder("creative_photos", formData),
     published: bool(formData, "published"),
@@ -1226,7 +1220,7 @@ export async function uploadCreativePhotos(formData: FormData) {
         const sequence = nextSortOrder + overallIndex + 1;
         const sequenceLabel = padSequence(sequence);
         const extension = extensionFromFilename(file.name);
-        const imagePath = await uploadImageFile(
+        const uploadedPhoto = await uploadImageFile(
           file,
           `${categorySlug}/${categorySlug}-${sequenceLabel}${extension}`,
           PHOTOGRAPHY_BUCKET,
@@ -1235,8 +1229,8 @@ export async function uploadCreativePhotos(formData: FormData) {
           id,
           category_id: categoryId,
           title: `${categoryTitleFromSlug(categorySlug)} ${sequence}`,
-          image_path: imagePath,
-          aspect_ratio: "landscape",
+          image_path: uploadedPhoto.imagePath,
+          aspect_ratio: uploadedPhoto.aspectRatio,
           featured: false,
           sort_order: nextSortOrder + overallIndex,
           published: true,
@@ -1255,7 +1249,6 @@ export async function uploadCreativePhotos(formData: FormData) {
 }
 
 export async function deleteCreativePhotos(formData: FormData) {
-  const admin = await requireAdmin();
   const rawIds = text(formData, "ids");
   const parsed = JSON.parse(rawIds || "[]");
 
@@ -1264,6 +1257,13 @@ export async function deleteCreativePhotos(formData: FormData) {
   }
 
   const ids = Array.from(new Set(parsed.map((id) => id.trim()))).filter(Boolean);
+  await deleteCreativePhotosByIds(ids);
+  redirect("/admin#creative-portfolio");
+}
+
+export async function deleteCreativePhotosByIds(ids: string[]) {
+  const admin = await requireAdmin();
+
   if (ids.length === 0) {
     throw new Error("Select at least one photo to remove.");
   }
@@ -1295,7 +1295,7 @@ export async function deleteCreativePhotos(formData: FormData) {
   }
 
   revalidateTag("portfolio-content", "max");
-  redirect("/admin#creative-portfolio");
+  return { deletedIds: ids };
 }
 
 export async function saveSiteContent(formData: FormData) {

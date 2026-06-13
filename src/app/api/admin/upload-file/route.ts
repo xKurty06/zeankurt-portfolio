@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import sharp from "sharp";
 import { createSupabaseAdminClient, createSupabaseServerClient } from "@/lib/supabase/server";
+import { optimizePhotographyImage } from "@/lib/photography-image";
 import { isAllowedAdminEmail, PHOTOGRAPHY_BUCKET } from "@/lib/supabase/config";
 
 function extensionFromFilename(value: string) {
@@ -40,30 +40,6 @@ function isUniqueConstraintError(error: unknown) {
   return code === "23505" || /duplicate key|unique constraint/i.test(message);
 }
 
-async function optimizeImage(buffer: Buffer, mime = "image/jpeg") {
-  try {
-    const image = sharp(buffer).rotate();
-    const metadata = await image.metadata();
-    const resizeOptions = { width: 2048, height: 2048, fit: "inside", withoutEnlargement: true } as any;
-
-    switch (metadata.format) {
-      case "jpeg":
-      case "jpg":
-        return { bytes: await image.resize(resizeOptions).jpeg({ quality: 82, mozjpeg: true }).toBuffer(), contentType: "image/jpeg" };
-      case "png":
-        return { bytes: await image.resize(resizeOptions).png({ compressionLevel: 8, adaptiveFiltering: true, effort: 6 }).toBuffer(), contentType: "image/png" };
-      case "webp":
-        return { bytes: await image.resize(resizeOptions).webp({ quality: 80 }).toBuffer(), contentType: "image/webp" };
-      case "avif":
-        return { bytes: await image.resize(resizeOptions).avif({ quality: 60 }).toBuffer(), contentType: "image/avif" };
-      default:
-        return { bytes: buffer, contentType: mime };
-    }
-  } catch (err) {
-    return { bytes: buffer, contentType: mime };
-  }
-}
-
 export async function POST(req: Request) {
   const formData = await req.formData();
   const file = formData.get("file");
@@ -86,7 +62,9 @@ export async function POST(req: Request) {
 
   const arrayBuffer = await file.arrayBuffer();
   const input = Buffer.from(arrayBuffer);
-  const processed = file.type.startsWith("image/") ? await optimizeImage(input, file.type) : { bytes: input, contentType: file.type || "application/octet-stream" };
+  const processed = file.type.startsWith("image/")
+    ? await optimizePhotographyImage(input, file.type)
+    : { aspectRatio: "landscape" as const, bytes: input, contentType: file.type || "application/octet-stream" };
 
   // determine sort_order
   const { data: sortData, error: sortError } = await admin.from("creative_photos").select("sort_order").eq("category_id", String(categoryId)).order("sort_order", { ascending: false }).limit(1).maybeSingle();
@@ -123,7 +101,7 @@ export async function POST(req: Request) {
       category_id: String(categoryId),
       title,
       image_path: publicUrl,
-      aspect_ratio: "landscape",
+      aspect_ratio: processed.aspectRatio,
       featured: false,
       sort_order: nextSortOrder,
       published: true,

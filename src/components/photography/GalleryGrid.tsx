@@ -38,20 +38,20 @@ export function GalleryGrid({ photos, onPhotoClick }: GalleryGridProps) {
   );
 
   return (
-    <div ref={gridRef} className="columns-1 gap-4 sm:columns-2 xl:columns-3">
+    <div ref={gridRef} className="columns-1 gap-4 sm:columns-2 xl:columns-3 2xl:columns-4">
       {photos.map((photo, index) => (
         <button
           key={photo.id}
           type="button"
           data-gallery-frame
           onClick={() => onPhotoClick(photo, index)}
-          className="group mb-4 block w-full overflow-hidden rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+          className="group mb-4 block w-full break-inside-avoid overflow-hidden rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
         >
           <div
             className={cn(
-              "relative w-full overflow-hidden",
-              photo.aspectRatio === "portrait" && "aspect-[4/5]",
-              photo.aspectRatio === "landscape" && "aspect-[16/10]",
+              "relative w-full overflow-hidden rounded-[1.35rem] bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))]",
+              photo.aspectRatio === "portrait" && "aspect-[3/4]",
+              photo.aspectRatio === "landscape" && "aspect-[4/3]",
               photo.aspectRatio === "square" && "aspect-square",
             )}
           >

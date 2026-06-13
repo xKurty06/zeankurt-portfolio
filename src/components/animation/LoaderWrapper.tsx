@@ -1,14 +1,22 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { PageLoader } from "@/components/animation/PageLoader";
 
 /** Shows the PageLoader on every visit with no session storage. */
 export function LoaderWrapper() {
+  const pathname = usePathname();
   const [show, setShow] = useState(true);
   const restoreScrollRef = useRef<() => void>(() => {});
+  const isAdminRoute = pathname?.startsWith("/admin");
 
   useEffect(() => {
+    if (isAdminRoute) {
+      setShow(false);
+      return;
+    }
+
     const previousHtmlOverflow = document.documentElement.style.overflow;
     const previousBodyOverflow = document.body.style.overflow;
     const previousBodyOverscroll = document.body.style.overscrollBehavior;
@@ -30,7 +38,7 @@ export function LoaderWrapper() {
     };
 
     return () => restoreScrollRef.current();
-  }, []);
+  }, [isAdminRoute]);
 
   if (!show) return null;
 

@@ -9,7 +9,7 @@ type UploadProgress = {
   error?: string;
   loaded: number;
   total: number;
-  status: "pending" | "uploading" | "done" | "error" | "cancelled";
+  status: "pending" | "uploading" | "processing" | "done" | "error" | "cancelled";
 };
 
 type DirectoryPickerWindow = Window & {
@@ -68,7 +68,7 @@ export default function UploadWithValidation({
   const overLimit = fileCount > maxFiles;
   const TriggerIcon = directory ? FolderUp : Upload;
   const triggerLabel = directory ? "Choose Folder" : "Choose Files";
-  const uploadIndicatorLabel =
+  const baseUploadIndicatorLabel =
     fileCount === 0
       ? "Uploading photos. You can close this modal and keep working."
       : `Uploading ${fileCount} photo${fileCount === 1 ? "" : "s"}. You can close this modal and keep working.`;
@@ -210,6 +210,24 @@ export default function UploadWithValidation({
             }));
           };
 
+          xhr.upload.onloadend = () => {
+            setProgress((current) => {
+              const existing = current[key];
+              if (!existing || existing.status === "done" || existing.status === "error" || existing.status === "cancelled") {
+                return current;
+              }
+
+              return {
+                ...current,
+                [key]: {
+                  ...existing,
+                  loaded: existing.total,
+                  status: "processing",
+                },
+              };
+            });
+          };
+
           xhr.onload = () => {
             const isSuccess = xhr.status >= 200 && xhr.status < 300;
             const jsonResponse =
@@ -335,11 +353,16 @@ export default function UploadWithValidation({
 
     const totalBytes = trackedEntries.reduce((sum, item) => sum + Math.max(1, item.total), 0);
     const loadedBytes = trackedEntries.reduce((sum, item) => {
-      if (item.status === "done") return sum + Math.max(1, item.total);
+      if (item.status === "done" || item.status === "processing") return sum + Math.max(1, item.total);
       return sum + Math.min(item.loaded, Math.max(1, item.total));
     }, 0);
     const completedCount = trackedEntries.filter((item) => item.status === "done").length;
+    const processingCount = trackedEntries.filter((item) => item.status === "processing").length;
     const progressPercent = Math.min(100, Math.max(0, Math.round((loadedBytes / Math.max(1, totalBytes)) * 100)));
+    const uploadIndicatorLabel =
+      processingCount > 0
+        ? `${baseUploadIndicatorLabel.replace(/\.\s*$/, "")} ${processingCount} photo${processingCount === 1 ? " is" : "s are"} processing on the server.`
+        : baseUploadIndicatorLabel;
 
     setSaving(true, uploadIndicatorLabel, {
       cancelAction: cancelUpload,
@@ -347,7 +370,7 @@ export default function UploadWithValidation({
       progressPercent,
       totalCount: selectedFiles.length,
     });
-  }, [cancelUpload, progress, selectedFiles, setSaving, submitting, uploadIndicatorLabel]);
+  }, [baseUploadIndicatorLabel, cancelUpload, progress, selectedFiles, setSaving, submitting]);
 
   const applySelectedFiles = (files: File[]) => {
     setSelectedFiles(files);
@@ -551,6 +574,8 @@ export default function UploadWithValidation({
                   {currentProgress
                     ? currentProgress.status === "uploading"
                       ? `${Math.round((currentProgress.loaded / Math.max(1, currentProgress.total)) * 100)}%`
+                      : currentProgress.status === "processing"
+                        ? "Processing"
                       : currentProgress.status === "done"
                         ? "Done"
                         : "Error"

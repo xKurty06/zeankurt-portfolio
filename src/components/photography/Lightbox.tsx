@@ -45,6 +45,7 @@ export function Lightbox({
 
   return (
     <div
+      data-preview-overlay="true"
       className="fixed inset-0 z-[100] flex items-center justify-center bg-black/92 p-4 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"

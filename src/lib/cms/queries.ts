@@ -1,5 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { createClient } from "@supabase/supabase-js";
+import { createSupabaseAdminClient } from "@/lib/supabase/server";
 import {
   getSupabaseAnonKey,
   getSupabaseUrl,
@@ -45,12 +46,14 @@ async function fetchPortfolioContent(): Promise<PortfolioContent> {
     throw new Error("Supabase public environment variables are required.");
   }
 
-  const supabase = createClient(getSupabaseUrl()!, getSupabaseAnonKey()!, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  });
+  const supabase =
+    createSupabaseAdminClient() ??
+    createClient(getSupabaseUrl()!, getSupabaseAnonKey()!, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    });
 
   try {
     const [

@@ -6,10 +6,17 @@ import { useSaving } from "@/lib/saving";
 type Props = React.ButtonHTMLAttributes<HTMLButtonElement> & {
   children?: React.ReactNode;
   loadingLabel?: string;
+  savingKey?: string;
 };
 
-export default function SaveButton({ children, className = "", loadingLabel = "Saving...", ...rest }: Props) {
-  const { isSaving } = useSaving();
+export default function SaveButton({
+  children,
+  className = "",
+  loadingLabel = "Saving...",
+  savingKey,
+  ...rest
+}: Props) {
+  const { isSaving } = useSaving(savingKey);
 
   return (
     <button

@@ -160,7 +160,7 @@ export function PhotographyTeaser({ creativeCategories = [] }: PhotographyTeaser
             >
               <div className="relative aspect-[4/5] overflow-hidden">
                 {card.image ? (
-                  <div data-photo-img className="absolute inset-0">
+                  <div data-photo-img className="absolute -inset-x-2 -inset-y-3">
                     <Image
                       src={card.image}
                       alt={`${card.title} category showcase`}
@@ -200,11 +200,6 @@ export function PhotographyTeaser({ creativeCategories = [] }: PhotographyTeaser
                   <p className="mt-1 text-lg font-semibold text-white">{card.title}</p>
                   {card.description ? (
                     <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-white/65">{card.description}</p>
-                  ) : null}
-                  {!card.image ? (
-                    <p className="mt-3 text-[11px] uppercase tracking-[0.18em] text-white/45">
-                      Upload showcase image in admin CMS
-                    </p>
                   ) : null}
                 </div>
               </div>
