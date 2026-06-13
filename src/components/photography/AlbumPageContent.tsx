@@ -1,13 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import type { PhotoAlbum, PhotoItem } from "@/types";
 import { GalleryGrid } from "@/components/photography/GalleryGrid";
 import { Lightbox } from "@/components/photography/Lightbox";
 import { Container } from "@/components/ui/Container";
-import { cn } from "@/lib/cn";
 import { resolvePhotoAspectRatio } from "@/lib/photo-aspect";
 
 interface AlbumPageContentProps {
@@ -18,9 +17,8 @@ interface AlbumPageContentProps {
 export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
   const albumPhotos = useMemo(() => photos ?? [], [photos]);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
-  const heroPhotos = albumPhotos.slice(0, 4);
-  const featuredPhoto = heroPhotos[0] ?? null;
-  const supportingPhotos = heroPhotos.slice(1);
+  const featuredPhoto = albumPhotos.find((photo) => photo.featured) ?? albumPhotos[0] ?? null;
+  const supportingPhotos = albumPhotos.filter((photo) => photo.id !== featuredPhoto?.id).slice(0, 4);
   const showCategoryLabel =
     album.category.trim().toLowerCase() !== album.title.trim().toLowerCase();
   const featuredImage = album.coverImage ?? featuredPhoto?.image ?? null;
@@ -28,8 +26,27 @@ export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
     featuredPhoto?.aspectRatio ?? "landscape",
   );
 
+  // Ensure featured aspect is accurate even when `album.coverImage` is used
+  // by preloading the featured image and measuring its natural size.
+  useEffect(() => {
+    if (!featuredImage) return;
+
+    let mounted = true;
+    const img = new Image();
+    img.src = featuredImage;
+    img.onload = () => {
+      if (!mounted) return;
+      const aspect = resolvePhotoAspectRatio(img.naturalWidth, img.naturalHeight);
+      setFeaturedAspectRatio(aspect);
+    };
+
+    return () => {
+      mounted = false;
+    };
+  }, [featuredImage]);
+
   const getAspectClass = (aspectRatio: PhotoItem["aspectRatio"]) => {
-    if (aspectRatio === "portrait") return "aspect-[4/5]";
+    if (aspectRatio === "portrait") return "aspect-[3/4]";
     if (aspectRatio === "square") return "aspect-square";
     return "aspect-[4/3]";
   };
@@ -54,7 +71,7 @@ export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
             Back to photography
           </Link>
 
-          <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,32rem)] lg:items-start">
+          <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,32rem)] lg:items-stretch">
             <div className="lg:pt-2">
               {showCategoryLabel ? (
                 <p className="font-mono text-xs uppercase tracking-[0.22em] text-white/45">
@@ -69,47 +86,33 @@ export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
               </p>
 
               {supportingPhotos.length > 0 ? (
-                <div className="mt-8 grid gap-4 sm:grid-cols-2">
-                  {supportingPhotos.map((photo, photoIndex) => {
+                <div className="mt-8 grid h-[calc(100%-9rem)] min-h-[20rem] grid-cols-2 grid-rows-2 gap-4">
+                  {supportingPhotos.map((photo) => {
                     const index = albumPhotos.findIndex((item) => item.id === photo.id);
-                    const isLastOddWide =
-                      supportingPhotos.length > 1 &&
-                      supportingPhotos.length % 2 === 1 &&
-                      photoIndex === supportingPhotos.length - 1;
 
                     return (
                       <button
                         key={photo.id}
                         type="button"
                         onClick={() => setLightboxIndex(index)}
-                        className={cn(
-                          "group overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02] text-left",
-                          isLastOddWide && "sm:col-span-2",
-                        )}
+                        className="group relative overflow-hidden rounded-[1.35rem] bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
                       >
-                        <div
-                          className={cn(
-                            "relative overflow-hidden",
-                            isLastOddWide ? "aspect-[16/9]" : getAspectClass(photo.aspectRatio),
-                          )}
-                        >
-                          {photo.image ? (
-                            <img
-                              src={photo.image}
-                              alt={photo.title}
-                              className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
-                              loading="lazy"
-                            />
-                          ) : (
-                            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))]" />
-                          )}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-transparent" />
-                          <div className="absolute inset-x-0 bottom-0 p-3">
-                            <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/60">
-                              {photo.category}
-                            </p>
-                            <p className="mt-1 text-sm font-medium text-white">{photo.title}</p>
-                          </div>
+                        {photo.image ? (
+                          <img
+                            src={photo.image}
+                            alt={photo.title}
+                            className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.03]"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))]" />
+                        )}
+                        <div className="absolute inset-0 bg-black/0 transition duration-300 group-hover:bg-black/20" />
+                        <div className="absolute inset-x-0 bottom-0 translate-y-2 p-4 opacity-0 transition duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+                          <p className="text-[10px] uppercase tracking-[0.18em] text-white/80">
+                            {photo.category}
+                          </p>
+                          <p className="mt-1 text-sm font-medium text-white">{photo.title}</p>
                         </div>
                       </button>
                     );
@@ -121,7 +124,7 @@ export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
             <button
               type="button"
               onClick={() => setLightboxIndex(featuredPhoto ? albumPhotos.findIndex((item) => item.id === featuredPhoto.id) : 0)}
-              className={`overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))] text-left lg:justify-self-end ${getAspectClass(featuredAspectRatio)}`}
+              className="overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))] text-left lg:justify-self-end lg:h-full lg:min-h-[28rem]"
             >
               {featuredImage ? (
                 <img

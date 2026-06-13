@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, Link } from "lucide-react";
 import { useGSAP } from "@gsap/react";
 import { socialGroups } from "@/data/social";
 import { gsap, registerGsapPlugins, SplitText, ScrollTrigger } from "@/lib/gsap";
@@ -12,6 +12,7 @@ import { RippleButton } from "@/components/animation/RippleButton";
 import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
 import { SocialLinks } from "@/components/ui/SocialLinks";
+import { redirect } from "next/navigation";
 
 const ROLES = [
   "Full-Stack Developer",
@@ -19,6 +20,8 @@ const ROLES = [
   "Co-Founder",
   "Photographer & Videographer",
   "Creative Technologist",
+  "Photo Editor",
+  "Colorist"
 ];
 
 const HERO_STACK = ["Build", "Ship", "Capture", "Connect"];
@@ -31,6 +34,7 @@ function ShatterName({ name }: { name: string }) {
   const handleClick = () => {
     const el = ref.current;
     if (!el) return;
+    
 
     registerGsapPlugins();
     const split = new SplitText(el, { type: "chars" });
@@ -53,8 +57,11 @@ function ShatterName({ name }: { name: string }) {
           { autoAlpha: 1, scale: 1, duration: 0.6, ease: "back.out(1.8)" },
         );
         setKey((k) => k + 1);
+        redirect("/#about");
       },
-    });
+    }
+  );
+    
   };
 
   return (
