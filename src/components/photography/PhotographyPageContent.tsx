@@ -126,7 +126,7 @@ export function PhotographyPageContent({ creativeCategories }: PhotographyPageCo
               </div>
             </div>
             {photoAlbums.length > 0 ? (
-              <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+              <div className="columns-1 gap-5 md:columns-2 xl:columns-3">
                 {photoAlbums.map((album) => (
                   <AlbumCard key={album.slug} album={album} />
                 ))}
@@ -160,8 +160,7 @@ export function PhotographyPageContent({ creativeCategories }: PhotographyPageCo
             {filteredPhotos.length > 0 ? (
               <GalleryGrid
                 photos={filteredPhotos}
-                onPhotoClick={(photo) => {
-                  const index = filteredPhotos.findIndex((item) => item.id === photo.id);
+                onPhotoClick={(_photo, index) => {
                   setLightboxIndex(index);
                 }}
               />

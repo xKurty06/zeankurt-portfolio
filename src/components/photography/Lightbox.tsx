@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect } from "react";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import type { PhotoItem } from "@/types";
@@ -83,18 +82,17 @@ export function Lightbox({
       ) : null}
 
       <div className="max-h-[85vh] w-full max-w-5xl">
-        <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl">
+        <div className="flex w-full items-center justify-center overflow-hidden rounded-2xl">
           {photo.image ? (
-            <Image
+            <img
+              key={photo.id}
               src={photo.image}
               alt={photo.title}
-              fill
-              className="object-contain"
-              sizes="100vw"
-              priority
+              className="block max-h-[72vh] w-auto max-w-full rounded-2xl object-contain"
+              loading="eager"
             />
           ) : (
-            <div className="flex h-full items-center justify-center bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))]">
+            <div className="flex min-h-[24rem] w-full items-center justify-center bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))]">
               <p className="text-sm uppercase tracking-[0.22em] text-white/45">
                 No image uploaded
               </p>

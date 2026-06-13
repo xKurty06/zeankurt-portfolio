@@ -18,6 +18,7 @@ export const photoAlbums: PhotoAlbum[] = [
     description:
       "Web3 meetups, hackathons, and campus tours across the Philippines - capturing the energy of builder communities.",
     category: "Event",
+    coverAspectRatio: "landscape",
     photoCount: 12,
   },
   {
@@ -26,6 +27,7 @@ export const photoAlbums: PhotoAlbum[] = [
     description:
       "Natural-light and editorial portraits - focused on expression, mood, and clean composition.",
     category: "Portrait",
+    coverAspectRatio: "portrait",
     photoCount: 8,
   },
   {
@@ -34,6 +36,7 @@ export const photoAlbums: PhotoAlbum[] = [
     description:
       "Candid street frames from around Cavite and neighboring provinces - everyday rhythm and light.",
     category: "Street",
+    coverAspectRatio: "portrait",
     photoCount: 10,
   },
   {
@@ -42,6 +45,7 @@ export const photoAlbums: PhotoAlbum[] = [
     description:
       "Personal explorations in color, motion blur, and experimental framing under shot.by.zk.",
     category: "Creative",
+    coverAspectRatio: "portrait",
     photoCount: 6,
   },
   {
@@ -50,6 +54,7 @@ export const photoAlbums: PhotoAlbum[] = [
     description:
       "Night-sky frames, moon studies, and long-exposure experiments focused on stars, atmosphere, and low-light detail.",
     category: "Astrophotography",
+    coverAspectRatio: "square",
     photoCount: 6,
   },
 ];

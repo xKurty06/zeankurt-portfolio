@@ -1,26 +1,44 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import type { PhotoAlbum } from "@/types";
+import { cn } from "@/lib/cn";
+import { resolvePhotoAspectRatio } from "@/lib/photo-aspect";
 
 interface AlbumCardProps {
   album: PhotoAlbum;
 }
 
 export function AlbumCard({ album }: AlbumCardProps) {
+  const [coverAspectRatio, setCoverAspectRatio] = useState(album.coverAspectRatio);
+
   return (
     <Link
       href={`/photography/${album.slug}`}
-      className="group overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]"
+      className="group mb-5 block break-inside-avoid overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]"
     >
-      <div className="relative overflow-hidden bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))]">
+      <div
+        className={cn(
+          "relative overflow-hidden bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))]",
+          coverAspectRatio === "portrait" && "aspect-[4/5]",
+          coverAspectRatio === "landscape" && "aspect-[4/3]",
+          coverAspectRatio === "square" && "aspect-square",
+        )}
+      >
         {album.coverImage ? (
           <img
             src={album.coverImage}
             alt={album.title}
-            className="block h-auto w-full transition duration-700 group-hover:scale-[1.03]"
+            className="block h-full w-full object-cover transition duration-700 group-hover:scale-[1.03]"
             loading="lazy"
+            onLoad={(event) => {
+              const { naturalWidth, naturalHeight } = event.currentTarget;
+              setCoverAspectRatio(resolvePhotoAspectRatio(naturalWidth, naturalHeight));
+            }}
           />
         ) : (
-          <div className="min-h-[16rem] bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))]" />
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))]" />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
         <div className="absolute inset-x-0 bottom-0 p-5">

@@ -1,21 +1,7 @@
 "use server";
 
 import sharp from "sharp";
-
-export type PhotoAspectRatio = "portrait" | "landscape" | "square";
-
-const SQUARE_RATIO_TOLERANCE = 0.08;
-
-function resolvePhotoAspectRatio(width?: number | null, height?: number | null): PhotoAspectRatio {
-  if (!width || !height) return "landscape";
-
-  const ratio = width / Math.max(height, 1);
-  if (Math.abs(1 - ratio) <= SQUARE_RATIO_TOLERANCE) {
-    return "square";
-  }
-
-  return ratio > 1 ? "landscape" : "portrait";
-}
+import { resolvePhotoAspectRatio } from "@/lib/photo-aspect";
 
 export async function optimizePhotographyImage(buffer: Buffer, mime = "image/jpeg") {
   try {
@@ -83,7 +69,7 @@ export async function optimizePhotographyImage(buffer: Buffer, mime = "image/jpe
     }
   } catch {
     return {
-      aspectRatio: "landscape" as PhotoAspectRatio,
+      aspectRatio: "landscape",
       bytes: buffer,
       contentType: mime,
     };

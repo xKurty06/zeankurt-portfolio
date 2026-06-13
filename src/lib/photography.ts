@@ -7,6 +7,7 @@ export function buildPhotographyAlbums(categories: CreativeCategory[]): PhotoAlb
     description: category.description ?? "",
     category: category.name,
     coverImage: category.showcaseImage ?? category.photos[0]?.image,
+    coverAspectRatio: category.photos[0]?.aspectRatio ?? "landscape",
     photoCount: category.photos.length,
   }));
 }

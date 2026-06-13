@@ -1,11 +1,12 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import Image from "next/image";
 import { useGSAP } from "@gsap/react";
 import { cn } from "@/lib/cn";
 import { gsap, registerGsapPlugins } from "@/lib/gsap";
 import type { PhotoItem } from "@/types";
+import { resolvePhotoAspectRatio } from "@/lib/photo-aspect";
 
 interface GalleryGridProps {
   photos: PhotoItem[];
@@ -14,6 +15,9 @@ interface GalleryGridProps {
 
 export function GalleryGrid({ photos, onPhotoClick }: GalleryGridProps) {
   const gridRef = useRef<HTMLDivElement>(null);
+  const [resolvedAspects, setResolvedAspects] = useState<Record<string, PhotoItem["aspectRatio"]>>(
+    {},
+  );
 
   useGSAP(
     () => {
@@ -50,9 +54,9 @@ export function GalleryGrid({ photos, onPhotoClick }: GalleryGridProps) {
           <div
             className={cn(
               "relative w-full overflow-hidden rounded-[1.35rem] bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))]",
-              photo.aspectRatio === "portrait" && "aspect-[3/4]",
-              photo.aspectRatio === "landscape" && "aspect-[4/3]",
-              photo.aspectRatio === "square" && "aspect-square",
+              (resolvedAspects[photo.id] ?? photo.aspectRatio) === "portrait" && "aspect-[3/4]",
+              (resolvedAspects[photo.id] ?? photo.aspectRatio) === "landscape" && "aspect-[4/3]",
+              (resolvedAspects[photo.id] ?? photo.aspectRatio) === "square" && "aspect-square",
             )}
           >
             {photo.image ? (
@@ -62,6 +66,19 @@ export function GalleryGrid({ photos, onPhotoClick }: GalleryGridProps) {
                 fill
                 className="object-cover transition duration-700 group-hover:scale-[1.03]"
                 sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
+                onLoad={(event) => {
+                  const image = event.currentTarget;
+                  const nextAspect = resolvePhotoAspectRatio(
+                    image.naturalWidth,
+                    image.naturalHeight,
+                  );
+
+                  setResolvedAspects((current) =>
+                    current[photo.id] === nextAspect
+                      ? current
+                      : { ...current, [photo.id]: nextAspect },
+                  );
+                }}
               />
             ) : (
               <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))]" />

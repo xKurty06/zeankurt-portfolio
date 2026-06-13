@@ -88,6 +88,7 @@ export interface PhotoAlbum {
   description: string;
   category: string;
   coverImage?: string;
+  coverAspectRatio: "portrait" | "landscape" | "square";
   photoCount: number;
 }
 
