@@ -118,6 +118,10 @@ export function HeroSection({ siteConfig }: HeroSectionProps) {
 
       registerGsapPlugins();
       gsap.set(sectionRef.current, { autoAlpha: 1 });
+      const content = sectionRef.current?.querySelector<HTMLElement>("[data-hero-content]");
+      const background = sectionRef.current?.querySelector<HTMLElement>("[data-hero-bg]");
+      const setContentY = content ? gsap.quickSetter(content, "y", "px") : null;
+      const setBackgroundY = background ? gsap.quickSetter(background, "y", "px") : null;
 
       const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
 
@@ -138,7 +142,7 @@ export function HeroSection({ siteConfig }: HeroSectionProps) {
         start: "top top", end: "bottom top",
         scrub: 1,
         onUpdate: (self) => {
-          gsap.to("[data-hero-content]", { y: self.progress * 90, ease: "none", duration: 0 });
+          setContentY?.(self.progress * 90);
         },
       });
       ScrollTrigger.create({
@@ -146,7 +150,7 @@ export function HeroSection({ siteConfig }: HeroSectionProps) {
         start: "top top", end: "bottom top",
         scrub: 2,
         onUpdate: (self) => {
-          gsap.to("[data-hero-bg]", { y: self.progress * 40, ease: "none", duration: 0 });
+          setBackgroundY?.(self.progress * 40);
         },
       });
     },

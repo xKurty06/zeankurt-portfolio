@@ -266,6 +266,11 @@ export function AnimatedBackground() {
       const cursorGlowPrimary = root.querySelector<HTMLElement>("[data-cursor-glow='primary']");
       const cursorGlowSecondary = root.querySelector<HTMLElement>("[data-cursor-glow='secondary']");
       let isActive = true;
+      let bounds = root.getBoundingClientRect();
+
+      const syncBounds = () => {
+        bounds = root.getBoundingClientRect();
+      };
 
       orbs.forEach((orb, i) => {
         gsap.to(orb, {
@@ -280,32 +285,29 @@ export function AnimatedBackground() {
       });
 
       const glowPrimaryX = cursorGlowPrimary
-        ? gsap.quickTo(cursorGlowPrimary, "x", { duration: 0.45, ease: "power3.out" })
+        ? gsap.quickTo(cursorGlowPrimary, "x", { duration: 0.16, ease: "power2.out" })
         : null;
       const glowPrimaryY = cursorGlowPrimary
-        ? gsap.quickTo(cursorGlowPrimary, "y", { duration: 0.45, ease: "power3.out" })
+        ? gsap.quickTo(cursorGlowPrimary, "y", { duration: 0.16, ease: "power2.out" })
         : null;
       const glowSecondaryX = cursorGlowSecondary
-        ? gsap.quickTo(cursorGlowSecondary, "x", { duration: 0.75, ease: "power3.out" })
+        ? gsap.quickTo(cursorGlowSecondary, "x", { duration: 0.28, ease: "power2.out" })
         : null;
       const glowSecondaryY = cursorGlowSecondary
-        ? gsap.quickTo(cursorGlowSecondary, "y", { duration: 0.75, ease: "power3.out" })
+        ? gsap.quickTo(cursorGlowSecondary, "y", { duration: 0.28, ease: "power2.out" })
         : null;
 
       // Pre-create quickTo setters for parallax layers to avoid creating new
       // tweens on every mouse move.
       const parallaxSetters = parallaxLayers.map((layer) => {
-        const x = gsap.quickTo(layer, "x", { duration: 0.8, ease: "power3.out" });
-        const y = gsap.quickTo(layer, "y", { duration: 0.8, ease: "power3.out" });
+        const x = gsap.quickTo(layer, "x", { duration: 0.4, ease: "power2.out" });
+        const y = gsap.quickTo(layer, "y", { duration: 0.4, ease: "power2.out" });
         const depth = Number(layer.dataset.parallax ?? 0);
         return { x, y, depth };
       });
 
-      const onMouseMove = (event: MouseEvent) => {
+      const onPointerMove = (event: PointerEvent) => {
         if (!isActive) return;
-
-        const bounds = root.getBoundingClientRect();
-        if (!bounds) return;
 
         const px = event.clientX - bounds.left;
         const py = event.clientY - bounds.top;
@@ -323,6 +325,21 @@ export function AnimatedBackground() {
         });
       };
 
+      const onPointerLeave = () => {
+        const offscreenX = bounds.width * 0.5;
+        const offscreenY = bounds.height + 200;
+
+        glowPrimaryX?.(offscreenX);
+        glowPrimaryY?.(offscreenY);
+        glowSecondaryX?.(offscreenX);
+        glowSecondaryY?.(offscreenY);
+
+        parallaxSetters.forEach((s) => {
+          s.x(0);
+          s.y(0);
+        });
+      };
+
       const stopMonitoring = monitorElementActivity(root, (nextActive) => {
         isActive = nextActive;
         if (!isActive) {
@@ -334,11 +351,17 @@ export function AnimatedBackground() {
         }
       }, { threshold: 0.05 });
 
-      window.addEventListener("mousemove", onMouseMove, { passive: true });
+      window.addEventListener("resize", syncBounds, { passive: true });
+      window.addEventListener("scroll", syncBounds, { passive: true });
+      root.addEventListener("pointermove", onPointerMove, { passive: true });
+      root.addEventListener("pointerleave", onPointerLeave);
 
       return () => {
         stopMonitoring();
-        window.removeEventListener("mousemove", onMouseMove);
+        window.removeEventListener("resize", syncBounds);
+        window.removeEventListener("scroll", syncBounds);
+        root.removeEventListener("pointermove", onPointerMove);
+        root.removeEventListener("pointerleave", onPointerLeave);
       };
     },
     { scope: rootRef },

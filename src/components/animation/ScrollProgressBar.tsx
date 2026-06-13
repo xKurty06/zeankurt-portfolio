@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { gsap, registerGsapPlugins, ScrollTrigger } from "@/lib/gsap";
+import { gsap, registerGsapPlugins } from "@/lib/gsap";
 
 /** Thin progress bar fixed at the very top of the viewport. */
 export function ScrollProgressBar() {
@@ -14,18 +14,64 @@ export function ScrollProgressBar() {
     const bar = barRef.current;
     if (!bar) return;
 
-    // Use a quickSetter for scaleX to avoid repeated style object allocation.
     const setScaleX = gsap.quickSetter(bar, "scaleX");
-    const trigger = ScrollTrigger.create({
-      start: "top top",
-      end: "bottom bottom",
-      onUpdate: (self) => {
-        setScaleX(self.progress);
-      },
+    let frame = 0;
+
+    const updateProgress = () => {
+      frame = 0;
+
+      const doc = document.documentElement;
+      const body = document.body;
+      const scrollTop = window.scrollY || doc.scrollTop || body.scrollTop || 0;
+      const scrollHeight = Math.max(
+        doc.scrollHeight,
+        body.scrollHeight,
+        doc.offsetHeight,
+        body.offsetHeight,
+        doc.clientHeight,
+      );
+      const maxScroll = Math.max(1, scrollHeight - window.innerHeight);
+      const progress = Math.min(1, Math.max(0, scrollTop / maxScroll));
+
+      setScaleX(progress);
+    };
+
+    const scheduleUpdate = () => {
+      if (frame !== 0) return;
+      frame = window.requestAnimationFrame(updateProgress);
+    };
+
+    const resizeObserver = typeof ResizeObserver !== "undefined"
+      ? new ResizeObserver(() => {
+          scheduleUpdate();
+        })
+      : null;
+    const mutationObserver = typeof MutationObserver !== "undefined"
+      ? new MutationObserver(() => {
+          scheduleUpdate();
+        })
+      : null;
+
+    resizeObserver?.observe(document.documentElement);
+    resizeObserver?.observe(document.body);
+    mutationObserver?.observe(document.body, {
+      attributes: true,
+      childList: true,
+      subtree: true,
     });
 
+    window.addEventListener("scroll", scheduleUpdate, { passive: true });
+    window.addEventListener("resize", scheduleUpdate, { passive: true });
+    scheduleUpdate();
+
     return () => {
-      trigger.kill();
+      if (frame !== 0) {
+        window.cancelAnimationFrame(frame);
+      }
+      resizeObserver?.disconnect();
+      mutationObserver?.disconnect();
+      window.removeEventListener("scroll", scheduleUpdate);
+      window.removeEventListener("resize", scheduleUpdate);
     };
   }, []);
 

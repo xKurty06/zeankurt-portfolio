@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
 import * as THREE from "three";
 import { cn } from "@/lib/cn";
@@ -11,7 +10,6 @@ type DottedSurfaceProps = Omit<React.ComponentProps<"div">, "ref">;
 
 export function DottedSurface({ className, ...props }: DottedSurfaceProps) {
   const { theme } = useTheme();
-  const pathname = usePathname();
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<{
     scene: THREE.Scene;
@@ -95,9 +93,10 @@ export function DottedSurface({ className, ...props }: DottedSurfaceProps) {
     let count = 0;
     let animationId = 0;
     let isActive = true;
+    let disposed = false;
 
     const animate = () => {
-      if (!isActive) {
+      if (disposed || !isActive) {
         animationId = 0;
         if (sceneRef.current) {
           sceneRef.current.animationId = 0;
@@ -142,6 +141,7 @@ export function DottedSurface({ className, ...props }: DottedSurfaceProps) {
     };
 
     const syncScene = () => {
+      if (disposed) return;
       handleResize();
       if (isActive && animationId === 0) {
         animate();
@@ -150,8 +150,10 @@ export function DottedSurface({ className, ...props }: DottedSurfaceProps) {
 
     const stopMonitoring = monitorElementActivity(activityTarget, (nextActive) => {
       isActive = nextActive;
-      if (isActive && animationId === 0) {
-        animate();
+      if (isActive) {
+        window.requestAnimationFrame(() => {
+          syncScene();
+        });
       }
     }, { threshold: 0.05 });
 
@@ -170,6 +172,7 @@ export function DottedSurface({ className, ...props }: DottedSurfaceProps) {
     };
 
     return () => {
+      disposed = true;
       stopMonitoring();
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("pageshow", syncScene);
@@ -193,7 +196,7 @@ export function DottedSurface({ className, ...props }: DottedSurfaceProps) {
         }
       }
     };
-  }, [theme, pathname]);
+  }, [theme]);
 
   return (
     <div

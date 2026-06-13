@@ -235,9 +235,6 @@ async function uploadAssetIfPresent(
 ) {
   const file = formData.get(field);
   if (!(file instanceof File) || file.size === 0) return null;
-  if (file.size > MAX_UPLOAD_BYTES) {
-    throw new Error("Upload is too large. Use files up to 8MB.");
-  }
 
   const allowed = file.type.startsWith("image/") || file.type === "application/pdf";
   if (!allowed) throw new Error("Only images and PDFs are supported.");
@@ -246,6 +243,9 @@ async function uploadAssetIfPresent(
   if (!admin) throw new Error("Supabase service role is not configured.");
 
   const processed = file.type.startsWith("image/") ? await optimizeImageUpload(file) : { bytes: await file.arrayBuffer(), contentType: file.type };
+  if (processed.bytes.byteLength > MAX_UPLOAD_BYTES) {
+    throw new Error("Upload is too large after optimization. Use images that compress below 8MB.");
+  }
   const extension = extensionFromFilename(file.name);
   const version = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
   const path = `${objectBasePath}-${safeFilename(version)}${extension}`;
@@ -274,9 +274,6 @@ async function uploadImageFile(
   bucket = SUPABASE_BUCKET,
 ) {
   if (file.size === 0) throw new Error("Image file is empty.");
-  if (file.size > MAX_UPLOAD_BYTES) {
-    throw new Error("Upload is too large. Use files up to 8MB.");
-  }
   if (!file.type.startsWith("image/")) {
     throw new Error("Only image uploads are supported for creative photos.");
   }
@@ -286,6 +283,9 @@ async function uploadImageFile(
 
   const input = Buffer.from(await file.arrayBuffer());
   const processed = await optimizePhotographyImage(input, file.type || "application/octet-stream");
+  if (processed.bytes.byteLength > MAX_UPLOAD_BYTES) {
+    throw new Error("Upload is too large after optimization. Use images that compress below 8MB.");
+  }
   const { error } = await admin.storage.from(bucket).upload(objectBasePath, processed.bytes, {
     cacheControl: "31536000",
     upsert: false,

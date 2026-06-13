@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Check, FolderUp, Trash2, Upload, X } from "lucide-react";
 import { useSaving } from "@/lib/saving";
+import { buildUploadMetricMap, formatBytes } from "@/components/admin/uploadMetrics";
 
 type UploadProgress = {
   error?: string;
@@ -62,6 +63,7 @@ export default function UploadWithValidation({
   const [progress, setProgress] = useState<Record<string, UploadProgress>>({});
   const [uploadErrors, setUploadErrors] = useState<string[]>([]);
   const [uploadNotice, setUploadNotice] = useState<string | null>(null);
+  const [metrics, setMetrics] = useState<Record<string, { originalBytes: number; optimizedBytes: number | null }>>({});
   const { setSaving } = useSaving();
 
   const fileCount = selectedFiles.length;
@@ -91,6 +93,27 @@ export default function UploadWithValidation({
       }),
     );
   };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (selectedFiles.length === 0) {
+      setMetrics({});
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    buildUploadMetricMap(selectedFiles).then((nextMetrics) => {
+      if (!cancelled) {
+        setMetrics(nextMetrics);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedFiles]);
 
   useEffect(() => {
     const input = inputRef.current;
@@ -385,6 +408,12 @@ export default function UploadWithValidation({
     emitUploadState("idle");
   };
 
+  const totalOriginalBytes = selectedFiles.reduce((sum, file) => sum + file.size, 0);
+  const totalOptimizedBytes = selectedFiles.reduce((sum, file) => {
+    const metric = metrics[getFileKey(file)];
+    return sum + (metric?.optimizedBytes ?? file.size);
+  }, 0);
+
   const handleDirectoryPick = async () => {
     const pickerWindow = window as DirectoryPickerWindow;
     if (!pickerWindow.showDirectoryPicker) {
@@ -484,6 +513,13 @@ export default function UploadWithValidation({
         ) : null}
       </div>
 
+      {fileCount > 0 ? (
+        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-[var(--foreground-muted)]">
+          <span>Total original: {formatBytes(totalOriginalBytes)}</span>
+          <span>Total optimized: {Object.keys(metrics).length === fileCount ? formatBytes(totalOptimizedBytes) : "Estimating..."}</span>
+        </div>
+      ) : null}
+
       {overLimit ? (
         <div className="mt-3 rounded-2xl border border-yellow-500/20 bg-yellow-500/8 p-3">
           <div className="flex items-start gap-3">
@@ -555,9 +591,16 @@ export default function UploadWithValidation({
           {selectedFiles.map((file) => {
             const key = `${file.name}-${file.size}`;
             const currentProgress = progress[key];
+            const metric = metrics[key];
             return (
               <div key={key} className="flex items-center gap-3">
-                <div className="min-w-[160px] truncate">{file.name}</div>
+                <div className="min-w-[220px]">
+                  <div className="truncate">{file.name}</div>
+                  <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-[var(--foreground-subtle)]">
+                    <span>Original: {formatBytes(file.size)}</span>
+                    <span>Optimized: {metric ? formatBytes(metric.optimizedBytes) : "Estimating..."}</span>
+                  </div>
+                </div>
                 <div className="flex-1">
                   <div className="relative h-2 w-full rounded bg-white/[0.03]">
                     <div

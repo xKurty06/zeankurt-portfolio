@@ -25,6 +25,7 @@ type SortDirection = "asc" | "desc";
 type BrowserMode = "edit" | "select";
 
 interface PhotoBrowserItem {
+  aspectRatio: "portrait" | "landscape" | "square";
   id: string;
   title: string;
   subtitle?: string;
@@ -239,7 +240,10 @@ function PhotoManagerModal({
     document.body.style.overscrollBehavior = "none";
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (lightboxIndex !== null && event.key === "Escape") return;
+      if (event.key === "Escape" && document.querySelector('[data-preview-overlay="true"]')) {
+        return;
+      }
+
       if (event.key === "Escape") onClose();
     };
 
@@ -258,7 +262,7 @@ function PhotoManagerModal({
       });
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [lightboxIndex, onClose, open]);
+  }, [onClose, open]);
 
   useEffect(() => {
     if (!open) return;
@@ -301,10 +305,7 @@ function PhotoManagerModal({
         albumSlug: category.slug,
         imageSeed: photo.id,
         image: photo.imagePath,
-        aspectRatio:
-          photo.subtitle === "portrait" || photo.subtitle === "square" || photo.subtitle === "landscape"
-            ? photo.subtitle
-            : "landscape",
+        aspectRatio: photo.aspectRatio,
         featured: photo.featured,
       })),
     [category.name, category.slug, filteredPhotos],
@@ -347,8 +348,12 @@ function PhotoManagerModal({
 
     try {
       await deleteCreativePhotosByIds(idsToRemove);
-      setRemovingIds(idsToRemove);
-      await new Promise((resolve) => window.setTimeout(resolve, 260));
+      for (const [index, id] of idsToRemove.entries()) {
+        window.setTimeout(() => {
+          setRemovingIds((current) => (current.includes(id) ? current : [...current, id]));
+        }, index * 55);
+      }
+      await new Promise((resolve) => window.setTimeout(resolve, Math.max(260, idsToRemove.length * 55 + 220)));
 
       const remainingPhotos = category.photos.filter((photo) => !idsToRemove.includes(photo.id));
       onCategoryChange({
@@ -550,7 +555,7 @@ function PhotoManagerModal({
           ) : null}
 
           {visiblePhotos.length > 0 ? (
-            <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+            <div className="mt-4 columns-2 gap-3 md:columns-3 xl:columns-4 2xl:columns-5">
               <AnimatePresence initial={false}>
                 {visiblePhotos.map((photo) => {
                 const selected = selectedIds.includes(photo.id);
@@ -568,7 +573,7 @@ function PhotoManagerModal({
                     exit={{ opacity: 0, scale: 0.92, y: 24, filter: "blur(6px)" }}
                     transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
                     className={cn(
-                      "group overflow-hidden rounded-3xl border bg-white/[0.02] transition",
+                      "group mb-3 block break-inside-avoid overflow-hidden rounded-3xl border bg-white/[0.02] transition",
                       selected
                         ? "border-[var(--blue-400)] shadow-[0_0_0_1px_rgba(72,202,228,0.4)]"
                         : "border-[var(--border)] hover:border-[var(--border-strong)]",
@@ -576,7 +581,10 @@ function PhotoManagerModal({
                   >
                     <div
                       className={cn(
-                        "relative aspect-[4/5] overflow-hidden bg-black/20",
+                        "relative overflow-hidden bg-black/20",
+                        photo.aspectRatio === "portrait" && "aspect-[3/4]",
+                        photo.aspectRatio === "landscape" && "aspect-[4/3]",
+                        photo.aspectRatio === "square" && "aspect-square",
                         mode === "select" ? "cursor-pointer" : photo.imagePath ? "cursor-zoom-in" : undefined,
                       )}
                       onClick={() => {
@@ -746,13 +754,15 @@ function PhotoCategoryCard({ category }: { category: PhotoBrowserCategory }) {
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            className="inline-flex h-10 items-center justify-center rounded-full border border-[var(--border)] px-4 text-sm font-medium text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white"
-          >
-            Manage photos
-          </button>
+          {localCategory.photoCount > 0 ? (
+            <button
+              type="button"
+              onClick={() => setOpen(true)}
+              className="inline-flex h-10 items-center justify-center rounded-full border border-[var(--border)] px-4 text-sm font-medium text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white"
+            >
+              Manage photos
+            </button>
+          ) : null}
         </div>
       </section>
 

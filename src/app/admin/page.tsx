@@ -1213,6 +1213,12 @@ export default async function AdminPage() {
                       description: value(category, "description"),
                       photoCount: categoryPhotos.length,
                       photos: categoryPhotos.map((photo) => ({
+                        aspectRatio:
+                          value(photo, "aspect_ratio") === "portrait" ||
+                          value(photo, "aspect_ratio") === "square" ||
+                          value(photo, "aspect_ratio") === "landscape"
+                            ? (value(photo, "aspect_ratio") as "portrait" | "landscape" | "square")
+                            : "landscape",
                         id: value(photo, "id"),
                         title: value(photo, "title"),
                         subtitle: value(photo, "aspect_ratio"),

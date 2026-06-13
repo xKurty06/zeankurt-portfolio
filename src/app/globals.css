@@ -91,6 +91,15 @@ body {
   );
 }
 
+[data-cursor-glow] {
+  will-change: transform;
+  transform: translate3d(-50%, -50%, 0);
+}
+
+[data-parallax] {
+  will-change: transform;
+}
+
 /* ─── Text ──────────────────────────────────────────────────────────────────── */
 
 .text-gradient {

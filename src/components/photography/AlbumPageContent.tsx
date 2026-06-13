@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import type { PhotoAlbum, PhotoItem } from "@/types";
@@ -51,18 +50,16 @@ export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
               </p>
             </div>
 
-            <div className="relative aspect-[16/10] overflow-hidden rounded-2xl border border-white/10">
+            <div className="overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))]">
               {album.coverImage ? (
-                <Image
+                <img
                   src={album.coverImage}
                   alt={album.title}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 1024px) 100vw, 40vw"
-                  priority
+                  className="block h-auto w-full"
+                  loading="eager"
                 />
               ) : (
-                <div className="flex h-full items-end bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))] p-6">
+                <div className="flex min-h-[18rem] items-end p-6">
                   <p className="text-sm uppercase tracking-[0.2em] text-white/45">
                     No showcase image uploaded
                   </p>

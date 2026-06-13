@@ -38,11 +38,13 @@ export function AdminDialog({
   const contentRef = useRef<HTMLDivElement>(null);
   const initialSnapshotRef = useRef<string>("");
   const portalNodeRef = useRef<HTMLDivElement | null>(null);
+  const submitIntentRef = useRef<"save" | "upload" | null>(null);
   const [mounted, setMounted] = useState(false);
   const savingKey = useId();
   const uploadIntent =
     submitBehavior === "upload" ||
     (submitBehavior === "auto" && /\b(upload|import)\b/i.test(`${triggerLabel} ${title}`));
+  const { cancelSaving, canCancel, setSaving } = useSaving(savingKey);
 
   const syncFormState = () => {
     const form = contentRef.current?.querySelector("form") ?? null;
@@ -129,6 +131,7 @@ export function AdminDialog({
 
     window.addEventListener("keydown", onKeyDown);
     return () => {
+      setSaving(false);
       observer.disconnect();
       document.body.style.overflow = previousOverflow;
       document.body.style.overscrollBehavior = previousOverscroll;
@@ -141,7 +144,7 @@ export function AdminDialog({
       setUploadDialogState("idle");
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [open]);
+  }, [open, setSaving]);
 
   const handleFieldChange = () => {
     setDirty(snapshotFields() !== initialSnapshotRef.current);
@@ -158,8 +161,6 @@ export function AdminDialog({
     setDirty(false);
     setUploadDialogState("idle");
   };
-
-  const { cancelSaving, canCancel, setSaving } = useSaving(savingKey);
 
   useEffect(() => {
     if (open) {
@@ -186,6 +187,41 @@ export function AdminDialog({
     };
   }, [hasFileInput, open, uploadIntent]);
 
+  useEffect(() => {
+    if (!open) return;
+
+    const form = contentRef.current?.querySelector("form");
+    if (!form) return;
+
+    const handleSubmit = () => {
+      const submitIntent = submitIntentRef.current;
+
+      if (submitIntent === "upload" || (uploadIntent && hasFileInput)) {
+        return;
+      }
+
+      setSaving(true, "Saving changes...");
+    };
+
+    const clearSavingState = () => {
+      submitIntentRef.current = null;
+      setSaving(false);
+      if (uploadIntent) {
+        setUploadDialogState("idle");
+      }
+    };
+
+    form.addEventListener("submit", handleSubmit);
+    window.addEventListener("error", clearSavingState);
+    window.addEventListener("unhandledrejection", clearSavingState);
+
+    return () => {
+      form.removeEventListener("submit", handleSubmit);
+      window.removeEventListener("error", clearSavingState);
+      window.removeEventListener("unhandledrejection", clearSavingState);
+    };
+  }, [hasFileInput, open, setSaving, uploadIntent]);
+
   const handleSave = () => {
     if (uploadIntent && hasFileInput && uploadDialogState === "complete") {
       setOpen(false);
@@ -194,15 +230,17 @@ export function AdminDialog({
 
     const form = contentRef.current?.querySelector("form");
     if (!form) return;
+    if (!form.reportValidity()) {
+      submitIntentRef.current = null;
+      setSaving(false);
+      return;
+    }
+
+    submitIntentRef.current = hasFileInput && uploadIntent ? "upload" : "save";
+
     if (hasFileInput && uploadIntent) {
       setUploadDialogState("uploading");
     }
-    setSaving(
-      true,
-      uploadIntent && hasFileInput
-        ? "Uploading selected files. You can close this modal and keep working."
-        : "Saving changes...",
-    );
     form.requestSubmit();
   };
 

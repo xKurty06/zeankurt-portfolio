@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { useGSAP } from "@gsap/react";
@@ -27,6 +26,7 @@ export function PhotographyTeaser({ creativeCategories = [] }: PhotographyTeaser
       title: category.name,
       description: category.description,
       image: category.showcaseImage ?? category.photos[0]?.image,
+      aspectRatio: category.photos[0]?.aspectRatio ?? "landscape",
       href: `/photography/${category.slug}`,
       meta: `${category.photos.length} ${category.photos.length === 1 ? "frame" : "frames"}`,
     }))
@@ -82,12 +82,10 @@ export function PhotographyTeaser({ creativeCategories = [] }: PhotographyTeaser
         });
 
         const onEnter = () => {
-          gsap.to(img, { scale: 1.08, y: -8, duration: 0.6, ease: "power2.out" });
           if (overlay) gsap.to(overlay, { opacity: 1, duration: 0.35 });
           if (caption) gsap.to(caption, { y: 0, opacity: 1, duration: 0.4, ease: "power2.out" });
         };
         const onLeave = () => {
-          gsap.to(img, { scale: 1, y: 0, duration: 0.7, ease: "elastic.out(1, 0.7)" });
           if (overlay) gsap.to(overlay, { opacity: 0.8, duration: 0.45 });
           if (caption) gsap.to(caption, { y: 6, opacity: 0.85, duration: 0.4, ease: "power2.out" });
         };
@@ -158,19 +156,23 @@ export function PhotographyTeaser({ creativeCategories = [] }: PhotographyTeaser
                 ? "photo-card group relative block w-[78vw] shrink-0 overflow-hidden rounded-2xl border border-[var(--border)] bg-black sm:w-72 lg:w-80"
                 : "photo-card group relative block overflow-hidden rounded-2xl border border-[var(--border)] bg-black"}
             >
-              <div className="relative aspect-[4/5] overflow-hidden">
+              <div className="relative aspect-[4/5] overflow-hidden bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))]">
                 {card.image ? (
-                  <div data-photo-img className="absolute -inset-x-2 -inset-y-3">
-                    <Image
+                  <div
+                    className="absolute inset-0"
+                  >
+                    <img
+                      data-photo-img
                       src={card.image}
                       alt={`${card.title} category showcase`}
-                      fill
-                      className="object-cover"
-                      sizes={shouldMarquee ? "(max-width: 640px) 78vw, 320px" : "(max-width: 640px) 100vw, 25vw"}
+                      className="h-full w-full scale-[1.08] object-cover object-center"
+                      loading="lazy"
                     />
                   </div>
                 ) : (
-                  <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,14,28,0.9),rgba(4,8,18,0.96))]" />
+                  <div
+                    className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,14,28,0.9),rgba(4,8,18,0.96))]"
+                  />
                 )}
                 {/* Gradient overlay */}
                 <div

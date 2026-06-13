@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import type { PhotoAlbum } from "@/types";
 
@@ -12,17 +11,16 @@ export function AlbumCard({ album }: AlbumCardProps) {
       href={`/photography/${album.slug}`}
       className="group overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]"
     >
-      <div className="relative aspect-[16/10] overflow-hidden">
+      <div className="relative overflow-hidden bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))]">
         {album.coverImage ? (
-          <Image
+          <img
             src={album.coverImage}
             alt={album.title}
-            fill
-            className="object-cover transition duration-700 group-hover:scale-105"
-            sizes="(max-width: 768px) 100vw, 33vw"
+            className="block h-auto w-full transition duration-700 group-hover:scale-[1.03]"
+            loading="lazy"
           />
         ) : (
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))]" />
+          <div className="min-h-[16rem] bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))]" />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
         <div className="absolute inset-x-0 bottom-0 p-5">
