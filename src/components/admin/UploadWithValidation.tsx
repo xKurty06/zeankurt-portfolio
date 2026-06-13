@@ -64,6 +64,8 @@ export default function UploadWithValidation({
   const [uploadErrors, setUploadErrors] = useState<string[]>([]);
   const [uploadNotice, setUploadNotice] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<Record<string, { originalBytes: number; optimizedBytes: number | null }>>({});
+  const [directoryPickerActive, setDirectoryPickerActive] = useState(false);
+  const directoryPickerActiveRef = useRef(false);
   const { setSaving } = useSaving();
 
   const fileCount = selectedFiles.length;
@@ -415,11 +417,16 @@ export default function UploadWithValidation({
   }, 0);
 
   const handleDirectoryPick = async () => {
+    if (directoryPickerActiveRef.current) return;
+
     const pickerWindow = window as DirectoryPickerWindow;
     if (!pickerWindow.showDirectoryPicker) {
       inputRef.current?.click();
       return;
     }
+
+    setDirectoryPickerActive(true);
+    directoryPickerActiveRef.current = true;
 
     try {
       const handle = await pickerWindow.showDirectoryPicker();
@@ -431,6 +438,9 @@ export default function UploadWithValidation({
       }
 
       throw error;
+    } finally {
+      setDirectoryPickerActive(false);
+      directoryPickerActiveRef.current = false;
     }
   };
 

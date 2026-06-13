@@ -7,6 +7,7 @@ import type { PhotoAlbum, PhotoItem } from "@/types";
 import { GalleryGrid } from "@/components/photography/GalleryGrid";
 import { Lightbox } from "@/components/photography/Lightbox";
 import { Container } from "@/components/ui/Container";
+import { cn } from "@/lib/cn";
 import { resolvePhotoAspectRatio } from "@/lib/photo-aspect";
 
 interface AlbumPageContentProps {
@@ -71,8 +72,8 @@ export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
             Back to photography
           </Link>
 
-          <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,32rem)] lg:items-stretch">
-            <div className="lg:pt-2">
+          <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4 lg:grid-rows-[auto_1fr_1fr]">
+            <div className="col-span-2 lg:col-span-2">
               {showCategoryLabel ? (
                 <p className="font-mono text-xs uppercase tracking-[0.22em] text-white/45">
                   {album.category}
@@ -84,53 +85,25 @@ export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
               <p className="mt-4 max-w-2xl text-base leading-relaxed text-white/65">
                 {album.description}
               </p>
-
-              {supportingPhotos.length > 0 ? (
-                <div className="mt-8 grid h-[calc(100%-9rem)] min-h-[20rem] grid-cols-2 grid-rows-2 gap-4">
-                  {supportingPhotos.map((photo) => {
-                    const index = albumPhotos.findIndex((item) => item.id === photo.id);
-
-                    return (
-                      <button
-                        key={photo.id}
-                        type="button"
-                        onClick={() => setLightboxIndex(index)}
-                        className="group relative overflow-hidden rounded-[1.35rem] bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
-                      >
-                        {photo.image ? (
-                          <img
-                            src={photo.image}
-                            alt={photo.title}
-                            className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.03]"
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))]" />
-                        )}
-                        <div className="absolute inset-0 bg-black/0 transition duration-300 group-hover:bg-black/20" />
-                        <div className="absolute inset-x-0 bottom-0 translate-y-2 p-4 opacity-0 transition duration-300 group-hover:translate-y-0 group-hover:opacity-100">
-                          <p className="text-[10px] uppercase tracking-[0.18em] text-white/80">
-                            {photo.category}
-                          </p>
-                          <p className="mt-1 text-sm font-medium text-white">{photo.title}</p>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : null}
             </div>
 
             <button
               type="button"
-              onClick={() => setLightboxIndex(featuredPhoto ? albumPhotos.findIndex((item) => item.id === featuredPhoto.id) : 0)}
-              className="overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))] text-left lg:justify-self-end lg:h-full lg:min-h-[28rem]"
+              onClick={() => {
+                if (featuredPhoto) {
+                  const idx = albumPhotos.findIndex((item) => item.id === featuredPhoto.id);
+                  if (idx >= 0) {
+                    setLightboxIndex(idx);
+                  }
+                }
+              }}
+              className="relative col-span-2 row-span-2 aspect-square overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))] text-left transition hover:border-white/30 hover:shadow-lg lg:col-span-2 lg:row-span-3 lg:aspect-auto lg:h-full"
             >
               {featuredImage ? (
                 <img
                   src={featuredImage}
                   alt={album.title}
-                  className="h-full w-full object-cover"
+                  className="absolute inset-0 h-full w-full object-cover"
                   loading="eager"
                   onLoad={(event) => {
                     const { naturalWidth, naturalHeight } = event.currentTarget;
@@ -138,13 +111,44 @@ export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
                   }}
                 />
               ) : (
-                <div className="flex h-full min-h-[18rem] items-end p-6">
+                <div className="absolute inset-0 flex items-end p-6">
                   <p className="text-sm uppercase tracking-[0.2em] text-white/45">
                     No showcase image uploaded
                   </p>
                 </div>
               )}
             </button>
+
+            {supportingPhotos.map((photo) => {
+              const index = albumPhotos.findIndex((item) => item.id === photo.id);
+
+              return (
+                <button
+                  key={photo.id}
+                  type="button"
+                  onClick={() => setLightboxIndex(index)}
+                  className="group relative aspect-square overflow-hidden rounded-[1.35rem] bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+                >
+                  {photo.image ? (
+                    <img
+                      src={photo.image}
+                      alt={photo.title}
+                      className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.03]"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))]" />
+                  )}
+                  <div className="absolute inset-0 bg-black/0 transition duration-300 group-hover:bg-black/20" />
+                  <div className="absolute inset-x-0 bottom-0 translate-y-2 p-4 opacity-0 transition duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+                    <p className="text-[10px] uppercase tracking-[0.18em] text-white/80">
+                      {photo.category}
+                    </p>
+                    <p className="mt-1 text-sm font-medium text-white">{photo.title}</p>
+                  </div>
+                </button>
+              );
+            })}
           </div>
 
           <div className="mt-12">
