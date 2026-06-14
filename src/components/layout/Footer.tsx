@@ -7,12 +7,12 @@ import { useGSAP } from "@gsap/react";
 import { footerNav } from "@/data/navigation";
 import { siteConfig } from "@/data/site";
 import { socialGroups } from "@/data/social";
-import { gsap, registerGsapPlugins } from "@/lib/gsap";
+import { gsap, registerGsapPlugins, ScrollTrigger } from "@/lib/gsap";
 import { SocialLinks } from "@/components/ui/SocialLinks";
 
 const ShaderBackground = dynamic(
   () => import("@/components/ui/ShaderBackground"),
-  { ssr: false }
+  { ssr: false },
 );
 
 export function Footer() {
@@ -22,23 +22,48 @@ export function Footer() {
     () => {
       registerGsapPlugins();
 
-      gsap.fromTo(
-        footerRef.current,
-        { autoAlpha: 0, y: 30 },
-        {
-          autoAlpha: 1,
-          y: 0,
-          duration: 0.9,
-          ease: "power3.out",
-          scrollTrigger: {
-            trigger: footerRef.current,
-            start: "top 95%",
-            toggleActions: "play none none none",
-          },
-        }
-      );
+      const footer = footerRef.current;
+      if (!footer) return;
 
-      const sweep = footerRef.current?.querySelector<HTMLElement>("[data-footer-sweep]");
+      const content = footer.querySelector<HTMLElement>("[data-footer-content]");
+      const sweep = footer.querySelector<HTMLElement>("[data-footer-sweep]");
+
+      /*
+        Important:
+        Keep the footer visible by default.
+
+        The old code animated the whole footer from autoAlpha: 0.
+        If ScrollTrigger failed to refresh after dynamic image grids loaded,
+        the footer stayed invisible.
+      */
+      gsap.set(footer, {
+        autoAlpha: 1,
+      });
+
+      if (content) {
+        gsap.fromTo(
+          content,
+          {
+            autoAlpha: 0,
+            y: 30,
+          },
+          {
+            autoAlpha: 1,
+            y: 0,
+            duration: 0.9,
+            ease: "power3.out",
+            immediateRender: false,
+            clearProps: "opacity,visibility,transform",
+            scrollTrigger: {
+              trigger: footer,
+              start: "top 95%",
+              toggleActions: "play none none none",
+              once: true,
+            },
+          },
+        );
+      }
+
       if (sweep) {
         gsap.to(sweep, {
           x: "200%",
@@ -49,8 +74,16 @@ export function Footer() {
           repeatDelay: 4,
         });
       }
+
+      const refreshTimeout = window.setTimeout(() => {
+        ScrollTrigger.refresh();
+      }, 250);
+
+      return () => {
+        window.clearTimeout(refreshTimeout);
+      };
     },
-    { scope: footerRef }
+    { scope: footerRef },
   );
 
   return (
@@ -70,7 +103,7 @@ export function Footer() {
         className="pointer-events-none absolute top-0 -left-1/2 z-10 h-px w-1/2 bg-gradient-to-r from-transparent via-[var(--blue-400)] to-transparent opacity-50"
       />
 
-      <div className="container-shell relative z-10 py-12 md:py-16">
+      <div data-footer-content className="container-shell relative z-10 py-12 md:py-16">
         <div className="grid gap-10 lg:grid-cols-[1.2fr_0.8fr]">
           <div>
             <Link
@@ -79,9 +112,11 @@ export function Footer() {
             >
               {siteConfig.name}
             </Link>
+
             <p className="mt-3 max-w-md text-sm leading-relaxed text-[var(--foreground-muted)]">
               {siteConfig.description}
             </p>
+
             <div className="mt-6">
               <SocialLinks links={socialGroups.personal} />
             </div>
@@ -91,6 +126,7 @@ export function Footer() {
             <p className="mb-4 font-mono text-xs uppercase tracking-[0.2em] text-[var(--blue-400)]">
               Navigation
             </p>
+
             <ul className="grid gap-1 sm:grid-cols-2">
               {footerNav.map((item) => (
                 <li key={item.href}>
@@ -128,13 +164,14 @@ export function Footer() {
           <p suppressHydrationWarning>
             © {new Date().getFullYear()} {siteConfig.name}. All rights reserved.
           </p>
+
           <p>
             Photography via{" "}
             <a
               href="https://www.instagram.com/shot.by.zk/"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[var(--blue-300)] hover:text-white transition"
+              className="text-[var(--blue-300)] transition hover:text-white"
             >
               {siteConfig.photographyBrand}
             </a>
@@ -143,7 +180,7 @@ export function Footer() {
               href="https://www.instagram.com/officialstudio.nomads/"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[var(--blue-300)] hover:text-white transition"
+              className="text-[var(--blue-300)] transition hover:text-white"
             >
               Studio Nomads
             </a>
