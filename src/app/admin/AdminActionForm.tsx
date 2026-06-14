@@ -198,7 +198,7 @@ export function AdminActionForm({
             {state.status === "success" ? (
                 <div
                     role="status"
-                    className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100"
+                    className="mt-3 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100"
                 >
                     {state.message}
                 </div>
@@ -207,7 +207,7 @@ export function AdminActionForm({
             {state.status === "error" ? (
                 <div
                     role="alert"
-                    className="rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-100"
+                    className="mt-3 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-100"
                 >
                     {state.message}
                 </div>

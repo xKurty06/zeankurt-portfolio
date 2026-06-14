@@ -18,6 +18,21 @@ type AdminDialogProps = {
   children: React.ReactNode;
 };
 
+type ScrollLockSnapshot = {
+  scrollY: number;
+  bodyOverflow: string;
+  bodyOverscrollBehavior: string;
+  bodyPosition: string;
+  bodyTop: string;
+  bodyLeft: string;
+  bodyRight: string;
+  bodyWidth: string;
+  bodyScrollBehavior: string;
+  htmlOverflow: string;
+  htmlOverscrollBehavior: string;
+  htmlScrollBehavior: string;
+};
+
 export function AdminDialog({
   title,
   description,
@@ -42,6 +57,7 @@ export function AdminDialog({
   const initialSnapshotRef = useRef<string>("");
   const portalNodeRef = useRef<HTMLDivElement | null>(null);
   const submitIntentRef = useRef<"save" | "upload" | null>(null);
+  const scrollLockRef = useRef<ScrollLockSnapshot | null>(null);
 
   const [mounted, setMounted] = useState(false);
 
@@ -50,6 +66,89 @@ export function AdminDialog({
     (submitBehavior === "auto" && /\b(upload|import)\b/i.test(`${triggerLabel} ${title}`));
 
   const { cancelSaving, canCancel, setSaving } = useSaving(savingKey);
+
+  const lockPageScroll = () => {
+    if (scrollLockRef.current) return;
+
+    const scrollY = window.scrollY;
+    const bodyStyle = document.body.style;
+    const htmlStyle = document.documentElement.style;
+
+    scrollLockRef.current = {
+      scrollY,
+      bodyOverflow: bodyStyle.overflow,
+      bodyOverscrollBehavior: bodyStyle.overscrollBehavior,
+      bodyPosition: bodyStyle.position,
+      bodyTop: bodyStyle.top,
+      bodyLeft: bodyStyle.left,
+      bodyRight: bodyStyle.right,
+      bodyWidth: bodyStyle.width,
+      bodyScrollBehavior: bodyStyle.scrollBehavior,
+      htmlOverflow: htmlStyle.overflow,
+      htmlOverscrollBehavior: htmlStyle.overscrollBehavior,
+      htmlScrollBehavior: htmlStyle.scrollBehavior,
+    };
+
+    htmlStyle.scrollBehavior = "auto";
+    htmlStyle.overflow = "hidden";
+    htmlStyle.overscrollBehavior = "none";
+
+    bodyStyle.scrollBehavior = "auto";
+    bodyStyle.overflow = "hidden";
+    bodyStyle.overscrollBehavior = "none";
+    bodyStyle.position = "fixed";
+    bodyStyle.top = `-${scrollY}px`;
+    bodyStyle.left = "0";
+    bodyStyle.right = "0";
+    bodyStyle.width = "100%";
+  };
+  const unlockPageScroll = () => {
+    const snapshot = scrollLockRef.current;
+    if (!snapshot) return;
+
+    const bodyStyle = document.body.style;
+    const htmlStyle = document.documentElement.style;
+    const targetScrollY = snapshot.scrollY;
+
+    htmlStyle.scrollBehavior = "auto";
+    bodyStyle.scrollBehavior = "auto";
+
+    window.scrollTo({
+      top: targetScrollY,
+      left: 0,
+      behavior: "instant",
+    });
+
+    bodyStyle.overflow = snapshot.bodyOverflow;
+    bodyStyle.overscrollBehavior = snapshot.bodyOverscrollBehavior;
+    bodyStyle.position = snapshot.bodyPosition;
+    bodyStyle.top = snapshot.bodyTop;
+    bodyStyle.left = snapshot.bodyLeft;
+    bodyStyle.right = snapshot.bodyRight;
+    bodyStyle.width = snapshot.bodyWidth;
+
+    htmlStyle.overflow = snapshot.htmlOverflow;
+    htmlStyle.overscrollBehavior = snapshot.htmlOverscrollBehavior;
+
+    window.scrollTo({
+      top: targetScrollY,
+      left: 0,
+      behavior: "instant",
+    });
+
+    requestAnimationFrame(() => {
+      window.scrollTo({
+        top: targetScrollY,
+        left: 0,
+        behavior: "instant",
+      });
+
+      bodyStyle.scrollBehavior = snapshot.bodyScrollBehavior;
+      htmlStyle.scrollBehavior = snapshot.htmlScrollBehavior;
+    });
+
+    scrollLockRef.current = null;
+  };
 
   const syncFormState = () => {
     const form = contentRef.current?.querySelector("form") ?? null;
@@ -105,6 +204,7 @@ export function AdminDialog({
     setMounted(true);
 
     return () => {
+      unlockPageScroll();
       portalNode.remove();
       portalNodeRef.current = null;
     };
@@ -117,8 +217,7 @@ export function AdminDialog({
       (element) => element !== portalNodeRef.current,
     );
 
-    document.body.style.overflow = "hidden";
-    document.body.style.overscrollBehavior = "none";
+    lockPageScroll();
 
     initialSnapshotRef.current = snapshotFields();
     setDirty(false);
@@ -157,8 +256,7 @@ export function AdminDialog({
       setSaving(false);
       observer.disconnect();
 
-      document.body.style.overflow = "";
-      document.body.style.overscrollBehavior = "";
+      unlockPageScroll();
 
       siblings.forEach((element) => {
         element.removeAttribute("inert");
@@ -338,7 +436,17 @@ export function AdminDialog({
           <SavingScopeProvider value={savingKey}>
             <div
               aria-hidden="false"
-              className="animate-fade-in fixed inset-0 z-[1000] flex items-center justify-center overflow-hidden bg-[rgba(3,7,18,0.76)] p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))] md:p-6"
+              className="animate-fade-in fixed inset-0 z-[1000] flex items-center justify-center overflow-hidden overscroll-none bg-[rgba(3,7,18,0.76)] p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))] md:p-6"
+              onWheel={(event) => {
+                if (event.target === event.currentTarget) {
+                  event.preventDefault();
+                }
+              }}
+              onTouchMove={(event) => {
+                if (event.target === event.currentTarget) {
+                  event.preventDefault();
+                }
+              }}
               onPointerDown={(event) => {
                 event.preventDefault();
               }}
@@ -354,6 +462,8 @@ export function AdminDialog({
                 className="animate-modal-in flex max-h-[calc(100dvh-1.5rem)] w-full max-w-3xl flex-col rounded-[1.25rem] border border-[var(--border-strong)] bg-[var(--background-elevated)] shadow-[0_20px_80px_rgba(0,0,0,0.45)] sm:rounded-[1.75rem] md:max-h-[calc(100dvh-3rem)]"
                 onClick={(event) => event.stopPropagation()}
                 onPointerDown={(event) => event.stopPropagation()}
+                onWheel={(event) => event.stopPropagation()}
+                onTouchMove={(event) => event.stopPropagation()}
                 onDragStart={(event) => event.stopPropagation()}
                 onDragOver={(event) => event.stopPropagation()}
                 onDrop={(event) => event.stopPropagation()}
@@ -394,7 +504,7 @@ export function AdminDialog({
 
                 <div
                   ref={contentRef}
-                  className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-5"
+                  className="min-h-0 min-w-0 flex-1 overscroll-contain overflow-x-hidden overflow-y-auto p-4 sm:p-5"
                   onInput={handleFieldChange}
                   onChange={handleFieldChange}
                 >
