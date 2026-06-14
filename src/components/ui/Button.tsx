@@ -52,12 +52,12 @@ export function Button({
   if (href) {
     if (external) {
       return (
-        <a href={href} target="_blank" rel="noopener noreferrer" className={classes}>
+        <a href={href} target="_blank" rel="noopener noreferrer" className={classes} onClick={onClick}>
           {inner}
         </a>
       );
     }
-    return <Link href={href} className={classes}>{inner}</Link>;
+    return <Link href={href} className={classes} onClick={onClick}>{inner}</Link>;
   }
 
   return (

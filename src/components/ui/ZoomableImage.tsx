@@ -78,7 +78,7 @@ export function ZoomableImage({
           data-interactive
           onClick={() => setOpen(true)}
           className={cn(
-            "absolute right-3 top-3 z-20 inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/16 bg-[rgba(3,7,18,0.7)] text-white/80 backdrop-blur-sm transition hover:border-white/30 hover:text-white",
+            "absolute right-3 top-3 z-20 inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/16 bg-[rgba(3,7,18,0.7)] text-white/80 backdrop-blur-sm transition hover:border-white/30 hover:text-white sm:h-9 sm:w-9",
             buttonClassName,
           )}
         >
@@ -107,7 +107,7 @@ export function ZoomableImage({
         <div
           data-preview-overlay="true"
           className={cn(
-            "fixed inset-0 z-[10000] flex items-center justify-center p-4 backdrop-blur-sm",
+            "fixed inset-0 z-[10000] flex items-center justify-center p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-sm sm:p-4",
             open
               ? "motion-safe:animate-[zoomableBackdropIn_220ms_ease-out_forwards]"
               : "motion-safe:animate-[zoomableBackdropOut_220ms_cubic-bezier(0.4,0,1,1)_forwards]",
@@ -119,7 +119,7 @@ export function ZoomableImage({
           <button
             type="button"
             onClick={() => setOpen(false)}
-            className="absolute right-4 top-4 inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/20 text-white transition hover:bg-white/10"
+            className="absolute right-3 top-3 z-20 inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/35 text-white transition hover:bg-white/10 sm:right-4 sm:top-4"
             aria-label="Close image preview"
           >
             <X className="h-5 w-5" />
@@ -127,14 +127,14 @@ export function ZoomableImage({
 
           <div
             className={cn(
-              "relative max-h-[88vh] w-full max-w-6xl",
+              "relative max-h-[80dvh] w-full max-w-6xl",
               open
                 ? "motion-safe:animate-[zoomableModalIn_280ms_cubic-bezier(0.16,1,0.3,1)_forwards]"
                 : "motion-safe:animate-[zoomableModalOut_220ms_cubic-bezier(0.4,0,1,1)_forwards]",
             )}
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="relative aspect-[16/10] w-full overflow-hidden rounded-2xl">
+            <div className="relative h-[80dvh] max-h-[80dvh] w-full overflow-hidden rounded-2xl">
               <Image
                 src={src}
                 alt={alt}

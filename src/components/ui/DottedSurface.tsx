@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { useTheme } from "next-themes";
 import * as THREE from "three";
 import { cn } from "@/lib/cn";
+import { useLowMotionDevice } from "@/hooks/useLowMotionDevice";
 import { monitorElementActivity } from "@/lib/animationActivity";
 
 type DottedSurfaceProps = Omit<React.ComponentProps<"div">, "ref">;
@@ -11,6 +12,7 @@ type DottedSurfaceProps = Omit<React.ComponentProps<"div">, "ref">;
 export function DottedSurface({ className, ...props }: DottedSurfaceProps) {
   const { theme } = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
+  const lowMotion = useLowMotionDevice();
   const sceneRef = useRef<{
     scene: THREE.Scene;
     camera: THREE.PerspectiveCamera;
@@ -21,6 +23,7 @@ export function DottedSurface({ className, ...props }: DottedSurfaceProps) {
   } | null>(null);
 
   useEffect(() => {
+    if (lowMotion) return;
     if (!containerRef.current) return;
 
     const container = containerRef.current;
@@ -196,7 +199,19 @@ export function DottedSurface({ className, ...props }: DottedSurfaceProps) {
         }
       }
     };
-  }, [theme]);
+  }, [lowMotion, theme]);
+
+  if (lowMotion) {
+    return (
+      <div
+        className={cn(
+          "pointer-events-none absolute inset-0 overflow-hidden bg-[radial-gradient(circle_at_22%_24%,rgba(72,202,228,0.12),transparent_24%),radial-gradient(circle_at_78%_72%,rgba(2,132,199,0.12),transparent_28%)]",
+          className,
+        )}
+        {...props}
+      />
+    );
+  }
 
   return (
     <div

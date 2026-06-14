@@ -11,6 +11,7 @@ import { SectionHeading } from "@/components/ui/SectionHeading";
 import { SocialLinkGroups } from "@/components/ui/SocialLinks";
 import { Section, Container } from "@/components/ui/Container";
 import { gsap, registerGsapPlugins } from "@/lib/gsap";
+import { useLowMotionDevice } from "@/hooks/useLowMotionDevice";
 
 interface ContactSectionProps {
   siteConfig: {
@@ -21,6 +22,7 @@ interface ContactSectionProps {
 export function ContactSection({ siteConfig }: ContactSectionProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
+  const lowMotion = useLowMotionDevice();
 
   useGSAP(
     () => {
@@ -56,7 +58,7 @@ export function ContactSection({ siteConfig }: ContactSectionProps) {
       const glow = card.querySelector<HTMLElement>("[data-contact-glow]");
       let onMouseMove: ((event: MouseEvent) => void) | null = null;
       let onMouseLeave: (() => void) | null = null;
-      if (glow) {
+      if (glow && !lowMotion) {
         onMouseMove = (e: MouseEvent) => {
           const rect = card.getBoundingClientRect();
           // Position via left/top; margin offsets (128px = half of h-64/w-64) centre it
@@ -92,7 +94,7 @@ export function ContactSection({ siteConfig }: ContactSectionProps) {
         }
       };
     },
-    { scope: sectionRef },
+    { dependencies: [lowMotion], revertOnUpdate: true, scope: sectionRef },
   );
 
   return (
@@ -100,7 +102,7 @@ export function ContactSection({ siteConfig }: ContactSectionProps) {
       <Container>
         <div
           ref={cardRef}
-          className="relative overflow-hidden rounded-[var(--radius-xl)] border border-[var(--border-strong)] p-8 md:p-12"
+          className="relative overflow-hidden rounded-[var(--radius-xl)] border border-[var(--border-strong)] p-5 md:p-12"
           style={{
             background: "linear-gradient(135deg, rgba(2,62,138,0.25), rgba(3,7,18,0.92))",
           }}

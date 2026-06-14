@@ -84,7 +84,7 @@ export function PhotographyPageContent({ creativeCategories }: PhotographyPageCo
           </p>
           <h1
             data-photo-hero="line"
-            className="mt-4 max-w-3xl font-[family-name:var(--font-syne)] text-4xl font-semibold leading-tight text-white sm:text-5xl md:text-6xl"
+            className="mt-4 max-w-3xl break-words font-[family-name:var(--font-syne)] text-[clamp(1.875rem,8vw,2.5rem)] font-semibold leading-tight text-white sm:text-5xl md:text-6xl"
           >
             Photography & visual stories from events, portraits, and the streets.
           </h1>
@@ -106,8 +106,8 @@ export function PhotographyPageContent({ creativeCategories }: PhotographyPageCo
           <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(3,7,18,0.72),rgba(3,7,18,0.42)_30%,rgba(3,7,18,0.58)_68%,rgba(3,7,18,0.82))]" />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_14%_16%,rgba(72,202,228,0.22),transparent_28%),radial-gradient(circle_at_82%_30%,rgba(0,180,216,0.16),transparent_30%),radial-gradient(circle_at_46%_72%,rgba(2,62,138,0.24),transparent_40%)]" />
           <div className="absolute inset-0 opacity-70 [background-image:linear-gradient(rgba(72,202,228,0.07)_1px,transparent_1px),linear-gradient(90deg,rgba(72,202,228,0.07)_1px,transparent_1px)] [background-size:96px_96px] [mask-image:linear-gradient(180deg,transparent,white_10%,white_90%,transparent)]" />
-          <div className="absolute left-[6%] top-20 h-80 w-80 rounded-full bg-[radial-gradient(circle,rgba(72,202,228,0.2),transparent_70%)] blur-3xl" />
-          <div className="absolute bottom-10 right-[8%] h-96 w-96 rounded-full bg-[radial-gradient(circle,rgba(2,132,199,0.26),transparent_72%)] blur-3xl" />
+          <div className="absolute left-[6%] top-20 h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(72,202,228,0.2),transparent_70%)] blur-3xl sm:h-80 sm:w-80" />
+          <div className="absolute bottom-10 right-[8%] h-64 w-64 rounded-full bg-[radial-gradient(circle,rgba(2,132,199,0.26),transparent_72%)] blur-3xl sm:h-96 sm:w-96" />
         </div>
 
         <Container className="relative z-10 py-14 md:py-20">
@@ -126,7 +126,7 @@ export function PhotographyPageContent({ creativeCategories }: PhotographyPageCo
               </div>
             </div>
             {photoAlbums.length > 0 ? (
-              <div className="columns-1 gap-5 md:columns-2 xl:columns-3">
+              <div className="grid max-w-full grid-cols-2 gap-3 sm:gap-4 md:gap-5 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4">
                 {photoAlbums.map((album) => (
                   <AlbumCard key={album.slug} album={album} />
                 ))}
@@ -193,7 +193,7 @@ function GalleryFilter({
   onChange: (category: string) => void;
 }) {
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex max-w-full flex-wrap gap-2">
       {categories.map((category) => (
         <button
           key={category}
@@ -201,8 +201,8 @@ function GalleryFilter({
           onClick={() => onChange(category)}
           className={
             active === category
-              ? "rounded-full border border-white bg-white px-4 py-2 text-sm text-black"
-              : "rounded-full border border-white/15 px-4 py-2 text-sm text-white/70 transition hover:border-white/35 hover:text-white"
+              ? "min-h-11 rounded-full border border-white bg-white px-4 py-2 text-sm text-black"
+              : "min-h-11 rounded-full border border-white/15 px-4 py-2 text-sm text-white/70 transition hover:border-white/35 hover:text-white"
           }
         >
           {category}

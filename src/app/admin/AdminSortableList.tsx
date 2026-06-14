@@ -217,7 +217,7 @@ export function AdminSortableList({
             <button
               type="button"
               onClick={() => setMenuOpen((current) => !current)}
-              className="inline-flex h-9 min-w-32 items-center justify-between gap-2 rounded-full border border-[var(--border)] bg-[var(--background)] px-3 text-xs font-medium text-white outline-none transition hover:border-[var(--border-strong)] focus:border-[var(--border-strong)]"
+              className="inline-flex min-h-11 min-w-32 items-center justify-between gap-2 rounded-full border border-[var(--border)] bg-[var(--background)] px-3 text-xs font-medium text-white outline-none transition hover:border-[var(--border-strong)] focus:border-[var(--border-strong)] sm:min-h-9"
               aria-haspopup="listbox"
               aria-expanded={menuOpen}
               aria-label="Sort field"
@@ -265,7 +265,7 @@ export function AdminSortableList({
               setDirection(nextDirection);
               applySort(sortField, nextDirection);
             }}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border)] text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[var(--border)] text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white sm:h-9 sm:w-9"
             aria-label={`Sort ${direction === "asc" ? "descending" : "ascending"}`}
             title={direction === "asc" ? "Ascending" : "Descending"}
           >
@@ -276,7 +276,7 @@ export function AdminSortableList({
           type="button"
           onClick={saveOrder}
           disabled={!dirty || isPending}
-          className="inline-flex items-center justify-center gap-2 rounded-full border border-[var(--border)] px-3 py-2 text-xs font-medium text-[var(--foreground-muted)] transition enabled:hover:border-[var(--border-strong)] enabled:hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-[var(--border)] px-3 py-2 text-xs font-medium text-[var(--foreground-muted)] transition enabled:hover:border-[var(--border-strong)] enabled:hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
         >
           <Save className="h-3.5 w-3.5" />
           {isPending ? "Saving" : dirty ? "Save custom order" : "Order saved"}
@@ -322,7 +322,7 @@ export function AdminSortableList({
             <div className="flex min-w-0 items-start gap-3">
               <button
                 type="button"
-                className="mt-0.5 inline-flex h-8 w-8 shrink-0 cursor-grab items-center justify-center rounded-full border border-[var(--border)] text-[var(--foreground-muted)] active:cursor-grabbing"
+                className="mt-0.5 inline-flex h-11 w-11 shrink-0 cursor-grab items-center justify-center rounded-full border border-[var(--border)] text-[var(--foreground-muted)] active:cursor-grabbing sm:h-8 sm:w-8"
                 aria-label={`Drag ${item.title}`}
                 title="Drag to reorder"
               >
@@ -344,7 +344,7 @@ export function AdminSortableList({
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2 md:justify-end">
+            <div className="flex flex-wrap items-center gap-2 md:justify-end">
               {item.actions}
             </div>
           </div>

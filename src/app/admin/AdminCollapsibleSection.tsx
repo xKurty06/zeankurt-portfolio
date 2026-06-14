@@ -38,17 +38,17 @@ export function AdminCollapsibleSection({
   return (
     <section
       id={id}
-      className="scroll-mt-6 rounded-3xl border border-[var(--border)] bg-[var(--background-elevated)] p-6"
+      className="scroll-mt-6 rounded-3xl border border-[var(--border)] bg-[var(--background-elevated)] p-4 sm:p-6"
     >
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
         aria-expanded={open}
         aria-controls={`${id}-content`}
-        className="flex w-full items-center justify-between gap-3 text-left"
+        className="flex min-h-11 w-full items-center justify-between gap-3 text-left"
       >
         <span className="flex min-w-0 items-center gap-3">
-          <span className="font-[family-name:var(--font-syne)] text-xl font-semibold text-white">
+          <span className="break-words font-[family-name:var(--font-syne)] text-lg font-semibold text-white sm:text-xl">
             {title}
           </span>
           {count !== undefined ? (
@@ -59,7 +59,7 @@ export function AdminCollapsibleSection({
         </span>
         <span
           className={cn(
-            "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--border)] text-[var(--foreground-muted)] transition duration-300",
+            "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[var(--border)] text-[var(--foreground-muted)] transition duration-300 sm:h-9 sm:w-9",
             open && "border-[var(--border-strong)] text-white rotate-180",
           )}
         >

@@ -83,7 +83,7 @@ export function Header({ variant }: HeaderProps) {
 
         <button
           type="button"
-          className="pointer-events-auto inline-flex h-10 w-10 items-center justify-center rounded-full border border-[var(--border)] text-white transition hover:border-[var(--border-strong)] hover:shadow-[0_0_16px_var(--accent-glow)] lg:hidden"
+          className="pointer-events-auto inline-flex h-11 w-11 items-center justify-center rounded-full border border-[var(--border)] text-white transition hover:border-[var(--border-strong)] hover:shadow-[0_0_16px_var(--accent-glow)] lg:hidden"
           aria-label={open ? "Close menu" : "Open menu"}
           onClick={() => setOpen((value) => !value)}
         >
@@ -101,9 +101,10 @@ export function Header({ variant }: HeaderProps) {
                 pathname={pathname}
                 mobile
                 index={i}
+                onNavigate={() => setOpen(false)}
               />
             ))}
-            <Button href="/#contact" variant="secondary" className="mt-2 w-full">
+            <Button href="/#contact" variant="secondary" className="mt-2 w-full" onClick={() => setOpen(false)}>
               Get in touch
             </Button>
           </nav>
@@ -118,11 +119,13 @@ function NavLink({
   pathname,
   mobile = false,
   index = 0,
+  onNavigate,
 }: {
   item: (typeof mainNav)[number];
   pathname: string;
   mobile?: boolean;
   index?: number;
+  onNavigate?: () => void;
 }) {
   const isExternal = item.external || item.href.startsWith("http");
   const isActive =
@@ -135,7 +138,7 @@ function NavLink({
 
   const className = cn(
     "rounded-full px-4 py-2 text-sm transition-all duration-200",
-    mobile && "w-full text-left",
+    mobile && "flex min-h-11 w-full items-center text-left",
     isActive
       ? "bg-[var(--accent-soft)] text-white shadow-[0_0_12px_var(--accent-glow)]"
       : "text-[var(--foreground-muted)] hover:bg-white/[0.05] hover:text-white hover:shadow-[0_0_8px_rgba(0,180,216,0.15)]",
@@ -148,6 +151,7 @@ function NavLink({
         target="_blank"
         rel="noopener noreferrer"
         className={className}
+        onClick={onNavigate}
         style={mobile ? { animationDelay: `${index * 0.05}s` } : undefined}
       >
         {item.label}
@@ -160,6 +164,7 @@ function NavLink({
       <Link
         href={item.href}
         className={className}
+        onClick={onNavigate}
         style={mobile ? { animationDelay: `${index * 0.05}s` } : undefined}
       >
         {item.label}
@@ -171,6 +176,7 @@ function NavLink({
     <a
       href={item.href}
       className={className}
+      onClick={onNavigate}
       style={mobile ? { animationDelay: `${index * 0.05}s` } : undefined}
     >
       {item.label}

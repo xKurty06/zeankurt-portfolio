@@ -20,7 +20,7 @@ export function SocialLinks({
   size = "md",
 }: SocialLinksProps) {
   const dimension = size === "sm" ? "h-4 w-4" : "h-5 w-5";
-  const buttonSize = size === "sm" ? "h-9 w-9" : "h-11 w-11";
+  const buttonSize = "h-11 w-11";
 
   return (
     <ul className={cn("flex flex-wrap items-center gap-3", className)}>
@@ -34,7 +34,7 @@ export function SocialLinks({
             title={link.description ?? link.label}
             className={cn(
               "group inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-white/[0.02] text-[var(--foreground-muted)] transition-all duration-300 hover:border-[var(--border-strong)] hover:bg-[var(--accent-soft)] hover:text-white",
-              showLabels ? "px-4 py-2.5" : buttonSize,
+              showLabels ? "min-h-11 px-4 py-2.5" : buttonSize,
               !showLabels && "justify-center",
             )}
           >

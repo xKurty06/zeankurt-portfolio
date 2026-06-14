@@ -6,9 +6,9 @@ import ConditionalHeader from "@/components/layout/ConditionalHeader";
 import { ScrollProgressBar } from "@/components/animation/ScrollProgressBar";
 import { GsapInit } from "@/lib/gsap";
 import { LoaderWrapper } from "@/components/animation/LoaderWrapper";
-import { ThemeProvider } from "@/components/providers/theme-provider";
 import { SavingIndicator } from "@/components/ui/SavingIndicator";
 import { SavingProvider } from "@/lib/saving";
+import { ThemeProvider } from "@/components/providers/theme-provider";
 import { siteConfig } from "@/data/site";
 import "./globals.css";
 
@@ -40,21 +40,21 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      data-scroll-behavior="smooth"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} ${syne.variable} h-full antialiased`}
+      className={`dark ${geistSans.variable} ${geistMono.variable} ${syne.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-background text-foreground">
+      <body className="min-h-full flex flex-col bg-background text-foreground" suppressHydrationWarning>
         <ThemeProvider>
           <SavingProvider>
-            <GsapInit />
-            {/* Page loader */}
-            <LoaderWrapper />
-            <ScrollProgressBar />
-            <ConditionalHeader />
-            <main className="flex-1">{children}</main>
-            <SavingIndicator />
-            <Footer />
-          </SavingProvider>
+          <GsapInit />
+          <LoaderWrapper />
+          <ScrollProgressBar />
+          <ConditionalHeader />
+          <main className="flex-1">{children}</main>
+          <SavingIndicator />
+          <Footer />
+        </SavingProvider>
         </ThemeProvider>
       </body>
     </html>

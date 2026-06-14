@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { useGSAP } from "@gsap/react";
@@ -12,6 +12,7 @@ import { Container, Section } from "@/components/ui/Container";
 import { DottedSurface } from "@/components/ui/DottedSurface";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { gsap, registerGsapPlugins } from "@/lib/gsap";
+import { useLowMotionDevice } from "@/hooks/useLowMotionDevice";
 
 interface PhotographyTeaserProps {
   creativeCategories?: CreativeCategory[];
@@ -19,7 +20,9 @@ interface PhotographyTeaserProps {
 
 export function PhotographyTeaser({ creativeCategories = [] }: PhotographyTeaserProps) {
   const sectionRef = useRef<HTMLElement>(null);
-  const [isMarqueePaused, setIsMarqueePaused] = useState(false);
+  const marqueeViewportRef = useRef<HTMLDivElement>(null);
+  const lowMotion = useLowMotionDevice();
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const categoryCards = creativeCategories.length > 0
     ? creativeCategories.map((category) => ({
       id: category.id,
@@ -35,7 +38,169 @@ export function PhotographyTeaser({ creativeCategories = [] }: PhotographyTeaser
     (card, index, cards) => cards.findIndex((item) => item.title === card.title) === index,
   );
   const shouldMarquee = uniqueCategoryCards.length > 4;
+  const enableInteractiveMarquee = shouldMarquee && !prefersReducedMotion;
   const renderedCards = shouldMarquee ? [...uniqueCategoryCards, ...uniqueCategoryCards] : uniqueCategoryCards;
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const updatePreference = () => setPrefersReducedMotion(mediaQuery.matches);
+
+    updatePreference();
+    mediaQuery.addEventListener("change", updatePreference);
+
+    return () => {
+      mediaQuery.removeEventListener("change", updatePreference);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!enableInteractiveMarquee) return;
+
+    const viewport = marqueeViewportRef.current;
+    if (!viewport) return;
+
+    let intervalId = 0;
+    let isPointerDown = false;
+    let isDragging = false;
+    let isHovered = false;
+    let startX = 0;
+    let startScrollLeft = 0;
+    let pointerLastX = 0;
+    let pointerLastTime = 0;
+    let velocity = 0;
+    let preventClick = false;
+    let loopWidth = 0;
+    const dragThreshold = 8;
+    let autoSpeed = window.innerWidth >= 1024 ? 0.04 : 0.065;
+
+    const measure = () => {
+      loopWidth = viewport.scrollWidth / 2;
+      autoSpeed = window.innerWidth >= 1024 ? 0.04 : 0.065;
+      if (loopWidth > viewport.clientWidth && viewport.scrollLeft === 0) {
+        viewport.scrollLeft = loopWidth;
+      }
+    };
+
+    const syncLoopPosition = () => {
+      if (loopWidth <= viewport.clientWidth) return;
+      if (viewport.scrollLeft >= loopWidth) {
+        viewport.scrollLeft -= loopWidth;
+      } else if (viewport.scrollLeft <= 0) {
+        viewport.scrollLeft += loopWidth;
+      }
+    };
+
+    const step = () => {
+      if (loopWidth <= viewport.clientWidth) {
+        return;
+      }
+
+      if (!isPointerDown && !isHovered && Math.abs(velocity) > 0.01) {
+        viewport.scrollLeft += velocity * 16;
+        velocity *= 0.94;
+        syncLoopPosition();
+      } else if (!isPointerDown && !isHovered) {
+        viewport.scrollLeft += autoSpeed * 16;
+        syncLoopPosition();
+      }
+    };
+
+    const handlePointerDown = (event: PointerEvent) => {
+      isPointerDown = true;
+      isDragging = false;
+      preventClick = false;
+      velocity = 0;
+      startX = event.clientX;
+      startScrollLeft = viewport.scrollLeft;
+      pointerLastX = event.clientX;
+      pointerLastTime = event.timeStamp;
+    };
+
+    const handlePointerMove = (event: PointerEvent) => {
+      if (!isPointerDown) return;
+      const deltaX = event.clientX - startX;
+      if (!isDragging && Math.abs(deltaX) < dragThreshold) return;
+      if (!isDragging) {
+        isDragging = true;
+        preventClick = true;
+        viewport.setPointerCapture(event.pointerId);
+      }
+      event.preventDefault();
+      viewport.scrollLeft = startScrollLeft - deltaX;
+      const elapsed = Math.max(1, event.timeStamp - pointerLastTime);
+      velocity = (pointerLastX - event.clientX) / elapsed;
+      pointerLastX = event.clientX;
+      pointerLastTime = event.timeStamp;
+      syncLoopPosition();
+    };
+
+    const releasePointer = (event: PointerEvent) => {
+      if (!isPointerDown) return;
+      isPointerDown = false;
+      if (isDragging && viewport.hasPointerCapture(event.pointerId)) {
+        viewport.releasePointerCapture(event.pointerId);
+      }
+      if (!isDragging) {
+        velocity = 0;
+        return;
+      }
+      isDragging = false;
+      velocity = Math.max(-1.25, Math.min(1.25, velocity));
+    };
+
+    const handleClickCapture = (event: MouseEvent) => {
+      if (!preventClick) return;
+      preventClick = false;
+      event.preventDefault();
+      event.stopPropagation();
+    };
+
+    const handleDragStart = (event: DragEvent) => {
+      event.preventDefault();
+    };
+
+    const handleMouseEnter = () => {
+      isHovered = true;
+    };
+
+    const handleMouseLeave = () => {
+      isHovered = false;
+    };
+
+    const resetPointerState = () => {
+      isPointerDown = false;
+      isDragging = false;
+      preventClick = false;
+    };
+
+    measure();
+    viewport.addEventListener("pointerdown", handlePointerDown);
+    viewport.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", releasePointer);
+    window.addEventListener("pointercancel", releasePointer);
+    viewport.addEventListener("click", handleClickCapture, true);
+    viewport.addEventListener("dragstart", handleDragStart);
+    viewport.addEventListener("mouseenter", handleMouseEnter);
+    viewport.addEventListener("mouseleave", handleMouseLeave);
+    window.addEventListener("blur", resetPointerState);
+    window.addEventListener("resize", measure);
+
+    intervalId = window.setInterval(step, 16);
+
+    return () => {
+      window.clearInterval(intervalId);
+      viewport.removeEventListener("pointerdown", handlePointerDown);
+      viewport.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", releasePointer);
+      window.removeEventListener("pointercancel", releasePointer);
+      viewport.removeEventListener("click", handleClickCapture, true);
+      viewport.removeEventListener("dragstart", handleDragStart);
+      viewport.removeEventListener("mouseenter", handleMouseEnter);
+      viewport.removeEventListener("mouseleave", handleMouseLeave);
+      window.removeEventListener("blur", resetPointerState);
+      window.removeEventListener("resize", measure);
+    };
+  }, [enableInteractiveMarquee]);
 
   useGSAP(
     () => {
@@ -77,9 +242,11 @@ export function PhotographyTeaser({ creativeCategories = [] }: PhotographyTeaser
             trigger: card,
             start: "top bottom",
             end: "bottom top",
-            scrub: 1.2,
+            scrub: lowMotion ? false : 1.2,
           },
         });
+
+        if (lowMotion) return;
 
         const onEnter = () => {
           if (overlay) gsap.to(overlay, { opacity: 1, duration: 0.35 });
@@ -102,7 +269,7 @@ export function PhotographyTeaser({ creativeCategories = [] }: PhotographyTeaser
         cleanups.forEach((cleanup) => cleanup());
       };
     },
-    { scope: sectionRef },
+    { dependencies: [lowMotion], revertOnUpdate: true, scope: sectionRef },
   );
 
   return (
@@ -135,16 +302,20 @@ export function PhotographyTeaser({ creativeCategories = [] }: PhotographyTeaser
           </RevealOnScroll>
         </div>
 
-        <div className="mt-10 overflow-hidden">
+        <div
+          ref={marqueeViewportRef}
+          className={
+            enableInteractiveMarquee
+              ? "photo-marquee-viewport mt-10 max-w-full overflow-x-auto overflow-y-hidden"
+              : "mt-10 max-w-full overflow-hidden"
+          }
+        >
           <div
-            onMouseEnter={() => setIsMarqueePaused(true)}
-            onMouseLeave={() => setIsMarqueePaused(false)}
             className={
-              shouldMarquee
-                ? "photo-category-marquee flex w-max gap-4"
-                : "grid gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4"
+              enableInteractiveMarquee
+                ? "photo-category-marquee flex w-max max-w-none gap-4"
+                : "grid min-w-0 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4"
             }
-            style={shouldMarquee ? { animationPlayState: isMarqueePaused ? "paused" : "running" } : undefined}
           >
           {renderedCards.map((card, index) => (
             <Link
@@ -152,20 +323,22 @@ export function PhotographyTeaser({ creativeCategories = [] }: PhotographyTeaser
               href={card.href}
               data-photo-card
               data-interactive
+              draggable={false}
               className={shouldMarquee
-                ? "photo-card group relative block w-[78vw] shrink-0 overflow-hidden rounded-2xl border border-[var(--border)] bg-black sm:w-72 lg:w-80"
-                : "photo-card group relative block overflow-hidden rounded-2xl border border-[var(--border)] bg-black"}
+                ? "photo-card group relative block w-[78vw] max-w-[22rem] shrink-0 select-none overflow-hidden rounded-2xl border border-[var(--border)] bg-black sm:w-72 lg:w-80"
+                : "photo-card group relative block min-w-0 select-none overflow-hidden rounded-2xl border border-[var(--border)] bg-black"}
             >
               <div className="relative aspect-[4/5] overflow-hidden bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))]">
                 {card.image ? (
                   <div
-                    className="absolute inset-0"
+                    className="absolute inset-0 select-none"
                   >
                     <img
                       data-photo-img
                       src={card.image}
                       alt={`${card.title} category showcase`}
-                      className="h-full w-full scale-[1.08] object-cover object-center"
+                      draggable={false}
+                      className="h-full w-full scale-[1.08] select-none object-cover object-center"
                       loading="lazy"
                     />
                   </div>
@@ -211,23 +384,33 @@ export function PhotographyTeaser({ creativeCategories = [] }: PhotographyTeaser
         </div>
 
         <style jsx>{`
-          .photo-category-marquee {
-            animation: photo-category-marquee 34s linear infinite;
+          .photo-marquee-viewport {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+            touch-action: pan-y;
+            cursor: grab;
+            user-select: none;
+            -webkit-user-select: none;
           }
 
-          @keyframes photo-category-marquee {
-            from {
-              transform: translateX(0);
-            }
-            to {
-              transform: translateX(-50%);
-            }
+          .photo-marquee-viewport::-webkit-scrollbar {
+            display: none;
+          }
+
+          .photo-marquee-viewport:active {
+            cursor: grabbing;
+          }
+
+          .photo-category-marquee {
+            padding-bottom: 0.25rem;
+          }
+
+          :global(.photo-card) {
+            -webkit-user-drag: none;
           }
 
           @media (prefers-reduced-motion: reduce) {
             .photo-category-marquee {
-              animation: none;
-              overflow-x: auto;
               max-width: 100%;
             }
           }

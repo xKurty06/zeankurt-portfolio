@@ -71,7 +71,7 @@ function ShatterName({ name }: { name: string }) {
       onClick={handleClick}
       data-interactive
       title="Click me"
-      className="text-gradient block cursor-pointer select-none"
+      className="text-gradient block max-w-full cursor-pointer select-none break-words [overflow-wrap:anywhere]"
       style={{ perspective: 600 }}
     >
       {name}
@@ -112,9 +112,11 @@ export function HeroSection({ siteConfig }: HeroSectionProps) {
     }
 
     const handleLoaderComplete = () => setLoaderComplete(true);
+    const fallback = window.setTimeout(() => setLoaderComplete(true), 5200);
     window.addEventListener("portfolio-loader-complete", handleLoaderComplete);
 
     return () => {
+      window.clearTimeout(fallback);
       window.removeEventListener("portfolio-loader-complete", handleLoaderComplete);
     };
   }, []);
@@ -167,17 +169,17 @@ export function HeroSection({ siteConfig }: HeroSectionProps) {
   return (
     <section
       ref={sectionRef}
-      className="relative flex min-h-svh items-center overflow-hidden pt-(--header-height)"
+      className="relative flex min-h-svh items-center overflow-hidden pt-[var(--header-height)]"
       style={{ visibility: "hidden" }}
     >
       <div data-hero-bg className="absolute inset-0">
         <AnimatedBackground />
       </div>
 
-      <Container className="relative z-10 py-20 md:py-28" data-hero-content="">
-        <div className="max-w-3xl">
+      <Container className="relative z-10 py-20 text-center md:py-28 lg:text-left" data-hero-content="">
+        <div className="mx-auto max-w-3xl lg:mx-0">
             {/* Name — click to shatter */}
-            <h1 className="font-[family-name:var(--font-syne)] text-4xl font-semibold leading-[1.05] tracking-tight text-white sm:text-6xl md:text-7xl">
+            <h1 className="max-w-full font-[family-name:var(--font-syne)] text-[clamp(1.875rem,9vw,3rem)] font-semibold leading-[1.05] tracking-tight text-white sm:text-6xl md:text-7xl">
               <span data-hero="name">
                 <ShatterName name={siteConfig.name} />
               </span>
@@ -185,9 +187,9 @@ export function HeroSection({ siteConfig }: HeroSectionProps) {
               {/* Typewriter role line */}
               <span
                 data-hero="role"
-                className="mt-1 block text-2xl font-normal text-[var(--blue-300)] sm:text-3xl md:text-4xl"
+                className="mt-1 block max-w-full text-[clamp(1.25rem,6vw,1.75rem)] font-normal text-[var(--blue-300)] sm:text-3xl md:text-4xl"
               >
-                <TypewriterCycle phrases={ROLES} className="font-[family-name:var(--font-syne)]" />
+                <TypewriterCycle phrases={ROLES} className="inline-block max-w-full overflow-hidden text-ellipsis whitespace-nowrap font-[family-name:var(--font-syne)] align-bottom" />
               </span>
 
               {/* Tagline */}
@@ -199,12 +201,12 @@ export function HeroSection({ siteConfig }: HeroSectionProps) {
 
             <p
               data-hero="copy"
-              className="mt-3 max-w-2xl text-sm leading-relaxed text-[var(--foreground-muted)] sm:text-base"
+              className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-[var(--foreground-muted)] sm:text-base lg:mx-0"
             >
               {siteConfig.description}
             </p>
 
-            <div data-hero="actions" className="mt-4 flex flex-wrap items-center gap-3">
+            <div data-hero="actions" className="mt-4 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
               <MagneticButton>
                 <RippleButton>
                   <Button href="/#projects">
@@ -220,7 +222,7 @@ export function HeroSection({ siteConfig }: HeroSectionProps) {
             </div>
 
             <div data-hero="meta" className="mt-6">
-              <SocialLinks links={socialGroups.personal} />
+              <SocialLinks links={socialGroups.personal} className="justify-center lg:justify-start" />
             </div>
           </div>
 

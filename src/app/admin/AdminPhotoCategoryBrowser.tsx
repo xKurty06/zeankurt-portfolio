@@ -111,7 +111,7 @@ function PickerButton<T extends string>({
         aria-label={ariaLabel}
         onClick={() => setOpen((current) => !current)}
         className={cn(
-          "group inline-flex h-10 items-center gap-3 rounded-full border border-[var(--border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] px-4 text-sm font-medium text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:border-[var(--border-strong)] hover:bg-white/[0.06]",
+          "group inline-flex min-h-11 items-center gap-3 rounded-full border border-[var(--border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] px-4 text-sm font-medium text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:border-[var(--border-strong)] hover:bg-white/[0.06] sm:min-h-10",
           open && "border-[var(--blue-400)] bg-[var(--accent-soft)]/50 text-[var(--blue-100)] shadow-[0_0_0_1px_rgba(72,202,228,0.25)]",
           className,
         )}
@@ -254,8 +254,9 @@ function PhotoManagerModal({
 
     window.addEventListener("keydown", onKeyDown);
     return () => {
-      document.body.style.overflow = previousOverflow;
-      document.body.style.overscrollBehavior = previousOverscroll;
+      // Clear any inline scroll-lock styles so scrolling is reliably restored.
+      document.body.style.overflow = "";
+      document.body.style.overscrollBehavior = "";
       siblings.forEach((element) => {
         element.removeAttribute("inert");
         element.removeAttribute("aria-hidden");
@@ -375,7 +376,7 @@ function PhotoManagerModal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[1000] flex items-center justify-center bg-[rgba(3,7,18,0.82)] p-4 md:p-6"
+      className="fixed inset-0 z-[1000] flex items-center justify-center bg-[rgba(3,7,18,0.82)] p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))] md:p-6"
       onClick={onClose}
     >
       <div
@@ -383,10 +384,10 @@ function PhotoManagerModal({
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
-        className="flex max-h-[calc(100dvh-2rem)] w-full max-w-7xl flex-col overflow-hidden rounded-[1.75rem] border border-[var(--border-strong)] bg-[var(--background-elevated)] shadow-[0_20px_80px_rgba(0,0,0,0.45)]"
+        className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-7xl flex-col overflow-hidden rounded-[1.25rem] border border-[var(--border-strong)] bg-[var(--background-elevated)] shadow-[0_20px_80px_rgba(0,0,0,0.45)] sm:rounded-[1.75rem]"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-[var(--border)] px-5 py-4">
+        <div className="flex items-start justify-between gap-4 border-b border-[var(--border)] px-4 py-4 sm:px-5">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <h3 id={titleId} className="font-[family-name:var(--font-syne)] text-lg font-semibold text-white">
@@ -411,13 +412,13 @@ function PhotoManagerModal({
             type="button"
             aria-label={`Close ${category.name}`}
             onClick={onClose}
-            className="rounded-full border border-[var(--border)] p-2 text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white"
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[var(--border)] text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-5">
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
           <div className="flex flex-col gap-3 rounded-2xl border border-[var(--border)] bg-[var(--background)]/70 p-3">
             <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
               <div className="flex flex-1 flex-col gap-3 lg:flex-row lg:items-center">
@@ -431,7 +432,7 @@ function PhotoManagerModal({
                       setPage(1);
                     }}
                     placeholder={`Search ${category.name.toLowerCase()} photos`}
-                    className="h-10 w-full rounded-full border border-[var(--border)] bg-white/[0.03] pl-9 pr-3 text-sm text-white outline-none transition placeholder:text-[var(--foreground-muted)] focus:border-[var(--border-strong)]"
+                    className="min-h-11 w-full rounded-full border border-[var(--border)] bg-white/[0.03] pl-9 pr-3 text-sm text-white outline-none transition placeholder:text-[var(--foreground-muted)] focus:border-[var(--border-strong)] sm:min-h-10"
                   />
                 </label>
 
@@ -440,7 +441,7 @@ function PhotoManagerModal({
                     type="button"
                     onClick={() => setMode("edit")}
                     className={cn(
-                      "inline-flex h-10 items-center justify-center gap-2 rounded-full border px-4 text-sm font-medium transition",
+                      "inline-flex min-h-11 items-center justify-center gap-2 rounded-full border px-4 text-sm font-medium transition sm:min-h-10",
                       mode === "edit"
                         ? "border-[var(--blue-400)] bg-[var(--accent-soft)] text-[var(--blue-200)]"
                         : "border-[var(--border)] text-[var(--foreground-muted)] hover:border-[var(--border-strong)] hover:text-white",
@@ -453,7 +454,7 @@ function PhotoManagerModal({
                     type="button"
                     onClick={() => setMode("select")}
                     className={cn(
-                      "inline-flex h-10 items-center justify-center gap-2 rounded-full border px-4 text-sm font-medium transition",
+                      "inline-flex min-h-11 items-center justify-center gap-2 rounded-full border px-4 text-sm font-medium transition sm:min-h-10",
                       mode === "select"
                         ? "border-[var(--blue-400)] bg-[var(--accent-soft)] text-[var(--blue-200)]"
                         : "border-[var(--border)] text-[var(--foreground-muted)] hover:border-[var(--border-strong)] hover:text-white",
@@ -473,6 +474,12 @@ function PhotoManagerModal({
                   onChange={(nextValue) => {
                     setSortField(nextValue);
                     setPage(1);
+                    // Default to showing featured/published items first
+                    if (nextValue === "featured" || nextValue === "status") {
+                      setSortDirection("desc");
+                    } else if (nextValue === "name") {
+                      setSortDirection("asc");
+                    }
                   }}
                 />
                 <button
@@ -481,7 +488,7 @@ function PhotoManagerModal({
                     setSortDirection((current) => (current === "asc" ? "desc" : "asc"));
                     setPage(1);
                   }}
-                  className="inline-flex h-10 items-center justify-center rounded-full border border-[var(--border)] px-3 text-xs font-medium text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white"
+                  className="inline-flex min-h-11 items-center justify-center rounded-full border border-[var(--border)] px-3 text-xs font-medium text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white sm:min-h-10"
                 >
                   {sortDirection === "asc" ? "Asc" : "Desc"}
                 </button>
@@ -510,7 +517,7 @@ function PhotoManagerModal({
                     type="button"
                     onClick={() => setSelectedIds(filteredPhotos.map((photo) => photo.id))}
                     disabled={filteredPhotos.length === 0 || allFilteredSelected || isDeleting}
-                    className="inline-flex h-10 items-center justify-center rounded-full border border-[var(--border)] px-3 text-xs font-medium text-[var(--foreground-muted)] transition enabled:hover:border-[var(--border-strong)] enabled:hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
+                    className="inline-flex min-h-11 items-center justify-center rounded-full border border-[var(--border)] px-3 text-xs font-medium text-[var(--foreground-muted)] transition enabled:hover:border-[var(--border-strong)] enabled:hover:text-white disabled:cursor-not-allowed disabled:opacity-45 sm:min-h-10"
                   >
                     Select all
                   </button>
@@ -518,7 +525,7 @@ function PhotoManagerModal({
                     type="button"
                     onClick={toggleSelectVisible}
                     disabled={visiblePhotos.length === 0 || isDeleting}
-                    className="inline-flex h-10 items-center justify-center rounded-full border border-[var(--border)] px-3 text-xs font-medium text-[var(--foreground-muted)] transition enabled:hover:border-[var(--border-strong)] enabled:hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
+                    className="inline-flex min-h-11 items-center justify-center rounded-full border border-[var(--border)] px-3 text-xs font-medium text-[var(--foreground-muted)] transition enabled:hover:border-[var(--border-strong)] enabled:hover:text-white disabled:cursor-not-allowed disabled:opacity-45 sm:min-h-10"
                   >
                     {allVisibleSelected ? "Clear visible" : "Select visible"}
                   </button>
@@ -526,7 +533,7 @@ function PhotoManagerModal({
                     type="button"
                     onClick={() => setSelectedIds([])}
                     disabled={selectedIds.length === 0 || isDeleting}
-                    className="inline-flex h-10 items-center justify-center rounded-full border border-[var(--border)] px-3 text-xs font-medium text-[var(--foreground-muted)] transition enabled:hover:border-[var(--border-strong)] enabled:hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
+                    className="inline-flex min-h-11 items-center justify-center rounded-full border border-[var(--border)] px-3 text-xs font-medium text-[var(--foreground-muted)] transition enabled:hover:border-[var(--border-strong)] enabled:hover:text-white disabled:cursor-not-allowed disabled:opacity-45 sm:min-h-10"
                   >
                     Clear all
                   </button>
@@ -534,7 +541,7 @@ function PhotoManagerModal({
                     type="button"
                     onClick={handleDeleteSelected}
                     disabled={selectedIds.length === 0 || isDeleting}
-                    className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-red-400/20 px-4 text-xs font-medium text-red-200 transition enabled:hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-45"
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-red-400/20 px-4 text-xs font-medium text-red-200 transition enabled:hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-45 sm:min-h-10"
                   >
                     <Trash2 className="h-4 w-4" />
                     {isDeleting ? "Removing..." : `Remove selected (${selectedIds.length})`}
@@ -555,7 +562,7 @@ function PhotoManagerModal({
           ) : null}
 
           {visiblePhotos.length > 0 ? (
-            <div className="mt-4 columns-2 gap-3 md:columns-3 xl:columns-4 2xl:columns-5">
+            <div className="mt-4 columns-2 gap-2 min-[430px]:gap-3 md:columns-3 xl:columns-4 2xl:columns-5">
               <AnimatePresence initial={false}>
                 {visiblePhotos.map((photo) => {
                 const selected = selectedIds.includes(photo.id);
@@ -626,7 +633,7 @@ function PhotoManagerModal({
                             toggleSelected(photo.id);
                           }}
                           className={cn(
-                            "absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-full border transition",
+                            "absolute right-2 top-2 inline-flex h-11 w-11 items-center justify-center rounded-full border transition sm:right-3 sm:top-3",
                             selected
                               ? "border-[var(--blue-400)] bg-[var(--blue-500)] text-[#03121a]"
                               : "border-white/20 bg-black/45 text-white",
@@ -688,7 +695,7 @@ function PhotoManagerModal({
                   type="button"
                   onClick={() => setPage((current) => Math.max(1, current - 1))}
                   disabled={currentPage === 1}
-                  className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-[var(--border)] px-3 text-xs font-medium text-[var(--foreground-muted)] transition enabled:hover:border-[var(--border-strong)] enabled:hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-[var(--border)] px-3 text-xs font-medium text-[var(--foreground-muted)] transition enabled:hover:border-[var(--border-strong)] enabled:hover:text-white disabled:cursor-not-allowed disabled:opacity-45 sm:min-h-10"
                 >
                   <ChevronLeft className="h-4 w-4" />
                   Prev
@@ -697,7 +704,7 @@ function PhotoManagerModal({
                   type="button"
                   onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
                   disabled={currentPage === totalPages}
-                  className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-[var(--border)] px-3 text-xs font-medium text-[var(--foreground-muted)] transition enabled:hover:border-[var(--border-strong)] enabled:hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-[var(--border)] px-3 text-xs font-medium text-[var(--foreground-muted)] transition enabled:hover:border-[var(--border-strong)] enabled:hover:text-white disabled:cursor-not-allowed disabled:opacity-45 sm:min-h-10"
                 >
                   Next
                   <ChevronRight className="h-4 w-4" />
@@ -758,7 +765,7 @@ function PhotoCategoryCard({ category }: { category: PhotoBrowserCategory }) {
             <button
               type="button"
               onClick={() => setOpen(true)}
-              className="inline-flex h-10 items-center justify-center rounded-full border border-[var(--border)] px-4 text-sm font-medium text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white"
+              className="inline-flex min-h-11 items-center justify-center rounded-full border border-[var(--border)] px-4 text-sm font-medium text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white"
             >
               Manage photos
             </button>

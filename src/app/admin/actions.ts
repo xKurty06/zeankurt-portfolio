@@ -316,6 +316,7 @@ async function mutateAndRefresh<T extends Record<string, unknown>>(
   table: CmsTable,
   payload: T,
   conflictTarget?: string,
+  options?: { redirect?: boolean },
 ) {
   const admin = await requireAdmin();
   const query = conflictTarget
@@ -326,7 +327,9 @@ async function mutateAndRefresh<T extends Record<string, unknown>>(
   if (error) throw error;
 
   revalidateTag("portfolio-content", "max");
-  redirect("/admin");
+  if (options?.redirect !== false) {
+    redirect("/admin");
+  }
 }
 
 async function resolveSortOrder(table: CmsTable, formData: FormData) {
@@ -1173,16 +1176,21 @@ export async function saveCreativePhoto(formData: FormData) {
 
   if (!uploadedPhoto && !existingImagePath) throw new Error("Photo image is required.");
 
-  await mutateAndRefresh("creative_photos", {
-    id,
-    category_id: categoryId,
-    title: requiredText(formData, "title", "Title"),
-    image_path: uploadedPhoto?.imagePath ?? existingImagePath,
-    aspect_ratio: uploadedPhoto?.aspectRatio ?? assertAllowedPhotoAspect(optionalText(formData, "aspect_ratio")),
-    featured: bool(formData, "featured"),
-    sort_order: await resolveSortOrder("creative_photos", formData),
-    published: bool(formData, "published"),
-  });
+  await mutateAndRefresh(
+    "creative_photos",
+    {
+      id,
+      category_id: categoryId,
+      title: requiredText(formData, "title", "Title"),
+      image_path: uploadedPhoto?.imagePath ?? existingImagePath,
+      aspect_ratio: uploadedPhoto?.aspectRatio ?? assertAllowedPhotoAspect(optionalText(formData, "aspect_ratio")),
+      featured: bool(formData, "featured"),
+      sort_order: await resolveSortOrder("creative_photos", formData),
+      published: bool(formData, "published"),
+    },
+    undefined,
+    { redirect: false },
+  );
 }
 
 export async function uploadCreativePhotos(formData: FormData) {

@@ -27,7 +27,7 @@ import { AdminSortableList } from "@/app/admin/AdminSortableList";
 import { ZoomableImage } from "@/components/ui/ZoomableImage";
 import { createSupabaseAdminClient, createSupabaseServerClient } from "@/lib/supabase/server";
 import { isAllowedAdminEmail } from "@/lib/supabase/config";
-import { Camera, Check, SquarePen, Trash2 } from "lucide-react";
+import { Award, BriefcaseBusiness, Camera, CalendarDays, Check, Code2, FileText, FolderKanban, SquarePen, Trash2 } from "lucide-react";
 import SaveButton from "@/components/ui/SaveButton";
 import UploadWithValidation from "@/components/admin/UploadWithValidationClient";
 import UploadField from "@/components/admin/UploadFieldClient";
@@ -274,7 +274,7 @@ function DeleteButton({
       <button
         type="submit"
         formAction={deleteRecord}
-        className="rounded-full border border-red-400/20 px-3 py-1.5 text-xs font-medium text-red-200 transition hover:bg-red-500/10"
+        className="inline-flex min-h-11 items-center rounded-full border border-red-400/20 px-3 py-2 text-xs font-medium text-red-200 transition hover:bg-red-500/10 sm:min-h-0 sm:py-1.5"
       >
         Delete
       </button>
@@ -458,12 +458,12 @@ export default async function AdminPage() {
   });
 
   const navItems: Array<{ id: string; label: string; count: number; icon: React.ReactNode }> = [
-    { id: "projects", label: "Projects", count: projects.length, icon: "⬡" },
-    { id: "experience", label: "Experience", count: experiences.length, icon: "◈" },
-    { id: "certifications", label: "Certifications", count: certifications.length, icon: "◎" },
-    { id: "events", label: "Events", count: events.length, icon: "◷" },
-    { id: "skills", label: "Skills", count: skills.length, icon: "◆" },
-    { id: "site-content", label: "Site Copy", count: siteRows.length, icon: "◉" },
+    { id: "projects", label: "Projects", count: projects.length, icon: <FolderKanban className="h-4 w-4" /> },
+    { id: "experience", label: "Experience", count: experiences.length, icon: <BriefcaseBusiness className="h-4 w-4" /> },
+    { id: "certifications", label: "Certifications", count: certifications.length, icon: <Award className="h-4 w-4" /> },
+    { id: "events", label: "Events", count: events.length, icon: <CalendarDays className="h-4 w-4" /> },
+    { id: "skills", label: "Skills", count: skills.length, icon: <Code2 className="h-4 w-4" /> },
+    { id: "site-content", label: "Site Copy", count: siteRows.length, icon: <FileText className="h-4 w-4" /> },
   ];
   navItems.push({
     id: "creative-portfolio",
@@ -475,22 +475,22 @@ export default async function AdminPage() {
   return (
     <div className="min-h-dvh bg-[var(--background)] text-white">
       <header className="sticky top-0 z-30 border-b border-[var(--border)] bg-[var(--background)]/90 backdrop-blur-sm">
-        <div className="mx-auto flex h-14 max-w-screen-xl items-center justify-between gap-4 px-5">
+        <div className="mx-auto flex min-h-14 max-w-screen-xl flex-wrap items-center justify-between gap-3 px-4 py-2 sm:flex-nowrap sm:px-5">
           <div className="flex items-center gap-3">
             <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--blue-300)]">CMS</span>
             <span className="h-4 w-px bg-[var(--border)]" />
             <span className="font-[family-name:var(--font-syne)] text-sm font-semibold">Admin</span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-4">
             <a
               href="/"
-              className="rounded-full border border-[var(--border)] px-3 py-1.5 text-xs text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white"
+              className="inline-flex min-h-11 items-center rounded-full border border-[var(--border)] px-3 py-2 text-xs text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white sm:min-h-0 sm:py-1.5"
             >
               Back to portfolio
             </a>
             <span className="hidden text-xs text-[var(--foreground-muted)] sm:block">{user.email}</span>
             <form action={signOut}>
-              <button className="rounded-full border border-[var(--border)] px-3 py-1.5 text-xs text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white">
+              <button className="inline-flex min-h-11 items-center rounded-full border border-[var(--border)] px-3 py-2 text-xs text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white sm:min-h-0 sm:py-1.5">
                 Sign out
               </button>
             </form>
@@ -543,7 +543,7 @@ export default async function AdminPage() {
                       <a
                         key={category.id}
                         href={`#${category.anchorId}`}
-                        className="flex items-center justify-between gap-3 rounded-lg px-2 py-1.5 text-xs text-[var(--foreground-muted)] transition hover:bg-white/[0.04] hover:text-white"
+                        className="flex min-h-11 items-center justify-between gap-3 rounded-lg px-2 py-2 text-xs text-[var(--foreground-muted)] transition hover:bg-white/[0.04] hover:text-white lg:min-h-0 lg:py-1.5"
                       >
                         <span className="truncate">{category.name}</span>
                         <span className="pr-3 shrink-0 text-[10px] tabular-nums text-[var(--blue-300)]">
@@ -573,7 +573,7 @@ export default async function AdminPage() {
               <a
                 key={item.id}
                 href={`#${item.id}`}
-                className="shrink-0 rounded-full border border-[var(--border)] px-3 py-1.5 text-xs text-[var(--foreground-muted)] transition hover:text-white"
+                className="inline-flex min-h-11 shrink-0 items-center rounded-full border border-[var(--border)] px-3 py-2 text-xs text-[var(--foreground-muted)] transition hover:text-white"
               >
                 {item.label}
                 <span className="ml-1.5 text-[var(--blue-300)]">{item.count}</span>
@@ -598,7 +598,7 @@ export default async function AdminPage() {
                         <a
                           href={PROJECT_CSV_TEMPLATE_HREF}
                           download="projects-import-template.csv"
-                          className="mt-3 inline-flex rounded-full border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--blue-300)] transition hover:border-[var(--border-strong)] hover:text-white"
+                          className="mt-3 inline-flex min-h-11 items-center rounded-full border border-[var(--border)] px-3 py-2 text-xs font-medium text-[var(--blue-300)] transition hover:border-[var(--border-strong)] hover:text-white sm:min-h-0 sm:py-1.5"
                         >
                           Download format
                         </a>
@@ -711,7 +711,7 @@ export default async function AdminPage() {
                         <a
                           href={EXPERIENCE_CSV_TEMPLATE_HREF}
                           download="experience-import-template.csv"
-                          className="mt-3 inline-flex rounded-full border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--blue-300)] transition hover:border-[var(--border-strong)] hover:text-white"
+                          className="mt-3 inline-flex min-h-11 items-center rounded-full border border-[var(--border)] px-3 py-2 text-xs font-medium text-[var(--blue-300)] transition hover:border-[var(--border-strong)] hover:text-white sm:min-h-0 sm:py-1.5"
                         >
                           Download format
                         </a>
@@ -802,7 +802,7 @@ export default async function AdminPage() {
                         <a
                           href={CERTIFICATIONS_CSV_TEMPLATE_HREF}
                           download="certifications-import-template.csv"
-                          className="mt-3 inline-flex rounded-full border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--blue-300)] transition hover:border-[var(--border-strong)] hover:text-white"
+                          className="mt-3 inline-flex min-h-11 items-center rounded-full border border-[var(--border)] px-3 py-2 text-xs font-medium text-[var(--blue-300)] transition hover:border-[var(--border-strong)] hover:text-white sm:min-h-0 sm:py-1.5"
                         >
                           Download format
                         </a>
@@ -894,7 +894,7 @@ export default async function AdminPage() {
                         <a
                           href={EVENTS_CSV_TEMPLATE_HREF}
                           download="events-import-template.csv"
-                          className="mt-3 inline-flex rounded-full border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--blue-300)] transition hover:border-[var(--border-strong)] hover:text-white"
+                          className="mt-3 inline-flex min-h-11 items-center rounded-full border border-[var(--border)] px-3 py-2 text-xs font-medium text-[var(--blue-300)] transition hover:border-[var(--border-strong)] hover:text-white sm:min-h-0 sm:py-1.5"
                         >
                           Download format
                         </a>
@@ -995,7 +995,7 @@ export default async function AdminPage() {
                         <a
                           href={SKILLS_CSV_TEMPLATE_HREF}
                           download="skills-import-template.csv"
-                          className="mt-3 inline-flex rounded-full border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--blue-300)] transition hover:border-[var(--border-strong)] hover:text-white"
+                          className="mt-3 inline-flex min-h-11 items-center rounded-full border border-[var(--border)] px-3 py-2 text-xs font-medium text-[var(--blue-300)] transition hover:border-[var(--border-strong)] hover:text-white sm:min-h-0 sm:py-1.5"
                         >
                           Download format
                         </a>
@@ -1236,7 +1236,7 @@ export default async function AdminPage() {
                                 type="submit"
                                 aria-label={`Delete ${value(photo, "title")}`}
                                 title="Delete"
-                                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-red-400/20 bg-black/45 text-red-200 transition hover:bg-red-500/10"
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-red-400/20 bg-black/45 text-red-200 transition hover:bg-red-500/10 sm:h-8 sm:w-8"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
                               </button>
@@ -1246,7 +1246,7 @@ export default async function AdminPage() {
                               description="Update or remove this photo."
                               triggerLabel="Edit photo"
                               triggerContent={<SquarePen className="h-3.5 w-3.5" />}
-                              triggerClassName="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-black/45 text-white transition hover:border-[var(--border-strong)] hover:text-white"
+                              triggerClassName="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/45 text-white transition hover:border-[var(--border-strong)] hover:text-white sm:h-8 sm:w-8"
                             >
                               <RowForm action={saveCreativePhoto}>
                                 <input type="hidden" name="id" value={value(photo, "id")} />

@@ -13,6 +13,7 @@ import { SectionHeading } from "@/components/ui/SectionHeading";
 import { ZoomableImage } from "@/components/ui/ZoomableImage";
 import { gsap, registerGsapPlugins } from "@/lib/gsap";
 import { cn } from "@/lib/cn";
+import { useLowMotionDevice } from "@/hooks/useLowMotionDevice";
 
 const INITIAL_SHOW = 6;
 
@@ -49,7 +50,7 @@ function FeaturedCard({ project, index }: { project: Project; index: number }) {
     <GlowCard
       ref={cardRef}
       intensity={0.55}
-      className="project-feature-card group rounded-2xl border border-[var(--border)] bg-[var(--background-elevated)] transition-shadow duration-500 hover:border-[var(--border-strong)] hover:shadow-[0_0_60px_rgba(0,180,216,0.13)]"
+      className="project-feature-card group min-w-0 rounded-2xl border border-[var(--border)] bg-[var(--background-elevated)] transition-shadow duration-500 hover:border-[var(--border-strong)] hover:shadow-[0_0_60px_rgba(0,180,216,0.13)]"
     >
       {/* Image */}
       <div className="relative aspect-[16/10] overflow-hidden bg-[linear-gradient(145deg,rgba(10,15,26,0.96),rgba(2,62,138,0.22))]">
@@ -105,7 +106,7 @@ function FeaturedCard({ project, index }: { project: Project; index: number }) {
               rel="noopener noreferrer"
               aria-label={`GitHub — ${project.title}`}
               data-interactive
-              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--border)] text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white hover:shadow-[0_0_14px_var(--accent-glow)]"
+              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[var(--border)] text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white hover:shadow-[0_0_14px_var(--accent-glow)]"
             >
               <SocialIcon platform="github" className="h-4 w-4" />
             </a>
@@ -141,13 +142,13 @@ function CompactCard({ project }: { project: Project }) {
   return (
     <GlowCard
       intensity={0.4}
-      className="project-compact-card group flex h-full flex-col rounded-xl border border-[var(--border)] bg-[var(--background-elevated)] p-5 transition duration-300 hover:border-[var(--border-strong)] hover:shadow-[0_0_28px_rgba(0,180,216,0.08)]"
+      className="project-compact-card group flex h-full min-w-0 flex-col rounded-xl border border-[var(--border)] bg-[var(--background-elevated)] p-5 transition duration-300 hover:border-[var(--border-strong)] hover:shadow-[0_0_28px_rgba(0,180,216,0.08)]"
     >
       <span aria-hidden className="project-corner project-corner-tl" />
       <span aria-hidden className="project-corner project-corner-br" />
       <span aria-hidden className="project-module-dot" />
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--blue-400)]">
             {project.year}
           </p>
@@ -155,7 +156,7 @@ function CompactCard({ project }: { project: Project }) {
             {project.title}
           </h3>
         </div>
-        <div className="flex shrink-0 items-center gap-1.5 pt-0.5">
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5 pt-0.5">
           {project.status ? (
             <span className={cn(
               "rounded-full border px-2 py-0.5 text-[9px] font-medium uppercase tracking-widest",
@@ -171,7 +172,7 @@ function CompactCard({ project }: { project: Project }) {
               rel="noopener noreferrer"
               aria-label={`GitHub — ${project.title}`}
               data-interactive
-              className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-[var(--border)] text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[var(--border)] text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white sm:h-7 sm:w-7"
             >
               <SocialIcon platform="github" className="h-3.5 w-3.5" />
             </a>
@@ -183,7 +184,7 @@ function CompactCard({ project }: { project: Project }) {
               rel="noopener noreferrer"
               aria-label={`Live — ${project.title}`}
               data-interactive
-              className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-[var(--border)] text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[var(--border)] text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white sm:h-7 sm:w-7"
             >
               <ArrowUpRight className="h-3.5 w-3.5" />
             </a>
@@ -217,11 +218,14 @@ interface ProjectsSectionProps {
 export function ProjectsSection({ projects }: ProjectsSectionProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const allProjectsGridRef = useRef<HTMLDivElement>(null);
+  const lowMotion = useLowMotionDevice();
   const [activeTag, setActiveTag] = useState("All");
   const [expanded, setExpanded] = useState(false);
 
   useGSAP(
     () => {
+      if (lowMotion) return;
+
       const section = sectionRef.current;
       if (!section) return;
 
@@ -237,7 +241,7 @@ export function ProjectsSection({ projects }: ProjectsSectionProps) {
         section.removeEventListener("mousemove", onMove);
       };
     },
-    { scope: sectionRef },
+    { dependencies: [lowMotion], revertOnUpdate: true, scope: sectionRef },
   );
 
   // Non-featured projects, filtered by tag
@@ -295,7 +299,7 @@ export function ProjectsSection({ projects }: ProjectsSectionProps) {
         <span className="projects-bg-pulse projects-bg-pulse-b" />
       </div>
 
-      <Container className="relative z-10">
+      <Container className="relative z-10 min-w-0">
         {/* ── Heading ── */}
         <RevealOnScroll>
           <SectionHeading
@@ -307,7 +311,7 @@ export function ProjectsSection({ projects }: ProjectsSectionProps) {
 
         {/* ── Featured 2-col grid ── */}
         <div
-          className="mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-3"
+          className="mt-12 grid min-w-0 gap-5 md:grid-cols-2 xl:grid-cols-3"
           style={{ perspective: 1400 }}
         >
           {featuredProjects.map((project, i) => (
@@ -328,7 +332,7 @@ export function ProjectsSection({ projects }: ProjectsSectionProps) {
                 </h3>
 
                 {/* Tag filter pills */}
-                <div className="flex flex-wrap gap-2">
+                <div className="flex min-w-0 flex-wrap gap-2">
                   {["All", ...nonFeaturedProjectTags].map((tag) => (
                     <button
                       key={tag}
@@ -336,7 +340,7 @@ export function ProjectsSection({ projects }: ProjectsSectionProps) {
                       data-interactive
                       onClick={() => { setActiveTag(tag); setExpanded(false); }}
                       className={cn(
-                        "rounded-full border px-3 py-1 text-xs font-medium transition-all duration-200",
+                        "min-h-11 rounded-full border px-3 py-2 text-xs font-medium transition-all duration-200 sm:min-h-0 sm:py-1",
                         activeTag === tag
                           ? "border-[var(--blue-500)] bg-[var(--accent-soft)] text-white shadow-[0_0_12px_var(--accent-glow)]"
                           : "border-[var(--border)] text-[var(--foreground-muted)] hover:border-[var(--border-strong)] hover:text-white",
@@ -350,7 +354,7 @@ export function ProjectsSection({ projects }: ProjectsSectionProps) {
             </RevealOnScroll>
 
             {/* Compact grid */}
-            <div ref={allProjectsGridRef} className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div ref={allProjectsGridRef} className="mt-6 grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {visible.map((project, i) => (
                 <div key={project.slug} data-all-project-frame>
                   <CompactCard project={project} />

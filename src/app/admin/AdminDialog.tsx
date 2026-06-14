@@ -133,8 +133,9 @@ export function AdminDialog({
     return () => {
       setSaving(false);
       observer.disconnect();
-      document.body.style.overflow = previousOverflow;
-      document.body.style.overscrollBehavior = previousOverscroll;
+      // Clear any inline scroll-lock styles so scrolling is reliably restored.
+      document.body.style.overflow = "";
+      document.body.style.overscrollBehavior = "";
       siblings.forEach((element) => {
         element.removeAttribute("inert");
         element.removeAttribute("aria-hidden");
@@ -252,8 +253,8 @@ export function AdminDialog({
 
   const defaultTriggerClassName =
     triggerVariant === "primary"
-      ? "rounded-full bg-[var(--blue-500)] px-4 py-2 text-sm font-medium text-[#03121a] transition hover:bg-[var(--blue-300)]"
-      : "rounded-full border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white";
+      ? "inline-flex min-h-11 items-center justify-center rounded-full bg-[var(--blue-500)] px-4 py-2 text-sm font-medium text-[#03121a] transition hover:bg-[var(--blue-300)]"
+      : "inline-flex min-h-11 items-center justify-center rounded-full border border-[var(--border)] px-3 py-2 text-xs font-medium text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white sm:min-h-0 sm:py-1.5";
 
   return (
     <>
@@ -272,7 +273,7 @@ export function AdminDialog({
         <SavingScopeProvider value={savingKey}>
           <div
             aria-hidden="false"
-            className="animate-fade-in fixed inset-0 z-[1000] flex items-center justify-center overflow-hidden bg-[rgba(3,7,18,0.76)] p-4 md:p-6"
+            className="animate-fade-in fixed inset-0 z-[1000] flex items-center justify-center overflow-hidden bg-[rgba(3,7,18,0.76)] p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))] md:p-6"
             onPointerDown={(event) => {
               event.preventDefault();
             }}
@@ -285,14 +286,14 @@ export function AdminDialog({
               aria-modal="true"
               aria-labelledby={titleId}
               aria-describedby={description ? descriptionId : undefined}
-              className="animate-modal-in flex max-h-[calc(100dvh-2rem)] w-full max-w-3xl flex-col rounded-[1.75rem] border border-[var(--border-strong)] bg-[var(--background-elevated)] shadow-[0_20px_80px_rgba(0,0,0,0.45)] md:max-h-[calc(100dvh-3rem)]"
+              className="animate-modal-in flex max-h-[calc(100dvh-1.5rem)] w-full max-w-3xl flex-col rounded-[1.25rem] border border-[var(--border-strong)] bg-[var(--background-elevated)] shadow-[0_20px_80px_rgba(0,0,0,0.45)] sm:rounded-[1.75rem] md:max-h-[calc(100dvh-3rem)]"
               onClick={(event) => event.stopPropagation()}
               onPointerDown={(event) => event.stopPropagation()}
               onDragStart={(event) => event.stopPropagation()}
               onDragOver={(event) => event.stopPropagation()}
               onDrop={(event) => event.stopPropagation()}
             >
-              <div className="flex items-start justify-between gap-4 border-b border-[var(--border)] px-5 py-4">
+              <div className="flex items-start justify-between gap-4 border-b border-[var(--border)] px-4 py-4 sm:px-5">
                 <div className="min-w-0">
                   <h3 id={titleId} className="font-[family-name:var(--font-syne)] text-lg font-semibold text-white">
                     {title}
@@ -307,7 +308,7 @@ export function AdminDialog({
                   type="button"
                   aria-label={`Close ${title}`}
                   onClick={() => setOpen(false)}
-                  className="rounded-full border border-[var(--border)] p-2 text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white"
+                  className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[var(--border)] text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white"
                 >
                   <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.5">
                     <path d="M4 4l8 8M12 4l-8 8" strokeLinecap="round" />
@@ -316,13 +317,13 @@ export function AdminDialog({
               </div>
               <div
                 ref={contentRef}
-                className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-5"
+                className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-5"
                 onInput={handleFieldChange}
                 onChange={handleFieldChange}
               >
                 {children}
               </div>
-              <div className="flex items-center justify-end gap-2 border-t border-[var(--border)] px-5 py-4">
+              <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--border)] px-4 py-4 sm:px-5">
                 {uploadIntent && hasFileInput && uploadDialogState === "uploading" && canCancel && cancelSaving ? (
                   <button
                     type="button"

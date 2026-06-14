@@ -9,6 +9,7 @@ import { Container, Section } from "@/components/ui/Container";
 import { FlickeringGrid } from "@/components/ui/FlickeringGridHero";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { gsap, registerGsapPlugins } from "@/lib/gsap";
+import { useLowMotionDevice } from "@/hooks/useLowMotionDevice";
 import type { Certification, EventHighlight, SkillCategory } from "@/types";
 
 type CounterData = {
@@ -38,6 +39,7 @@ export function AboutSection({
   creativePhotoCount,
 }: AboutSectionProps) {
   const sectionRef = useRef<HTMLElement>(null);
+  const lowMotion = useLowMotionDevice();
   const counterMap: Record<CounterLabel, CounterData> = {
     Focus: { to: skillCategories.length, suffix: "+ stacks" },
     Events: { to: eventHighlights.length, suffix: "+ events" },
@@ -93,22 +95,24 @@ export function AboutSection({
   );
 
   return (
-    <Section id="about" surface="elevated" ref={sectionRef} className="overflow-visible">
+    <Section id="about" surface="elevated" ref={sectionRef} className="overflow-hidden">
       <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-[rgba(72,202,228,0.08)] to-transparent" />
         <div className="absolute -left-20 top-10 h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(72,202,228,0.12),transparent_70%)] blur-2xl" />
         <div className="absolute right-0 top-1/2 h-72 w-72 -translate-y-1/2 bg-[radial-gradient(circle,rgba(0,119,182,0.12),transparent_72%)] blur-3xl" />
-        <FlickeringGrid
-          className="absolute inset-0 opacity-70 [mask-image:radial-gradient(circle_at_center,white,transparent_78%)]"
-          color="var(--blue-400)"
-          squareSize={3}
-          gridGap={7}
-          flickerChance={0.18}
-          maxOpacity={0.18}
-        />
+        {!lowMotion ? (
+          <FlickeringGrid
+            className="absolute inset-0 opacity-70 [mask-image:radial-gradient(circle_at_center,white,transparent_78%)]"
+            color="var(--blue-400)"
+            squareSize={3}
+            gridGap={7}
+            flickerChance={0.18}
+            maxOpacity={0.18}
+          />
+        ) : null}
       </div>
       <Container>
-        <div className="relative z-10 grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
+        <div className="relative z-10 grid min-w-0 gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
 
           {/* Left: heading with sweep highlight */}
           <RevealOnScroll>
@@ -128,7 +132,7 @@ export function AboutSection({
           </RevealOnScroll>
 
           {/* Right: paragraphs + highlight cards */}
-          <div className="space-y-6">
+          <div className="min-w-0 space-y-6">
             {aboutContent.paragraphs.map((paragraph, index) => (
               <p
                 key={paragraph.slice(0, 24)}
@@ -147,14 +151,14 @@ export function AboutSection({
                   return (
                     <GlowCard
                       key={item.label}
-                      className="rounded-lg border border-[var(--border)] bg-white/[0.02] p-3 cursor-default"
+                      className="min-w-0 cursor-default rounded-lg border border-[var(--border)] bg-white/[0.02] p-3"
                       intensity={0.4}
                       data-interactive
                     >
                       <dt className="font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--blue-400)]">
                         {item.label}
                       </dt>
-                      <dd className="mt-1.5 text-sm font-medium text-white">
+                      <dd className="mt-1.5 break-words text-sm font-medium text-white">
                         {counter ? (
                           <AnimatedCounter
                             to={counter.to}

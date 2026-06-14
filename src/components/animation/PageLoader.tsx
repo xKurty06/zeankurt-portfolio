@@ -8,61 +8,122 @@ export function PageLoader({ onComplete }: { onComplete: () => void }) {
   const contentRef = useRef<HTMLDivElement>(null);
   const progressRef = useRef<HTMLDivElement>(null);
   const glowRef = useRef<HTMLDivElement>(null);
+  const completedRef = useRef(false);
   const [pct, setPct] = useState(0);
 
   useEffect(() => {
-    registerGsapPlugins();
+    const finish = () => {
+      if (completedRef.current) return;
 
-    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const progress = { value: 0 };
-    const tl = gsap.timeline();
+      completedRef.current = true;
+      onComplete();
+    };
 
-    gsap.set(contentRef.current, { autoAlpha: 0, y: 18 });
-    gsap.set(progressRef.current, { scaleX: 0, transformOrigin: "left center" });
-    gsap.set(glowRef.current, { scale: 0.92, autoAlpha: 0.45 });
+    const fallback = window.setTimeout(finish, 4200);
+    let tl: gsap.core.Timeline | null = null;
+    let fallbackProgressInterval: number | null = null;
+    let immediateProgressInterval: number | null = null;
+    let gsapStarted = false;
+    let currentProgress = 1;
 
-    tl.to(contentRef.current, {
-      autoAlpha: 1,
-      y: 0,
-      duration: reduceMotion ? 0.01 : 0.55,
-      ease: "power3.out",
-    });
+    // Start progress immediately with direct DOM updates for instant mobile feedback
+    setPct(1);
+    if (progressRef.current) {
+      progressRef.current.style.transform = "scaleX(0.01)";
+    }
 
-    tl.to(glowRef.current, {
-      scale: 1,
-      autoAlpha: 0.9,
-      duration: reduceMotion ? 0.01 : 1.2,
-      ease: "sine.inOut",
-    }, "<");
-
-    tl.to(progress, {
-      value: 100,
-      duration: reduceMotion ? 0.01 : 2.1,
-      ease: "power2.inOut",
-      onUpdate() {
-        setPct(Math.round(progress.value));
+    immediateProgressInterval = window.setInterval(() => {
+      if (!gsapStarted && currentProgress < 30) {
+        currentProgress = Math.min(currentProgress + 4, 30);
+        setPct(currentProgress);
         if (progressRef.current) {
-          gsap.set(progressRef.current, { scaleX: progress.value / 100 });
+          progressRef.current.style.transform = `scaleX(${currentProgress / 100})`;
         }
-      },
-    }, reduceMotion ? ">" : "-=0.25");
+      }
+    }, 50);
 
-    tl.to(contentRef.current, {
-      autoAlpha: 0,
-      y: reduceMotion ? 0 : -14,
-      duration: reduceMotion ? 0.01 : 0.34,
-      ease: "power2.in",
-    });
+    try {
+      registerGsapPlugins();
 
-    tl.to(overlayRef.current, {
-      autoAlpha: 0,
-      duration: reduceMotion ? 0.01 : 0.46,
-      ease: "power3.inOut",
-      onComplete,
-    }, "<0.08");
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const progress = { value: 0 };
+      tl = gsap.timeline();
+
+      gsap.set(contentRef.current, { autoAlpha: 1, y: 0 });
+      gsap.set(progressRef.current, { scaleX: 0, transformOrigin: "left center" });
+      gsap.set(glowRef.current, { scale: 0.92, autoAlpha: 0.45 });
+
+      tl.to(glowRef.current, {
+        scale: 1,
+        autoAlpha: 0.9,
+        duration: reduceMotion ? 0.01 : 1.2,
+        ease: "sine.inOut",
+      }, 0);
+
+      tl.to(progress, {
+        value: 100,
+        duration: reduceMotion ? 0.01 : 2.1,
+        ease: "power2.inOut",
+        onStart() {
+          gsapStarted = true;
+          if (immediateProgressInterval !== null) {
+            window.clearInterval(immediateProgressInterval);
+            immediateProgressInterval = null;
+          }
+          currentProgress = 35;
+          setPct(35);
+        },
+        onUpdate() {
+          currentProgress = Math.max(35, 35 + progress.value * 0.65);
+          setPct(Math.round(currentProgress));
+          if (progressRef.current) {
+            gsap.set(progressRef.current, { scaleX: progress.value / 100 });
+          }
+        },
+      }, 0);
+
+      tl.to(contentRef.current, {
+        autoAlpha: 0,
+        y: reduceMotion ? 0 : -14,
+        duration: reduceMotion ? 0.01 : 0.34,
+        ease: "power2.in",
+      }, "-=0.34");
+
+      tl.to(overlayRef.current, {
+        autoAlpha: 0,
+        duration: reduceMotion ? 0.01 : 0.46,
+        ease: "power3.inOut",
+        onComplete: finish,
+      }, "<0.08");
+    } catch (error) {
+      console.warn("Page loader animation failed:", error);
+      if (immediateProgressInterval !== null) {
+        window.clearInterval(immediateProgressInterval);
+      }
+      gsapStarted = true;
+      currentProgress = 35;
+      setPct(35);
+      if (progressRef.current) {
+        progressRef.current.style.transform = "scaleX(0.35)";
+      }
+      fallbackProgressInterval = window.setInterval(() => {
+        currentProgress = Math.min(currentProgress + 6, 98);
+        setPct(Math.round(currentProgress));
+        if (progressRef.current) {
+          progressRef.current.style.transform = `scaleX(${currentProgress / 100})`;
+        }
+      }, 200);
+    }
 
     return () => {
-      tl.kill();
+      window.clearTimeout(fallback);
+      if (immediateProgressInterval !== null) {
+        window.clearInterval(immediateProgressInterval);
+      }
+      if (fallbackProgressInterval !== null) {
+        window.clearInterval(fallbackProgressInterval);
+      }
+      tl?.kill();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -101,7 +162,7 @@ export function PageLoader({ onComplete }: { onComplete: () => void }) {
         </div>
 
         <div className="overflow-hidden">
-          <h2 className="font-display text-[clamp(3.35rem,12vw,8rem)] font-semibold leading-[0.9] text-white">
+          <h2 className="font-display text-[clamp(2.8rem,12vw,8rem)] font-semibold leading-[0.9] text-white">
             Zean
             <span className="block text-gradient">Kurt</span>
           </h2>
@@ -115,6 +176,7 @@ export function PageLoader({ onComplete }: { onComplete: () => void }) {
           <div className="h-[3px] w-full overflow-hidden rounded-full bg-cyan-100/10">
             <div
               ref={progressRef}
+              style={{ transform: 'scaleX(0)', transformOrigin: 'left center' }}
               className="h-full w-full rounded-full bg-gradient-to-r from-[var(--blue-700)] via-[var(--blue-400)] to-[var(--blue-100)] shadow-[0_0_18px_rgba(72,202,228,0.65)]"
             />
           </div>

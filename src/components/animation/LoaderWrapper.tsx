@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { PageLoader } from "@/components/animation/PageLoader";
 
@@ -9,11 +9,29 @@ export function LoaderWrapper() {
   const pathname = usePathname();
   const [show, setShow] = useState(true);
   const restoreScrollRef = useRef<() => void>(() => {});
+  const completedRef = useRef(false);
   const isAdminRoute = pathname?.startsWith("/admin");
+
+  const shouldSkipLoader = () => false;
+
+  const completeLoader = useCallback(() => {
+    if (completedRef.current) return;
+
+    completedRef.current = true;
+    restoreScrollRef.current();
+    document.documentElement.dataset.loaderComplete = "true";
+    window.dispatchEvent(new Event("portfolio-loader-complete"));
+    setShow(false);
+  }, []);
 
   useEffect(() => {
     if (isAdminRoute) {
       setShow(false);
+      return;
+    }
+
+    if (shouldSkipLoader()) {
+      completeLoader();
       return;
     }
 
@@ -23,8 +41,8 @@ export function LoaderWrapper() {
     const previousScrollRestoration = window.history.scrollRestoration;
 
     window.history.scrollRestoration = "manual";
-    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
-    requestAnimationFrame(() => window.scrollTo({ top: 0, left: 0, behavior: "instant" }));
+    window.scrollTo(0, 0);
+    requestAnimationFrame(() => window.scrollTo(0, 0));
 
     document.documentElement.style.overflow = "hidden";
     document.body.style.overflow = "hidden";
@@ -37,19 +55,21 @@ export function LoaderWrapper() {
       window.history.scrollRestoration = previousScrollRestoration;
     };
 
-    return () => restoreScrollRef.current();
-  }, [isAdminRoute]);
+    const fallback = window.setTimeout(() => {
+      completeLoader();
+    }, 4500);
+
+    return () => {
+      window.clearTimeout(fallback);
+      restoreScrollRef.current();
+    };
+  }, [completeLoader, isAdminRoute]);
 
   if (!show) return null;
 
   return (
     <PageLoader
-      onComplete={() => {
-        restoreScrollRef.current();
-        document.documentElement.dataset.loaderComplete = "true";
-        window.dispatchEvent(new Event("portfolio-loader-complete"));
-        setShow(false);
-      }}
+      onComplete={completeLoader}
     />
   );
 }

@@ -45,7 +45,7 @@ export function Lightbox({
   return (
     <div
       data-preview-overlay="true"
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/92 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/92 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-sm sm:p-4"
       role="dialog"
       aria-modal="true"
       aria-label={photo.title}
@@ -53,7 +53,7 @@ export function Lightbox({
       <button
         type="button"
         onClick={onClose}
-        className="absolute right-4 top-4 inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/20 text-white transition hover:bg-white/10"
+        className="absolute right-3 top-3 z-20 inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/35 text-white transition hover:bg-white/10 sm:right-4 sm:top-4"
         aria-label="Close lightbox"
       >
         <X className="h-5 w-5" />
@@ -63,7 +63,7 @@ export function Lightbox({
         <button
           type="button"
           onClick={() => onNavigate(activeIndex - 1)}
-          className="absolute left-4 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 text-white transition hover:bg-white/10"
+          className="absolute bottom-4 left-4 z-20 inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/35 text-white transition hover:bg-white/10 sm:top-1/2 sm:bottom-auto sm:-translate-y-1/2"
           aria-label="Previous photo"
         >
           <ChevronLeft className="h-5 w-5" />
@@ -74,21 +74,21 @@ export function Lightbox({
         <button
           type="button"
           onClick={() => onNavigate(activeIndex + 1)}
-          className="absolute right-4 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 text-white transition hover:bg-white/10 md:right-16"
+          className="absolute bottom-4 right-4 z-20 inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/35 text-white transition hover:bg-white/10 sm:top-1/2 sm:bottom-auto sm:-translate-y-1/2 md:right-16"
           aria-label="Next photo"
         >
           <ChevronRight className="h-5 w-5" />
         </button>
       ) : null}
 
-      <div className="max-h-[85vh] w-full max-w-5xl">
+      <div className="max-h-[85dvh] w-full max-w-5xl px-0 sm:px-14 md:px-16">
         <div className="flex w-full items-center justify-center overflow-hidden rounded-2xl">
           {photo.image ? (
             <img
               key={photo.id}
               src={photo.image}
               alt={photo.title}
-              className="block max-h-[72vh] w-auto max-w-full rounded-2xl object-contain"
+              className="block max-h-[68dvh] w-auto max-w-full rounded-2xl object-contain sm:max-h-[72vh]"
               loading="eager"
             />
           ) : (

@@ -16,7 +16,7 @@ export function AlbumCard({ album }: AlbumCardProps) {
   return (
     <Link
       href={`/photography/${album.slug}`}
-      className="group mb-5 block break-inside-avoid overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]"
+      className="group block w-full max-w-full overflow-hidden rounded-xl border border-white/10 bg-white/[0.02] sm:rounded-2xl"
     >
       <div
         className={cn(
@@ -41,11 +41,11 @@ export function AlbumCard({ album }: AlbumCardProps) {
           <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))]" />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
-        <div className="absolute inset-x-0 bottom-0 p-5">
-          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-white/70">
+        <div className="absolute inset-x-0 bottom-0 p-3 sm:p-5">
+          <p className="font-mono text-[9px] uppercase tracking-[0.14em] text-white/70 sm:text-[10px] sm:tracking-[0.2em]">
             {album.category} · {album.photoCount} photos
           </p>
-          <h3 className="mt-2 font-[family-name:var(--font-syne)] text-xl font-semibold text-white">
+          <h3 className="mt-1 line-clamp-2 break-words font-[family-name:var(--font-syne)] text-sm font-semibold leading-tight text-white sm:mt-2 sm:text-xl">
             {album.title}
           </h3>
           {!album.coverImage ? (
@@ -55,7 +55,7 @@ export function AlbumCard({ album }: AlbumCardProps) {
           ) : null}
         </div>
       </div>
-      <p className="p-5 text-sm leading-relaxed text-white/65">
+      <p className="line-clamp-2 break-words p-3 text-xs leading-relaxed text-white/65 sm:p-5 sm:text-sm">
         {album.description}
       </p>
     </Link>

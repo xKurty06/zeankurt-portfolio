@@ -232,8 +232,8 @@ export function ExperienceSection({
           />
         </RevealOnScroll>
 
-        <div className="mt-12 grid gap-10 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="relative">
+        <div className="mt-12 grid min-w-0 gap-10 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="relative min-w-0">
             <div
               data-timeline-line
               className="absolute left-0 top-2 bottom-2 hidden w-px md:block"
@@ -257,14 +257,14 @@ export function ExperienceSection({
                 <article
                   key={item.id}
                   data-exp-card
-                  className="relative rounded-2xl border border-[rgba(72,202,228,0.14)] bg-[linear-gradient(180deg,rgba(6,12,24,0.92),rgba(8,15,30,0.9))] p-5 transition-colors duration-300 hover:border-[rgba(72,202,228,0.28)] hover:bg-[linear-gradient(180deg,rgba(8,15,30,0.96),rgba(10,18,34,0.94))] md:p-6"
+                  className="relative min-w-0 rounded-2xl border border-[rgba(72,202,228,0.14)] bg-[linear-gradient(180deg,rgba(6,12,24,0.92),rgba(8,15,30,0.9))] p-5 transition-colors duration-300 hover:border-[rgba(72,202,228,0.28)] hover:bg-[linear-gradient(180deg,rgba(8,15,30,0.96),rgba(10,18,34,0.94))] md:p-6"
                 >
                   <div className="timeline-dot absolute -left-[calc(1.5rem+6px)] top-7 hidden h-3 w-3 rounded-full border-2 border-[var(--blue-500)] bg-[var(--background-subtle)] md:block" />
 
                   <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <h3 className="text-lg font-semibold text-white">{item.organization}</h3>
-                      <p className="mt-1 text-sm text-[var(--blue-300)]">{item.role}</p>
+                    <div className="min-w-0">
+                      <h3 className="break-words text-lg font-semibold text-white">{item.organization}</h3>
+                      <p className="mt-1 break-words text-sm text-[var(--blue-300)]">{item.role}</p>
                     </div>
                     <Badge>{item.type}</Badge>
                   </div>
@@ -279,7 +279,7 @@ export function ExperienceSection({
             </div>
           </div>
 
-          <div className="sui-modular-panel relative space-y-6">
+          <div className="sui-modular-panel relative min-w-0 space-y-6 overflow-hidden">
             <span aria-hidden className="sui-stack-ring sui-stack-ring-a" />
             <span aria-hidden className="sui-stack-ring sui-stack-ring-b" />
             <RevealOnScroll delay={0.08} variant="scale-in">
@@ -302,7 +302,7 @@ export function ExperienceSection({
                   </div>
                 </div>
 
-                <div className="events-scroll mt-5 max-h-[28rem] space-y-5 overflow-y-auto pr-2">
+                <div className="events-scroll mt-5 max-h-[60dvh] space-y-5 overflow-y-auto pr-2 md:max-h-[28rem]">
                   {certificationGroups.map(([issuer, items]) => (
                     <section key={issuer}>
                       <div className="sticky top-0 z-10 mb-3 flex items-center gap-3 py-2">
@@ -335,12 +335,12 @@ export function ExperienceSection({
                               <button
                                 type="button"
                                 onClick={() => setActiveCert({ name: cert.name, image: cert.image ?? "" })}
-                                className="shrink-0 rounded-full border border-[var(--border)] bg-white/[0.03] px-3 py-1.5 text-xs font-medium text-[var(--blue-300)] transition-colors duration-300 hover:border-[var(--border-strong)] hover:text-white"
+                                className="inline-flex min-h-11 shrink-0 items-center rounded-full border border-[var(--border)] bg-white/[0.03] px-3 py-2 text-xs font-medium text-[var(--blue-300)] transition-colors duration-300 hover:border-[var(--border-strong)] hover:text-white sm:min-h-0 sm:py-1.5"
                               >
                                 View cert
                               </button>
                             ) : (
-                              <span className="shrink-0 rounded-full border border-dashed border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--foreground-subtle)]">
+                              <span className="inline-flex min-h-11 shrink-0 items-center rounded-full border border-dashed border-[var(--border)] px-3 py-2 text-xs font-medium text-[var(--foreground-subtle)] sm:min-h-0 sm:py-1.5">
                                 Add image
                               </span>
                             )}
@@ -374,7 +374,7 @@ export function ExperienceSection({
                   </div>
                 </div>
 
-                <div className="events-scroll mt-5 max-h-[42rem] min-w-0 space-y-5 overflow-y-auto overflow-x-hidden pr-2">
+                <div className="events-scroll mt-5 max-h-[60dvh] min-w-0 space-y-5 overflow-y-auto overflow-x-hidden pr-2 lg:max-h-[42rem]">
                   {eventsByYear.map(([year, events]) => (
                     <section key={year}>
                       <div className="sticky top-0 z-10 mb-3 flex items-center gap-3 py-2">

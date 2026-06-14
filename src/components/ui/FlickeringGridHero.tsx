@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
+import { useLowMotionDevice } from "@/hooks/useLowMotionDevice";
 
 interface FlickeringGridProps extends React.HTMLAttributes<HTMLDivElement> {
   squareSize?: number;
@@ -60,6 +61,7 @@ export function FlickeringGrid({
 }: FlickeringGridProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const lowMotion = useLowMotionDevice();
   const frameRef = useRef<number | null>(null);
   const isInViewRef = useRef(false);
   const gridRef = useRef<GridState | null>(null);
@@ -71,6 +73,8 @@ export function FlickeringGrid({
   }, [color]);
 
   useEffect(() => {
+    if (lowMotion) return;
+
     const canvas = canvasRef.current;
     const container = containerRef.current;
     if (!canvas || !container) return;
@@ -173,7 +177,11 @@ export function FlickeringGrid({
       resizeObserver.disconnect();
       intersectionObserver.disconnect();
     };
-  }, [flickerChance, gridGap, height, maxOpacity, squareSize, width]);
+  }, [flickerChance, gridGap, height, lowMotion, maxOpacity, squareSize, width]);
+
+  if (lowMotion) {
+    return null;
+  }
 
   return (
     <div

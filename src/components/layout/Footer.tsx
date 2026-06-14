@@ -1,14 +1,19 @@
 "use client";
 
-import { useRef } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
+import { useRef } from "react";
 import { useGSAP } from "@gsap/react";
 import { footerNav } from "@/data/navigation";
 import { siteConfig } from "@/data/site";
 import { socialGroups } from "@/data/social";
 import { gsap, registerGsapPlugins } from "@/lib/gsap";
 import { SocialLinks } from "@/components/ui/SocialLinks";
-import ShaderBackground from "@/components/ui/ShaderBackground";
+
+const ShaderBackground = dynamic(
+  () => import("@/components/ui/ShaderBackground"),
+  { ssr: false }
+);
 
 export function Footer() {
   const footerRef = useRef<HTMLElement>(null);
@@ -17,20 +22,22 @@ export function Footer() {
     () => {
       registerGsapPlugins();
 
-      // Reveal footer on scroll
       gsap.fromTo(
         footerRef.current,
         { autoAlpha: 0, y: 30 },
         {
-          autoAlpha: 1, y: 0, duration: 0.9, ease: "power3.out",
+          autoAlpha: 1,
+          y: 0,
+          duration: 0.9,
+          ease: "power3.out",
           scrollTrigger: {
-            trigger: footerRef.current, start: "top 95%",
+            trigger: footerRef.current,
+            start: "top 95%",
             toggleActions: "play none none none",
           },
-        },
+        }
       );
 
-      // Animated gradient sweep on the top border — slow, once every 8s
       const sweep = footerRef.current?.querySelector<HTMLElement>("[data-footer-sweep]");
       if (sweep) {
         gsap.to(sweep, {
@@ -43,7 +50,7 @@ export function Footer() {
         });
       }
     },
-    { scope: footerRef },
+    { scope: footerRef }
   );
 
   return (
@@ -57,7 +64,6 @@ export function Footer() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(72,202,228,0.12),transparent_42%)] opacity-70" />
       </div>
 
-      {/* Top border traveling glow */}
       <div
         data-footer-sweep
         aria-hidden
@@ -85,7 +91,7 @@ export function Footer() {
             <p className="mb-4 font-mono text-xs uppercase tracking-[0.2em] text-[var(--blue-400)]">
               Navigation
             </p>
-            <ul className="grid gap-2 sm:grid-cols-2">
+            <ul className="grid gap-1 sm:grid-cols-2">
               {footerNav.map((item) => (
                 <li key={item.href}>
                   {item.external ? (
@@ -93,21 +99,21 @@ export function Footer() {
                       href={item.href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-sm text-[var(--foreground-muted)] transition hover:text-white hover:translate-x-1 inline-block duration-200"
+                      className="inline-flex min-h-11 items-center text-sm text-[var(--foreground-muted)] transition duration-200 hover:translate-x-1 hover:text-white"
                     >
                       {item.label}
                     </a>
                   ) : item.href.startsWith("/") ? (
                     <Link
                       href={item.href}
-                      className="text-sm text-[var(--foreground-muted)] transition hover:text-white hover:translate-x-1 inline-block duration-200"
+                      className="inline-flex min-h-11 items-center text-sm text-[var(--foreground-muted)] transition duration-200 hover:translate-x-1 hover:text-white"
                     >
                       {item.label}
                     </Link>
                   ) : (
                     <a
                       href={item.href}
-                      className="text-sm text-[var(--foreground-muted)] transition hover:text-white hover:translate-x-1 inline-block duration-200"
+                      className="inline-flex min-h-11 items-center text-sm text-[var(--foreground-muted)] transition duration-200 hover:translate-x-1 hover:text-white"
                     >
                       {item.label}
                     </a>
@@ -119,7 +125,9 @@ export function Footer() {
         </div>
 
         <div className="mt-10 flex flex-col gap-3 border-t border-[var(--border)] pt-6 text-sm text-[var(--foreground-subtle)] sm:flex-row sm:items-center sm:justify-between">
-          <p>© {new Date().getFullYear()} {siteConfig.name}. All rights reserved.</p>
+          <p suppressHydrationWarning>
+            © {new Date().getFullYear()} {siteConfig.name}. All rights reserved.
+          </p>
           <p>
             Photography via{" "}
             <a

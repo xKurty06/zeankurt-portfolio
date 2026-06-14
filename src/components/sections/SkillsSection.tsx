@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Container, Section } from "@/components/ui/Container";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { gsap, registerGsapPlugins } from "@/lib/gsap";
+import { useLowMotionDevice } from "@/hooks/useLowMotionDevice";
 import type { SkillCategory } from "@/types";
 
 interface SkillsSectionProps {
@@ -16,6 +17,7 @@ interface SkillsSectionProps {
 
 export function SkillsSection({ skillCategories }: SkillsSectionProps) {
   const sectionRef = useRef<HTMLElement>(null);
+  const lowMotion = useLowMotionDevice();
 
   useGSAP(
     () => {
@@ -60,7 +62,7 @@ export function SkillsSection({ skillCategories }: SkillsSectionProps) {
         }
       });
 
-      if (section) {
+      if (section && !lowMotion) {
         const onMove = (event: MouseEvent) => {
           const sectionRect = section.getBoundingClientRect();
           section.style.setProperty("--skills-bg-x", `${event.clientX - sectionRect.left}px`);
@@ -74,7 +76,7 @@ export function SkillsSection({ skillCategories }: SkillsSectionProps) {
         };
       }
     },
-    { scope: sectionRef },
+    { dependencies: [lowMotion], revertOnUpdate: true, scope: sectionRef },
   );
 
   return (
@@ -87,7 +89,7 @@ export function SkillsSection({ skillCategories }: SkillsSectionProps) {
         <span className="skills-bg-dot skills-bg-dot-c" />
       </div>
 
-      <Container className="relative z-10">
+      <Container className="relative z-10 min-w-0">
         <RevealOnScroll>
           <SectionHeading
             eyebrow="Skills"
@@ -97,7 +99,7 @@ export function SkillsSection({ skillCategories }: SkillsSectionProps) {
         </RevealOnScroll>
 
         <div
-          className="relative mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-3"
+          className="relative mt-12 grid min-w-0 gap-5 md:grid-cols-2 xl:grid-cols-3"
           style={{ perspective: 1200 }}
         >
           {skillCategories.map((category) => (
@@ -105,18 +107,18 @@ export function SkillsSection({ skillCategories }: SkillsSectionProps) {
               key={category.name}
               data-skill-card
               intensity={0.45}
-              className="h-full rounded-2xl border border-[var(--border)] bg-[var(--background-elevated)] p-5 md:p-6 transition duration-300 hover:border-[var(--border-strong)] hover:shadow-[0_0_32px_rgba(0,180,216,0.08)]"
+              className="h-full min-w-0 rounded-2xl border border-[var(--border)] bg-[var(--background-elevated)] p-5 transition duration-300 hover:border-[var(--border-strong)] hover:shadow-[0_0_32px_rgba(0,180,216,0.08)] md:p-6"
             >
               <h3 className="font-[family-name:var(--font-syne)] text-lg font-semibold text-white">
                 {category.name}
               </h3>
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="mt-4 flex min-w-0 flex-wrap gap-2">
                 {category.skills.map((skill) => (
                   <span
                     key={skill}
                     data-badge-item
                     data-interactive
-                    className="inline-block cursor-default"
+                    className="inline-block max-w-full cursor-default break-words"
                   >
                     <Badge>{skill}</Badge>
                   </span>

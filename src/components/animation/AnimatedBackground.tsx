@@ -4,13 +4,16 @@ import { useEffect, useRef } from "react";
 import { useGSAP } from "@gsap/react";
 import { gsap, registerGsapPlugins } from "@/lib/gsap";
 import { monitorElementActivity } from "@/lib/animationActivity";
+import { useLowMotionDevice } from "@/hooks/useLowMotionDevice";
 
-function ParticleCanvas() {
+function ParticleCanvas({ lowMotion }: { lowMotion: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number>(0);
   const mouseRef = useRef({ x: -9999, y: -9999 });
 
   useEffect(() => {
+    if (lowMotion) return;
+
     const canvas = canvasRef.current;
     if (!canvas) return;
     const context = canvas.getContext("2d");
@@ -182,7 +185,7 @@ function ParticleCanvas() {
       window.removeEventListener("mousemove", onMouse);
       window.removeEventListener("mouseout", onMouseLeave);
     };
-  }, []);
+  }, [lowMotion]);
 
   return <canvas ref={canvasRef} aria-hidden className="absolute inset-0 h-full w-full opacity-70" />;
 }
@@ -201,11 +204,13 @@ const CODE_TOKENS = [
   "on-chain",
 ];
 
-function FloatingTokens() {
+function FloatingTokens({ lowMotion }: { lowMotion: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
 
   useGSAP(
     () => {
+      if (lowMotion) return;
+
       const tokens = ref.current?.querySelectorAll<HTMLElement>("[data-token]");
       if (!tokens) return;
 
@@ -230,7 +235,7 @@ function FloatingTokens() {
         });
       });
     },
-    { scope: ref },
+    { dependencies: [lowMotion], revertOnUpdate: true, scope: ref },
   );
 
   return (
@@ -255,9 +260,12 @@ function FloatingTokens() {
 
 export function AnimatedBackground() {
   const rootRef = useRef<HTMLDivElement>(null);
+  const lowMotion = useLowMotionDevice();
 
   useGSAP(
     () => {
+      if (lowMotion) return;
+
       registerGsapPlugins();
       const root = rootRef.current;
       if (!root) return;
@@ -364,19 +372,23 @@ export function AnimatedBackground() {
         root.removeEventListener("pointerleave", onPointerLeave);
       };
     },
-    { scope: rootRef },
+    { dependencies: [lowMotion], revertOnUpdate: true, scope: rootRef },
   );
 
   return (
     <div ref={rootRef} aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-      <div
-        data-cursor-glow="secondary"
-        className="absolute left-0 top-0 h-[28rem] w-[28rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(72,202,228,0.18),rgba(0,180,216,0.08)_32%,transparent_72%)] opacity-70 blur-3xl"
-      />
-      <div
-        data-cursor-glow="primary"
-        className="absolute left-0 top-0 h-[18rem] w-[18rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(202,240,248,0.22),rgba(72,202,228,0.14)_30%,transparent_70%)] opacity-90 blur-2xl"
-      />
+      {!lowMotion ? (
+        <>
+          <div
+            data-cursor-glow="secondary"
+            className="absolute left-0 top-0 h-[28rem] w-[28rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(72,202,228,0.18),rgba(0,180,216,0.08)_32%,transparent_72%)] opacity-70 blur-3xl"
+          />
+          <div
+            data-cursor-glow="primary"
+            className="absolute left-0 top-0 h-[18rem] w-[18rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(202,240,248,0.22),rgba(72,202,228,0.14)_30%,transparent_70%)] opacity-90 blur-2xl"
+          />
+        </>
+      ) : null}
 
       <div
         data-orb
@@ -394,10 +406,10 @@ export function AnimatedBackground() {
         className="glow-orb absolute left-1/2 bottom-0 h-[500px] w-[500px] rounded-full blur-3xl opacity-28"
       />
 
-      <ParticleCanvas />
+      <ParticleCanvas lowMotion={lowMotion} />
 
       <div data-parallax="12" className="absolute inset-0">
-        <FloatingTokens />
+        <FloatingTokens lowMotion={lowMotion} />
       </div>
 
       <div data-parallax="8" className="grid-bg absolute inset-0 opacity-40" />
