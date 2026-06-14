@@ -7,12 +7,14 @@ import { ProjectsSection } from "@/components/sections/ProjectsSection";
 import { SkillsSection } from "@/components/sections/SkillsSection";
 import { getPortfolioContent } from "@/lib/cms/queries";
 import { getCreativePhotoCount } from "@/lib/photography";
+import { Analytics } from "@vercel/analytics/next"
 
 export default async function HomePage() {
   const content = await getPortfolioContent();
 
   return (
     <>
+      <Analytics />
       <HeroSection siteConfig={content.siteConfig} />
       <AboutSection
         aboutContent={content.aboutContent}
