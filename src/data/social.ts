@@ -36,7 +36,7 @@ export const socialLinks: SocialLink[] = [
   {
     id: "instagram-photo",
     platform: "instagram",
-    label: "shot.by.zk",
+    label: "Instagram",
     href: "https://www.instagram.com/shot.by.zk/",
     group: "photography",
     description: "Photography portfolio",
@@ -44,7 +44,7 @@ export const socialLinks: SocialLink[] = [
   {
     id: "facebook-photo",
     platform: "facebook",
-    label: "Photography Page",
+    label: "Facebook Page",
     href: "https://www.facebook.com/profile.php?id=61579829156550",
     group: "photography",
     description: "Photography work",
@@ -52,7 +52,7 @@ export const socialLinks: SocialLink[] = [
   {
     id: "studio-nomads-ig",
     platform: "instagram",
-    label: "Studio Nomads",
+    label: "Instagram",
     href: "https://www.instagram.com/officialstudio.nomads/",
     group: "affiliation",
     description: "Creative collective",
@@ -60,7 +60,7 @@ export const socialLinks: SocialLink[] = [
   {
     id: "studio-nomads-fb",
     platform: "facebook",
-    label: "Studio Nomads",
+    label: "Facebook Page",
     href: "https://www.facebook.com/officialstudionomads",
     group: "affiliation",
     description: "Creative collective",

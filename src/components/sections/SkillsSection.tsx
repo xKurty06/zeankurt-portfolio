@@ -51,14 +51,14 @@ export function SkillsSection({ skillCategories }: SkillsSectionProps) {
           card,
           {
             autoAlpha: 0,
-            y: 18,
-            scale: 0.98,
+            y: 16,
+            scale: 0.985,
           },
           {
             autoAlpha: 1,
             y: 0,
             scale: 1,
-            duration: 0.42,
+            duration: 0.38,
             delay: cardIndex * 0.035,
             ease: "power2.out",
             scrollTrigger: {
@@ -76,17 +76,17 @@ export function SkillsSection({ skillCategories }: SkillsSectionProps) {
             badges,
             {
               autoAlpha: 0,
-              scale: 0.92,
-              y: 6,
+              scale: 0.94,
+              y: 5,
             },
             {
               autoAlpha: 1,
               scale: 1,
               y: 0,
-              duration: 0.28,
-              stagger: 0.018,
+              duration: 0.24,
+              stagger: 0.015,
               ease: "power2.out",
-              delay: cardIndex * 0.03 + 0.08,
+              delay: cardIndex * 0.03 + 0.06,
               scrollTrigger: {
                 trigger: card,
                 start: "top 92%",
@@ -116,7 +116,7 @@ export function SkillsSection({ skillCategories }: SkillsSectionProps) {
   );
 
   return (
-    <Section id="skills" ref={sectionRef}>
+    <Section id="skills" ref={sectionRef} className="py-10 sm:py-16 lg:py-24">
       {!lowMotion ? (
         <div aria-hidden className="skills-ambient-bg hidden sm:block">
           <span className="skills-bg-stream skills-bg-stream-a" />
@@ -144,14 +144,20 @@ export function SkillsSection({ skillCategories }: SkillsSectionProps) {
             <GlowCard
               key={category.name}
               data-skill-card
-              intensity={lowMotion ? 0.18 : 0.32}
-              className="h-full min-w-0 rounded-2xl border border-[var(--border)] bg-[var(--background-elevated)] p-4 text-center transition duration-300 hover:border-[var(--border-strong)] hover:shadow-[0_0_24px_rgba(0,180,216,0.07)] sm:p-5 sm:text-left md:p-6"
+              intensity={lowMotion ? 0.16 : 0.28}
+              className="h-full min-w-0 rounded-2xl border border-[var(--border)] bg-[var(--background-elevated)] p-4 text-left transition duration-300 hover:border-[var(--border-strong)] hover:shadow-[0_0_24px_rgba(0,180,216,0.07)] sm:p-5 md:p-6"
             >
-              <h3 className="font-[family-name:var(--font-syne)] text-base font-semibold text-white sm:text-lg">
-                {category.name}
-              </h3>
+              <div className="flex items-start justify-between gap-3">
+                <h3 className="min-w-0 break-words font-[family-name:var(--font-syne)] text-base font-semibold leading-snug text-white sm:text-lg">
+                  {category.name}
+                </h3>
 
-              <div className="mt-3 flex min-w-0 flex-wrap justify-center gap-1.5 sm:mt-4 sm:justify-start sm:gap-2">
+                <span className="shrink-0 rounded-full border border-[var(--border)] bg-white/[0.03] px-2 py-0.5 text-[10px] font-medium text-[var(--blue-300)]">
+                  {category.skills.length}
+                </span>
+              </div>
+
+              <div className="mt-3 flex min-w-0 flex-wrap justify-start gap-1.5 sm:mt-4 sm:gap-2">
                 {category.skills.map((skill) => (
                   <span
                     key={skill}

@@ -7,7 +7,6 @@ import { socialGroups } from "@/data/social";
 import { RevealOnScroll } from "@/components/animation/RevealOnScroll";
 import { MagneticButton } from "@/components/animation/MagneticButton";
 import { Button } from "@/components/ui/Button";
-import { SectionHeading } from "@/components/ui/SectionHeading";
 import { SocialLinkGroups } from "@/components/ui/SocialLinks";
 import { Section, Container } from "@/components/ui/Container";
 import { gsap, registerGsapPlugins } from "@/lib/gsap";
@@ -46,25 +45,25 @@ export function ContactSection({ siteConfig }: ContactSectionProps) {
         card,
         {
           autoAlpha: 0,
-          y: 42,
-          scale: 0.97,
+          y: 28,
+          scale: 0.98,
         },
         {
           autoAlpha: 1,
           y: 0,
           scale: 1,
-          duration: 0.85,
+          duration: 0.65,
           ease: "power3.out",
           scrollTrigger: {
             trigger: card,
-            start: "top 85%",
+            start: "top 88%",
             toggleActions: "play none none reverse",
           },
         },
       );
 
       gsap.to(card, {
-        boxShadow: "0 0 56px rgba(0,180,216,0.14), 0 0 88px rgba(2,62,138,0.1)",
+        boxShadow: "0 0 48px rgba(0,180,216,0.12), 0 0 72px rgba(2,62,138,0.08)",
         duration: 2.5,
         repeat: -1,
         yoyo: true,
@@ -127,13 +126,14 @@ export function ContactSection({ siteConfig }: ContactSectionProps) {
   );
 
   return (
-    <Section id="contact" ref={sectionRef}>
+    <Section id="contact" ref={sectionRef} className="py-10 sm:py-16 lg:py-24">
       <Container>
         <div
           ref={cardRef}
-          className="relative overflow-hidden rounded-[1.25rem] border border-[var(--border-strong)] p-4 text-center sm:rounded-[var(--radius-xl)] sm:p-6 md:p-10 lg:p-12 lg:text-left"
+          className="relative mx-auto max-w-[42rem] overflow-hidden rounded-[1.35rem] border border-[var(--border-strong)] px-4 py-7 text-center sm:rounded-[var(--radius-xl)] sm:px-6 sm:py-8 md:px-8 md:py-10 lg:max-w-none lg:px-12 lg:py-12 lg:text-left"
           style={{
-            background: "linear-gradient(135deg, rgba(2,62,138,0.25), rgba(3,7,18,0.92))",
+            background:
+              "linear-gradient(135deg, rgba(2,62,138,0.22), rgba(3,7,18,0.94))",
           }}
         >
           <div
@@ -155,7 +155,7 @@ export function ContactSection({ siteConfig }: ContactSectionProps) {
 
           <div
             aria-hidden
-            className="pointer-events-none absolute -bottom-20 -left-20 h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(2,62,138,0.24),transparent_65%)] blur-3xl sm:-bottom-28 sm:-left-28 sm:h-72 sm:w-72"
+            className="pointer-events-none absolute -bottom-20 -left-20 h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(2,62,138,0.22),transparent_65%)] blur-3xl sm:-bottom-28 sm:-left-28 sm:h-72 sm:w-72"
           />
 
           {!lowMotion ? (
@@ -176,18 +176,26 @@ export function ContactSection({ siteConfig }: ContactSectionProps) {
 
           <div className="relative z-10">
             <RevealOnScroll>
-              <SectionHeading
-                eyebrow="Contact"
-                title="Open to dev collaborations, software and web builds, and photo/video work."
-                description="Reach out for software projects, hackathon teams, event coverage, or Studio Nomads inquiries."
-                className="mx-auto text-center lg:mx-0 lg:text-left"
-              />
+              <div className="mx-auto max-w-[22rem] text-center sm:max-w-2xl lg:mx-0 lg:max-w-3xl lg:text-left">
+                <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.3em] text-[var(--blue-400)] sm:text-xs">
+                  Contact
+                </p>
+
+                <h2 className="mt-3 font-[family-name:var(--font-syne)] text-[clamp(1.9rem,8vw,2.55rem)] font-semibold leading-[1.08] tracking-[-0.04em] text-white sm:text-5xl lg:text-6xl">
+                  Open to collaborations, web builds, and photo/video work.
+                </h2>
+
+                <p className="mx-auto mt-4 max-w-[19rem] text-sm leading-7 text-[var(--foreground-muted)] sm:max-w-xl sm:text-base sm:leading-8 lg:mx-0">
+                  Reach out for software projects, hackathon teams, event coverage,
+                  or Studio Nomads inquiries.
+                </p>
+              </div>
             </RevealOnScroll>
 
             <RevealOnScroll delay={0.1}>
-              <div className="mt-6 flex justify-center sm:mt-7 lg:justify-start">
+              <div className="mt-6 flex justify-center lg:justify-start">
                 <MagneticButton>
-                  <Button href={`mailto:${siteConfig.email}`}>
+                  <Button href={`mailto:${siteConfig.email}`} className="min-h-10 px-4 text-sm">
                     <Mail className="h-4 w-4" />
                     Email me
                   </Button>
@@ -196,7 +204,7 @@ export function ContactSection({ siteConfig }: ContactSectionProps) {
             </RevealOnScroll>
 
             <RevealOnScroll delay={0.18}>
-              <div className="mt-8 sm:mt-10">
+              <div className="mx-auto mt-8 max-w-[22rem] sm:max-w-2xl lg:mx-0 lg:max-w-none">
                 <SocialLinkGroups
                   personal={socialGroups.personal}
                   photography={socialGroups.photography}
