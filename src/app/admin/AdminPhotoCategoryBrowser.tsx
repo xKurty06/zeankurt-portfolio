@@ -2,7 +2,15 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { createPortal } from "react-dom";
-import { useCallback, useDeferredValue, useEffect, useId, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Check,
   ChevronDown,
@@ -276,6 +284,7 @@ function PhotoManagerModal({
   const [mounted, setMounted] = useState(false);
   const photoGridRef = useRef<HTMLDivElement>(null);
   const [imageRatios, setImageRatios] = useState<Record<string, number>>({});
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [photoGridMetrics, setPhotoGridMetrics] = useState<PhotoGridMetrics>({
     columnWidth: ADMIN_FALLBACK_COLUMN_WIDTH,
     rowGap: 12,
@@ -294,6 +303,16 @@ function PhotoManagerModal({
         ...current,
         [id]: ratio,
       };
+    });
+  }, []);
+
+  const scrollModalToTop = useCallback((behavior: ScrollBehavior = "smooth") => {
+    requestAnimationFrame(() => {
+      scrollAreaRef.current?.scrollTo({
+        top: 0,
+        left: 0,
+        behavior,
+      });
     });
   }, []);
 
@@ -404,6 +423,11 @@ function PhotoManagerModal({
   const visiblePhotos = filteredPhotos.slice(startIndex, startIndex + pageSize);
   const rangeStart = filteredPhotos.length === 0 ? 0 : startIndex + 1;
   const rangeEnd = Math.min(startIndex + pageSize, filteredPhotos.length);
+  useEffect(() => {
+    if (!open) return;
+
+    scrollModalToTop("auto");
+  }, [currentPage, pageSize, sortField, sortDirection, deferredQuery, open, scrollModalToTop]);
 
   const allFilteredSelected =
     filteredPhotos.length > 0 && filteredPhotos.every((photo) => selectedIds.includes(photo.id));
@@ -503,7 +527,6 @@ function PhotoManagerModal({
   };
 
   if (!open || !mounted || !portalNodeRef.current) return null;
-
   return createPortal(
     <div
       className="fixed inset-0 z-[1000] flex items-center justify-center bg-[rgba(3,7,18,0.82)] p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))] md:p-6"
@@ -555,7 +578,7 @@ function PhotoManagerModal({
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
+        <div ref={scrollAreaRef} className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
           <div className="flex flex-col gap-3 rounded-2xl border border-[var(--border)] bg-[var(--background)]/70 p-3">
             <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
               <div className="flex flex-1 flex-col gap-3 lg:flex-row lg:items-center">
