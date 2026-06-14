@@ -734,7 +734,7 @@ function PhotoManagerModal({
                         )}`,
                       }}
                       className={cn(
-                        "relative h-full overflow-hidden bg-black/20",
+                        "relative h-full overflow-hidden bg-black/20 group rounded-2xl",
                         mode === "select" ? "cursor-pointer" : photo.imagePath ? "cursor-zoom-in" : undefined,
                       )}
                     >
