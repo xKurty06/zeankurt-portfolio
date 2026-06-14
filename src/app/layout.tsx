@@ -49,13 +49,13 @@ export default function RootLayout({
         <ThemeProvider>
           <SavingProvider>
             <GsapInit />
-            <LoaderWrapper/>
-              <ScrollProgressBar />
-              <ConditionalHeader />
+            <LoaderWrapper />
+            <ScrollProgressBar />
+            <ConditionalHeader />
 
-              {children}
-
-              <ScrollToTopButton />
+            {children}
+            <Footer />
+            <ScrollToTopButton />
           </SavingProvider>
         </ThemeProvider>
       </body>

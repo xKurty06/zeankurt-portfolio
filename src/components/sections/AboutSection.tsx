@@ -118,7 +118,7 @@ export function AboutSection({
       id="about"
       surface="elevated"
       ref={sectionRef}
-      className="overflow-hidden pb-24 sm:pb-28"
+      className="overflow-hidden pb-24 sm:pb-28 lg:pb-24"
     >
       <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-[rgba(72,202,228,0.07)] to-transparent sm:h-32" />
@@ -140,7 +140,7 @@ export function AboutSection({
       <Container>
         <div className="relative z-10 grid min-w-0 gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-start lg:gap-12">
           <RevealOnScroll>
-            <div className="relative max-w-3xl">
+            <div className="relative mx-auto max-w-3xl text-center lg:mx-0 lg:text-left">
               <div
                 aria-hidden
                 data-about-sweep
@@ -151,11 +151,11 @@ export function AboutSection({
                 About
               </p>
 
-              <h2 className="mt-4 max-w-3xl font-[family-name:var(--font-syne)] text-[clamp(2.05rem,8.5vw,3.15rem)] font-semibold leading-[1.12] tracking-[-0.04em] text-white sm:text-5xl lg:text-6xl">
+              <h2 className="mx-auto mt-4 max-w-3xl font-[family-name:var(--font-syne)] text-[clamp(2rem,8vw,3.15rem)] font-semibold leading-[1.12] tracking-[-0.04em] text-white sm:text-5xl lg:mx-0 lg:text-6xl">
                 Developer, builder, and visual storyteller.
               </h2>
 
-              <p className="mt-5 max-w-2xl text-base leading-8 text-[var(--foreground-muted)] sm:text-lg sm:leading-8">
+              <p className="mx-auto mt-5 max-w-2xl text-base leading-8 text-[var(--foreground-muted)] sm:text-lg sm:leading-8 lg:mx-0">
                 Computer Science at Cavite State University. Full-stack developer and
                 Co-founder at Studio Nomads. Based in Cavite, Philippines.
               </p>
@@ -163,12 +163,12 @@ export function AboutSection({
           </RevealOnScroll>
 
           <div className="min-w-0">
-            <div className="space-y-5 sm:space-y-6">
+            <div className="mx-auto max-w-3xl space-y-5 text-left sm:space-y-6 lg:mx-0 lg:max-w-none">
               {aboutContent.paragraphs.map((paragraph) => (
                 <p
                   key={paragraph.slice(0, 24)}
                   data-about-para
-                  className="max-w-3xl text-base leading-8 text-[var(--foreground-muted)] sm:text-[1.05rem] sm:leading-8 lg:max-w-none"
+                  className="text-base leading-8 text-[var(--foreground-muted)] sm:text-[1.05rem] sm:leading-8"
                   style={{ perspective: 600 }}
                 >
                   {paragraph}
@@ -177,22 +177,22 @@ export function AboutSection({
             </div>
 
             <RevealOnScroll delay={0.16}>
-              <dl className="mt-8 grid grid-cols-1 gap-3 min-[430px]:grid-cols-2 sm:mt-9 sm:gap-4">
+              <dl className="mx-auto mt-7 grid max-w-3xl grid-cols-2 gap-3 sm:mt-9 sm:gap-4 lg:mx-0 lg:max-w-none">
                 {aboutContent.highlights.map((item) => {
                   const counter = counterMap[item.label as CounterLabel];
 
                   return (
                     <GlowCard
                       key={item.label}
-                      className="min-w-0 cursor-default rounded-2xl border border-[var(--border)] bg-white/[0.02] p-4 sm:p-5"
-                      intensity={lowMotion ? 0.2 : 0.35}
+                      className="min-w-0 cursor-default rounded-2xl border border-[var(--border)] bg-white/[0.02] p-3 text-center sm:p-5 lg:text-left"
+                      intensity={lowMotion ? 0.16 : 0.28}
                       data-interactive
                     >
-                      <dt className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--blue-400)]">
+                      <dt className="font-mono text-[9px] font-semibold uppercase tracking-[0.18em] text-[var(--blue-400)] sm:text-[10px]">
                         {item.label}
                       </dt>
 
-                      <dd className="mt-2 break-words text-xl font-semibold leading-tight text-white sm:text-2xl">
+                      <dd className="mt-2 break-words text-lg font-semibold leading-tight text-white min-[390px]:text-xl sm:text-2xl">
                         {counter ? (
                           <AnimatedCounter
                             to={counter.to}

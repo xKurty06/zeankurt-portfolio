@@ -7,8 +7,9 @@ import { useGSAP } from "@gsap/react";
 import { footerNav } from "@/data/navigation";
 import { siteConfig } from "@/data/site";
 import { socialGroups } from "@/data/social";
-import { gsap, registerGsapPlugins, ScrollTrigger } from "@/lib/gsap";
+import { gsap, registerGsapPlugins } from "@/lib/gsap";
 import { SocialLinks } from "@/components/ui/SocialLinks";
+import { useLowMotionDevice } from "@/hooks/useLowMotionDevice";
 
 const ShaderBackground = dynamic(
   () => import("@/components/ui/ShaderBackground"),
@@ -17,6 +18,7 @@ const ShaderBackground = dynamic(
 
 export function Footer() {
   const footerRef = useRef<HTMLElement>(null);
+  const lowMotion = useLowMotionDevice();
 
   useGSAP(
     () => {
@@ -32,23 +34,35 @@ export function Footer() {
         autoAlpha: 1,
       });
 
+      if (lowMotion) {
+        if (content) {
+          gsap.set(content, {
+            autoAlpha: 1,
+            y: 0,
+            clearProps: "opacity,visibility,transform",
+          });
+        }
+
+        return;
+      }
+
       if (content) {
         gsap.fromTo(
           content,
           {
             autoAlpha: 0,
-            y: 20,
+            y: 14,
           },
           {
             autoAlpha: 1,
             y: 0,
-            duration: 0.65,
-            ease: "power3.out",
+            duration: 0.5,
+            ease: "power2.out",
             immediateRender: false,
             clearProps: "opacity,visibility,transform",
             scrollTrigger: {
               trigger: footer,
-              start: "top 95%",
+              start: "top 98%",
               toggleActions: "play none none none",
               once: true,
             },
@@ -62,31 +76,26 @@ export function Footer() {
           duration: 8,
           repeat: -1,
           ease: "sine.inOut",
-          delay: 2,
+          delay: 1,
           repeatDelay: 4,
         });
       }
-
-      const refreshTimeout = window.setTimeout(() => {
-        ScrollTrigger.refresh();
-      }, 250);
-
-      return () => {
-        window.clearTimeout(refreshTimeout);
-      };
     },
-    { scope: footerRef },
+    { dependencies: [lowMotion], scope: footerRef },
   );
 
   return (
     <footer
       ref={footerRef}
       className="relative isolate overflow-hidden border-t border-[var(--border)] bg-[var(--background-elevated)]"
+      style={{ visibility: "visible" }}
     >
       <div aria-hidden className="absolute inset-0">
-        <div className="hidden sm:block">
-          <ShaderBackground />
-        </div>
+        {!lowMotion ? (
+          <div className="hidden sm:block">
+            <ShaderBackground />
+          </div>
+        ) : null}
 
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(3,7,18,0.78),rgba(10,15,26,0.94)_42%,rgba(10,15,26,0.98))]" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(72,202,228,0.1),transparent_42%)] opacity-70" />
@@ -98,21 +107,24 @@ export function Footer() {
         className="pointer-events-none absolute -left-1/2 top-0 z-10 h-px w-1/2 bg-gradient-to-r from-transparent via-[var(--blue-400)] to-transparent opacity-50"
       />
 
-      <div data-footer-content className="container-shell relative z-10 py-7 text-center sm:py-10 md:py-14 lg:text-left">
-        <div className="grid gap-7 md:gap-8 lg:grid-cols-[1.2fr_0.8fr]">
+      <div
+        data-footer-content
+        className="container-shell relative z-10 py-8 text-center sm:py-10 md:py-14 lg:text-left"
+      >
+        <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:gap-10">
           <div className="mx-auto max-w-md lg:mx-0">
             <Link
               href="/"
-              className="group inline-flex items-center justify-center gap-2 font-[family-name:var(--font-syne)] text-xl font-semibold text-white transition sm:text-2xl lg:justify-start"
+              className="inline-flex items-center justify-center gap-2 font-[family-name:var(--font-syne)] text-xl font-semibold text-white transition hover:text-[var(--blue-200)] sm:text-2xl lg:justify-start"
             >
               {siteConfig.name}
             </Link>
 
-            <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-[var(--foreground-muted)] sm:mt-3 lg:mx-0">
+            <p className="mx-auto mt-3 max-w-md text-sm leading-7 text-[var(--foreground-muted)] lg:mx-0">
               {siteConfig.description}
             </p>
 
-            <div className="mt-4 sm:mt-5">
+            <div className="mt-5">
               <SocialLinks
                 links={socialGroups.personal}
                 size="sm"
@@ -123,11 +135,11 @@ export function Footer() {
           </div>
 
           <div className="mx-auto w-full max-w-md lg:mx-0 lg:max-w-none">
-            <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.2em] text-[var(--blue-400)] sm:text-xs">
+            <p className="mb-4 font-mono text-[11px] uppercase tracking-[0.24em] text-[var(--blue-400)] sm:text-xs">
               Navigation
             </p>
 
-            <ul className="grid grid-cols-2 justify-items-center gap-x-5 gap-y-1 sm:gap-x-6 lg:justify-items-start">
+            <ul className="grid grid-cols-2 justify-items-center gap-x-5 gap-y-2 lg:justify-items-start">
               {footerNav.map((item) => (
                 <li key={item.href}>
                   {item.external ? (
@@ -135,21 +147,21 @@ export function Footer() {
                       href={item.href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex min-h-8 items-center justify-center text-sm text-[var(--foreground-muted)] transition duration-200 hover:text-white lg:justify-start lg:hover:translate-x-1 sm:min-h-10"
+                      className="inline-flex min-h-9 items-center justify-center text-sm text-[var(--foreground-muted)] transition duration-200 hover:text-white lg:justify-start lg:hover:translate-x-1"
                     >
                       {item.label}
                     </a>
                   ) : item.href.startsWith("/") ? (
                     <Link
                       href={item.href}
-                      className="inline-flex min-h-8 items-center justify-center text-sm text-[var(--foreground-muted)] transition duration-200 hover:text-white lg:justify-start lg:hover:translate-x-1 sm:min-h-10"
+                      className="inline-flex min-h-9 items-center justify-center text-sm text-[var(--foreground-muted)] transition duration-200 hover:text-white lg:justify-start lg:hover:translate-x-1"
                     >
                       {item.label}
                     </Link>
                   ) : (
                     <a
                       href={item.href}
-                      className="inline-flex min-h-8 items-center justify-center text-sm text-[var(--foreground-muted)] transition duration-200 hover:text-white lg:justify-start lg:hover:translate-x-1 sm:min-h-10"
+                      className="inline-flex min-h-9 items-center justify-center text-sm text-[var(--foreground-muted)] transition duration-200 hover:text-white lg:justify-start lg:hover:translate-x-1"
                     >
                       {item.label}
                     </a>
@@ -160,7 +172,7 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="mx-auto mt-6 flex max-w-md flex-col items-center gap-2 border-t border-[var(--border)] pt-4 text-xs leading-relaxed text-[var(--foreground-subtle)] sm:mt-8 sm:text-sm lg:mx-0 lg:max-w-none lg:flex-row lg:items-center lg:justify-between lg:text-left">
+        <div className="mx-auto mt-7 flex max-w-md flex-col items-center gap-2 border-t border-[var(--border)] pt-5 text-xs leading-6 text-[var(--foreground-subtle)] sm:mt-8 sm:text-sm lg:mx-0 lg:max-w-none lg:flex-row lg:items-center lg:justify-between lg:text-left">
           <p suppressHydrationWarning>
             © {new Date().getFullYear()} {siteConfig.name}. All rights reserved.
           </p>
