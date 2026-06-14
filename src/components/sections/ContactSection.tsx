@@ -29,17 +29,31 @@ export function ContactSection({ siteConfig }: ContactSectionProps) {
       registerGsapPlugins();
 
       const card = cardRef.current;
-
       if (!card) return;
+
+      if (lowMotion) {
+        gsap.set(card, {
+          autoAlpha: 1,
+          y: 0,
+          scale: 1,
+          clearProps: "filter,transform,opacity,visibility,boxShadow",
+        });
+
+        return;
+      }
 
       gsap.fromTo(
         card,
-        { autoAlpha: 0, y: 42, scale: 0.97 },
+        {
+          autoAlpha: 0,
+          y: 42,
+          scale: 0.97,
+        },
         {
           autoAlpha: 1,
           y: 0,
           scale: 1,
-          duration: 0.9,
+          duration: 0.85,
           ease: "power3.out",
           scrollTrigger: {
             trigger: card,
@@ -50,7 +64,7 @@ export function ContactSection({ siteConfig }: ContactSectionProps) {
       );
 
       gsap.to(card, {
-        boxShadow: "0 0 56px rgba(0,180,216,0.16), 0 0 96px rgba(2,62,138,0.12)",
+        boxShadow: "0 0 56px rgba(0,180,216,0.14), 0 0 88px rgba(2,62,138,0.1)",
         duration: 2.5,
         repeat: -1,
         yoyo: true,
@@ -62,18 +76,25 @@ export function ContactSection({ siteConfig }: ContactSectionProps) {
       let onMouseMove: ((event: MouseEvent) => void) | null = null;
       let onMouseLeave: (() => void) | null = null;
 
-      if (glow && !lowMotion) {
+      if (glow) {
         onMouseMove = (event: MouseEvent) => {
           const rect = card.getBoundingClientRect();
 
           glow.style.left = `${event.clientX - rect.left}px`;
           glow.style.top = `${event.clientY - rect.top}px`;
 
-          gsap.to(glow, { opacity: 1, duration: 0.3, ease: "power2.out" });
+          gsap.to(glow, {
+            opacity: 1,
+            duration: 0.3,
+            ease: "power2.out",
+          });
         };
 
         onMouseLeave = () => {
-          gsap.to(glow, { opacity: 0, duration: 0.5 });
+          gsap.to(glow, {
+            opacity: 0,
+            duration: 0.5,
+          });
         };
 
         card.addEventListener("mousemove", onMouseMove);
@@ -83,8 +104,8 @@ export function ContactSection({ siteConfig }: ContactSectionProps) {
       const signalItems = gsap.utils.toArray<HTMLElement>("[data-contact-signal]");
 
       gsap.to(signalItems, {
-        y: -10,
-        opacity: 0.95,
+        y: -8,
+        opacity: 0.9,
         duration: 2.4,
         stagger: 0.35,
         repeat: -1,
@@ -110,7 +131,7 @@ export function ContactSection({ siteConfig }: ContactSectionProps) {
       <Container>
         <div
           ref={cardRef}
-          className="relative overflow-hidden rounded-[1.25rem] border border-[var(--border-strong)] p-4 sm:rounded-[var(--radius-xl)] sm:p-6 md:p-10 lg:p-12"
+          className="relative overflow-hidden rounded-[1.25rem] border border-[var(--border-strong)] p-4 text-center sm:rounded-[var(--radius-xl)] sm:p-6 md:p-10 lg:p-12 lg:text-left"
           style={{
             background: "linear-gradient(135deg, rgba(2,62,138,0.25), rgba(3,7,18,0.92))",
           }}
@@ -118,7 +139,7 @@ export function ContactSection({ siteConfig }: ContactSectionProps) {
           <div
             data-contact-glow
             aria-hidden
-            className="pointer-events-none absolute z-0 h-56 w-56 rounded-full opacity-0 sm:h-64 sm:w-64"
+            className="pointer-events-none absolute z-0 hidden h-56 w-56 rounded-full opacity-0 lg:block"
             style={{
               marginLeft: -112,
               marginTop: -112,
@@ -127,14 +148,23 @@ export function ContactSection({ siteConfig }: ContactSectionProps) {
             }}
           />
 
-          <div aria-hidden className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(0,180,216,0.12),transparent_65%)] blur-3xl sm:-right-28 sm:-top-28 sm:h-72 sm:w-72" />
-          <div aria-hidden className="pointer-events-none absolute -bottom-20 -left-20 h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(2,62,138,0.25),transparent_65%)] blur-3xl sm:-bottom-28 sm:-left-28 sm:h-72 sm:w-72" />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(0,180,216,0.12),transparent_65%)] blur-3xl sm:-right-28 sm:-top-28 sm:h-72 sm:w-72"
+          />
 
-          <div aria-hidden className="contact-signal-field pointer-events-none absolute inset-0 hidden sm:block">
-            <span data-contact-signal className="contact-signal contact-signal-a" />
-            <span data-contact-signal className="contact-signal contact-signal-b" />
-            <span data-contact-signal className="contact-signal contact-signal-c" />
-          </div>
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -bottom-20 -left-20 h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(2,62,138,0.24),transparent_65%)] blur-3xl sm:-bottom-28 sm:-left-28 sm:h-72 sm:w-72"
+          />
+
+          {!lowMotion ? (
+            <div aria-hidden className="contact-signal-field pointer-events-none absolute inset-0 hidden lg:block">
+              <span data-contact-signal className="contact-signal contact-signal-a" />
+              <span data-contact-signal className="contact-signal contact-signal-b" />
+              <span data-contact-signal className="contact-signal contact-signal-c" />
+            </div>
+          ) : null}
 
           <div aria-hidden className="polygon-stack pointer-events-none absolute right-6 top-6 hidden md:block">
             <span />
@@ -150,13 +180,14 @@ export function ContactSection({ siteConfig }: ContactSectionProps) {
                 eyebrow="Contact"
                 title="Open to dev collaborations, software and web builds, and photo/video work."
                 description="Reach out for software projects, hackathon teams, event coverage, or Studio Nomads inquiries."
+                className="mx-auto text-center lg:mx-0 lg:text-left"
               />
             </RevealOnScroll>
 
             <RevealOnScroll delay={0.1}>
-              <div className="mt-5 flex flex-wrap gap-3 sm:mt-7 md:mt-8">
+              <div className="mt-6 flex justify-center sm:mt-7 lg:justify-start">
                 <MagneticButton>
-                  <Button href={`mailto:${siteConfig.email}`} className="w-full min-[420px]:w-auto">
+                  <Button href={`mailto:${siteConfig.email}`}>
                     <Mail className="h-4 w-4" />
                     Email me
                   </Button>
@@ -165,7 +196,7 @@ export function ContactSection({ siteConfig }: ContactSectionProps) {
             </RevealOnScroll>
 
             <RevealOnScroll delay={0.18}>
-              <div className="mt-7 sm:mt-9 md:mt-10">
+              <div className="mt-8 sm:mt-10">
                 <SocialLinkGroups
                   personal={socialGroups.personal}
                   photography={socialGroups.photography}

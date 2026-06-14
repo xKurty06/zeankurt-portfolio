@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useGSAP } from "@gsap/react";
 import { cn } from "@/lib/cn";
 import { gsap, registerGsapPlugins } from "@/lib/gsap";
+import { useLowMotionDevice } from "@/hooks/useLowMotionDevice";
 import type { PhotoItem } from "@/types";
 
 interface GalleryGridProps {
@@ -29,21 +30,17 @@ function getFallbackRatio(aspectRatio: PhotoItem["aspectRatio"]) {
 
 function readGridMetrics(element: HTMLElement): GridMetrics {
   const styles = window.getComputedStyle(element);
-  const columns = styles.gridTemplateColumns
-    .split(" ")
-    .filter(Boolean).length;
+  const columns = styles.gridTemplateColumns.split(" ").filter(Boolean).length;
 
   const columnCount = Math.max(1, columns);
   const columnGap = Number.parseFloat(styles.columnGap) || 0;
   const rowGap = Number.parseFloat(styles.rowGap) || 0;
 
-  const columnWidth =
-    (element.clientWidth - columnGap * (columnCount - 1)) / columnCount;
+  const columnWidth = (element.clientWidth - columnGap * (columnCount - 1)) / columnCount;
 
   return {
-    columnWidth: Number.isFinite(columnWidth) && columnWidth > 0
-      ? columnWidth
-      : FALLBACK_COLUMN_WIDTH,
+    columnWidth:
+      Number.isFinite(columnWidth) && columnWidth > 0 ? columnWidth : FALLBACK_COLUMN_WIDTH,
     rowGap,
   };
 }
@@ -57,6 +54,8 @@ function getGridRowSpan(height: number, rowGap: number) {
 
 export function GalleryGrid({ photos, onPhotoClick, className }: GalleryGridProps) {
   const gridRef = useRef<HTMLDivElement>(null);
+  const lowMotion = useLowMotionDevice();
+
   const [loadedIds, setLoadedIds] = useState<Set<string>>(new Set());
   const [imageRatios, setImageRatios] = useState<Record<string, number>>({});
   const [gridMetrics, setGridMetrics] = useState<GridMetrics>({
@@ -113,8 +112,7 @@ export function GalleryGrid({ photos, onPhotoClick, className }: GalleryGridProp
       const nextMetrics = readGridMetrics(element);
 
       setGridMetrics((current) => {
-        const sameColumnWidth =
-          Math.abs(current.columnWidth - nextMetrics.columnWidth) < 0.5;
+        const sameColumnWidth = Math.abs(current.columnWidth - nextMetrics.columnWidth) < 0.5;
         const sameRowGap = Math.abs(current.rowGap - nextMetrics.rowGap) < 0.5;
 
         if (sameColumnWidth && sameRowGap) {
@@ -140,7 +138,20 @@ export function GalleryGrid({ photos, onPhotoClick, className }: GalleryGridProp
 
   const getRowSpan = (photo: PhotoItem) => {
     const ratio = imageRatios[photo.id] ?? getFallbackRatio(photo.aspectRatio);
-    const targetHeight = gridMetrics.columnWidth / ratio;
+
+    let targetHeight = gridMetrics.columnWidth / ratio;
+
+    const isMobile = gridMetrics.columnWidth < 220;
+
+    if (isMobile) {
+      if (ratio < 0.85) {
+        targetHeight *= 1.12;
+      } else if (ratio > 1.15) {
+        targetHeight *= 0.78;
+      } else {
+        targetHeight *= 0.95;
+      }
+    }
 
     return getGridRowSpan(targetHeight, gridMetrics.rowGap);
   };
@@ -153,21 +164,36 @@ export function GalleryGrid({ photos, onPhotoClick, className }: GalleryGridProp
 
       if (frames.length === 0) return;
 
+      if (lowMotion) {
+        gsap.set(frames, {
+          autoAlpha: 1,
+          y: 0,
+          scale: 1,
+          clearProps: "filter,transform,opacity,visibility",
+        });
+
+        return;
+      }
+
       gsap.fromTo(
         frames,
-        { autoAlpha: 0, y: 14, scale: 0.985, filter: "blur(6px)" },
+        {
+          autoAlpha: 0,
+          y: 10,
+          scale: 0.99,
+        },
         {
           autoAlpha: 1,
           y: 0,
           scale: 1,
-          filter: "blur(0px)",
-          duration: 0.42,
-          stagger: 0.035,
+          duration: 0.3,
+          stagger: 0.018,
           ease: "power2.out",
+          clearProps: "filter",
         },
       );
     },
-    { dependencies: [photos], revertOnUpdate: true, scope: gridRef },
+    { dependencies: [photos, lowMotion], revertOnUpdate: true, scope: gridRef },
   );
 
   return (
@@ -201,7 +227,7 @@ export function GalleryGrid({ photos, onPhotoClick, className }: GalleryGridProp
               }}
               onError={() => markLoaded(photo.id)}
               className={cn(
-                "absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.03]",
+                "absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]",
                 !loadedIds.has(photo.id) && "opacity-0",
               )}
             />

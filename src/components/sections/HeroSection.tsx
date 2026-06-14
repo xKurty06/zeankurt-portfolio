@@ -12,7 +12,8 @@ import { RippleButton } from "@/components/animation/RippleButton";
 import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
 import { SocialLinks } from "@/components/ui/SocialLinks";
-import { redirect } from "next/navigation";
+import { useLowMotionDevice } from "@/hooks/useLowMotionDevice";
+import { useRouter } from "next/navigation";
 
 const ROLES = [
   "Full-Stack Developer",
@@ -29,35 +30,43 @@ const HERO_STACK = ["Build", "Ship", "Capture", "Connect"];
 function ShatterName({ name }: { name: string }) {
   const ref = useRef<HTMLSpanElement>(null);
   const [key, setKey] = useState(0);
+  const lowMotion = useLowMotionDevice();
+  const router = useRouter();
 
   const handleClick = () => {
     const el = ref.current;
+
     if (!el) return;
+
+    if (lowMotion) {
+      router.push("/#about");
+      return;
+    }
 
     registerGsapPlugins();
 
     const split = new SplitText(el, { type: "chars" });
 
     gsap.to(split.chars, {
-      y: () => (Math.random() - 0.5) * 200,
-      x: () => (Math.random() - 0.5) * 200,
-      rotation: () => (Math.random() - 0.5) * 720,
-      scale: () => Math.random() * 1.5 + 0.5,
+      y: () => (Math.random() - 0.5) * 140,
+      x: () => (Math.random() - 0.5) * 140,
+      rotation: () => (Math.random() - 0.5) * 360,
+      scale: () => Math.random() * 1.2 + 0.5,
       autoAlpha: 0,
-      duration: 0.5,
-      stagger: { amount: 0.15, from: "random" },
+      duration: 0.4,
+      stagger: { amount: 0.1, from: "random" },
       ease: "power2.out",
       onComplete: () => {
         split.revert();
 
         gsap.fromTo(
           el,
-          { autoAlpha: 0, scale: 0.8 },
-          { autoAlpha: 1, scale: 1, duration: 0.6, ease: "back.out(1.8)" },
+          { autoAlpha: 0, scale: 0.9 },
+          { autoAlpha: 1, scale: 1, duration: 0.35, ease: "power2.out" },
         );
 
         setKey((current) => current + 1);
-        redirect("/#about");
+        router.push("/#about");
       },
     });
   };
@@ -87,6 +96,7 @@ interface HeroSectionProps {
 
 export function HeroSection({ siteConfig }: HeroSectionProps) {
   const sectionRef = useRef<HTMLElement>(null);
+  const lowMotion = useLowMotionDevice();
   const [loaderComplete, setLoaderComplete] = useState(false);
 
   useEffect(() => {
@@ -114,8 +124,32 @@ export function HeroSection({ siteConfig }: HeroSectionProps) {
 
       gsap.set(sectionRef.current, { autoAlpha: 1 });
 
+      if (lowMotion) {
+        gsap.set(
+          [
+            "[data-hero='name']",
+            "[data-hero='role']",
+            "[data-hero='tagline']",
+            "[data-hero='copy']",
+            "[data-hero='actions'] > *",
+            "[data-hero='meta']",
+            "[data-hero='network']",
+          ],
+          {
+            autoAlpha: 1,
+            y: 0,
+            x: 0,
+            scale: 1,
+            clearProps: "filter,transform,opacity,visibility",
+          },
+        );
+
+        return;
+      }
+
       const content = sectionRef.current?.querySelector<HTMLElement>("[data-hero-content]");
       const background = sectionRef.current?.querySelector<HTMLElement>("[data-hero-bg]");
+
       const setContentY = content ? gsap.quickSetter(content, "y", "px") : null;
       const setBackgroundY = background ? gsap.quickSetter(background, "y", "px") : null;
 
@@ -123,28 +157,31 @@ export function HeroSection({ siteConfig }: HeroSectionProps) {
 
       tl.from("[data-hero='name']", {
         autoAlpha: 0,
-        scale: 0.85,
-        y: 32,
-        duration: 0.75,
-        ease: "back.out(1.6)",
+        scale: 0.88,
+        y: 28,
+        duration: 0.65,
+        ease: "back.out(1.4)",
       });
-      tl.from("[data-hero='role']", { autoAlpha: 0, y: 14, duration: 0.5 }, "-=0.3");
-      tl.from("[data-hero='tagline']", { autoAlpha: 0, y: 10, duration: 0.35 }, "-=0.25");
-      tl.from("[data-hero='copy']", { autoAlpha: 0, y: 14, duration: 0.5 }, "-=0.3");
+
+      tl.from("[data-hero='role']", { autoAlpha: 0, y: 12, duration: 0.45 }, "-=0.25");
+      tl.from("[data-hero='tagline']", { autoAlpha: 0, y: 8, duration: 0.3 }, "-=0.2");
+      tl.from("[data-hero='copy']", { autoAlpha: 0, y: 12, duration: 0.45 }, "-=0.25");
+
       tl.from(
         "[data-hero='actions'] > *",
         {
           autoAlpha: 0,
-          y: 14,
+          y: 12,
           scale: 0.94,
-          stagger: 0.06,
-          duration: 0.5,
-          ease: "back.out(1.5)",
+          stagger: 0.05,
+          duration: 0.4,
+          ease: "back.out(1.3)",
         },
-        "-=0.35",
+        "-=0.3",
       );
-      tl.from("[data-hero='meta']", { autoAlpha: 0, y: 10, duration: 0.45 }, "-=0.25");
-      tl.from("[data-hero='network']", { autoAlpha: 0, x: 24, scale: 0.96, duration: 0.75 }, "-=0.55");
+
+      tl.from("[data-hero='meta']", { autoAlpha: 0, y: 8, duration: 0.35 }, "-=0.2");
+      tl.from("[data-hero='network']", { autoAlpha: 0, x: 18, scale: 0.96, duration: 0.55 }, "-=0.35");
 
       ScrollTrigger.create({
         trigger: sectionRef.current,
@@ -152,7 +189,7 @@ export function HeroSection({ siteConfig }: HeroSectionProps) {
         end: "bottom top",
         scrub: 1,
         onUpdate: (self) => {
-          setContentY?.(self.progress * 60);
+          setContentY?.(self.progress * 40);
         },
       });
 
@@ -162,11 +199,11 @@ export function HeroSection({ siteConfig }: HeroSectionProps) {
         end: "bottom top",
         scrub: 2,
         onUpdate: (self) => {
-          setBackgroundY?.(self.progress * 32);
+          setBackgroundY?.(self.progress * 24);
         },
       });
     },
-    { dependencies: [loaderComplete], revertOnUpdate: true, scope: sectionRef },
+    { dependencies: [loaderComplete, lowMotion], revertOnUpdate: true, scope: sectionRef },
   );
 
   return (
@@ -180,18 +217,18 @@ export function HeroSection({ siteConfig }: HeroSectionProps) {
       </div>
 
       <Container
-        className="relative z-10 py-10 text-center sm:py-14 md:py-20 lg:py-24 lg:text-left"
+        className="relative z-10 py-10 text-center sm:py-14 md:py-20 lg:text-left"
         data-hero-content=""
       >
         <div className="mx-auto max-w-3xl lg:mx-0">
-          <h1 className="max-w-full font-[family-name:var(--font-syne)] text-[clamp(2rem,10vw,3rem)] font-semibold leading-[1.04] tracking-tight text-white sm:text-6xl md:text-7xl">
+          <h1 className="max-w-full font-[family-name:var(--font-syne)] text-[clamp(1.875rem,9vw,3rem)] font-semibold leading-[1.05] tracking-tight text-white sm:text-6xl md:text-7xl">
             <span data-hero="name">
               <ShatterName name={siteConfig.name} />
             </span>
 
             <span
               data-hero="role"
-              className="mt-1.5 block max-w-full text-[clamp(1.1rem,5.5vw,1.5rem)] font-normal text-[var(--blue-300)] sm:text-3xl md:text-4xl"
+              className="mt-1 block max-w-full text-[clamp(1.25rem,6vw,1.75rem)] font-normal text-[var(--blue-300)] sm:text-3xl md:text-4xl"
             >
               <TypewriterCycle
                 phrases={ROLES}
@@ -201,7 +238,7 @@ export function HeroSection({ siteConfig }: HeroSectionProps) {
 
             <span
               data-hero="tagline"
-              className="mt-2 block text-xs font-light tracking-wide text-white/50 sm:text-sm"
+              className="mt-2 block text-sm font-light tracking-wide text-white/50"
             >
               {siteConfig.headline}
             </span>
@@ -209,18 +246,18 @@ export function HeroSection({ siteConfig }: HeroSectionProps) {
 
           <p
             data-hero="copy"
-            className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-[var(--foreground-muted)] sm:mt-4 sm:text-base lg:mx-0"
+            className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-[var(--foreground-muted)] sm:text-base lg:mx-0"
           >
             {siteConfig.description}
           </p>
 
           <div
             data-hero="actions"
-            className="mt-5 flex flex-col items-stretch justify-center gap-2 min-[420px]:flex-row min-[420px]:items-center sm:gap-3 lg:justify-start"
+            className="mt-4 flex flex-wrap items-center justify-center gap-3 lg:justify-start"
           >
             <MagneticButton>
               <RippleButton>
-                <Button href="/#projects" className="w-full min-[420px]:w-auto">
+                <Button href="/#projects">
                   View projects <ArrowUpRight className="h-4 w-4" />
                 </Button>
               </RippleButton>
@@ -228,14 +265,14 @@ export function HeroSection({ siteConfig }: HeroSectionProps) {
 
             <MagneticButton>
               <RippleButton>
-                <Button href="/photography" variant="secondary" className="w-full min-[420px]:w-auto">
+                <Button href="/photography" variant="secondary">
                   Photography
                 </Button>
               </RippleButton>
             </MagneticButton>
           </div>
 
-          <div data-hero="meta" className="mt-5 sm:mt-6">
+          <div data-hero="meta" className="mt-6">
             <SocialLinks
               links={socialGroups.personal}
               size="sm"

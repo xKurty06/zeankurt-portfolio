@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useGSAP } from "@gsap/react";
 import { MapPin, Sparkles, Users, X } from "lucide-react";
 import { RevealOnScroll } from "@/components/animation/RevealOnScroll";
@@ -11,6 +11,7 @@ import BackgroundScene from "@/components/ui/AuroraSectionHero";
 import { Container, Section } from "@/components/ui/Container";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { gsap, registerGsapPlugins, ScrollTrigger } from "@/lib/gsap";
+import { useLowMotionDevice } from "@/hooks/useLowMotionDevice";
 import type { Certification, EventHighlight, ExperienceItem } from "@/types";
 
 interface ExperienceSectionProps {
@@ -25,33 +26,58 @@ export function ExperienceSection({
   eventHighlights,
 }: ExperienceSectionProps) {
   const sectionRef = useRef<HTMLElement>(null);
+  const lowMotion = useLowMotionDevice();
+
   const [activeCert, setActiveCert] = useState<{ name: string; image: string } | null>(null);
-  const sortedEvents = [...eventHighlights].sort(
-    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+
+  const sortedEvents = useMemo(
+    () =>
+      [...eventHighlights].sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+      ),
+    [eventHighlights],
   );
-  const rawCertificationGroups = Object.entries(
-    certifications.reduce<Record<string, typeof certifications>>((groups, cert) => {
-      groups[cert.issuer] ??= [];
-      groups[cert.issuer].push(cert);
-      return groups;
-    }, {}),
-  );
-  const majorCertificationGroups = rawCertificationGroups.filter(([, items]) => items.length >= 3);
-  const otherCertificationItems = rawCertificationGroups
-    .filter(([, items]) => items.length < 3)
-    .flatMap(([, items]) => items);
-  const certificationGroups = [
-    ...majorCertificationGroups,
-    ...(otherCertificationItems.length ? ([["Other", otherCertificationItems]] as const) : []),
-  ];
-  const eventGroups = sortedEvents.reduce<Record<string, typeof eventHighlights>>((groups, event) => {
-    groups[event.year] ??= [];
-    groups[event.year].push(event);
-    return groups;
-  }, {});
-  const eventsByYear = Object.keys(eventGroups)
-    .sort((a, b) => Number(b) - Number(a))
-    .map((year) => [year, eventGroups[year]] as const);
+
+  const certificationGroups = useMemo(() => {
+    const rawCertificationGroups = Object.entries(
+      certifications.reduce<Record<string, typeof certifications>>((groups, cert) => {
+        groups[cert.issuer] ??= [];
+        groups[cert.issuer].push(cert);
+
+        return groups;
+      }, {}),
+    );
+
+    const majorCertificationGroups = rawCertificationGroups.filter(
+      ([, items]) => items.length >= 3,
+    );
+
+    const otherCertificationItems = rawCertificationGroups
+      .filter(([, items]) => items.length < 3)
+      .flatMap(([, items]) => items);
+
+    return [
+      ...majorCertificationGroups,
+      ...(otherCertificationItems.length ? ([["Other", otherCertificationItems]] as const) : []),
+    ];
+  }, [certifications]);
+
+  const eventsByYear = useMemo(() => {
+    const eventGroups = sortedEvents.reduce<Record<string, typeof eventHighlights>>(
+      (groups, event) => {
+        groups[event.year] ??= [];
+        groups[event.year].push(event);
+
+        return groups;
+      },
+      {},
+    );
+
+    return Object.keys(eventGroups)
+      .sort((a, b) => Number(b) - Number(a))
+      .map((year) => [year, eventGroups[year]] as const);
+  }, [eventHighlights, sortedEvents]);
+
   const isPdf = activeCert?.image.toLowerCase().endsWith(".pdf") ?? false;
 
   useEffect(() => {
@@ -75,42 +101,82 @@ export function ExperienceSection({
   useGSAP(
     () => {
       registerGsapPlugins();
+
+      const section = sectionRef.current;
+      if (!section) return;
+
       const cleanups: Array<() => void> = [];
 
-      const line = sectionRef.current?.querySelector<HTMLElement>("[data-timeline-line]");
+      const line = section.querySelector<HTMLElement>("[data-timeline-line]");
+      const traveller = section.querySelector<HTMLElement>("[data-timeline-traveller]");
+      const cards = gsap.utils.toArray<HTMLElement>("[data-exp-card]", section);
+      const certRows = gsap.utils.toArray<HTMLElement>("[data-cert-row]", section);
+
+      if (lowMotion) {
+        if (line) {
+          gsap.set(line, {
+            scaleY: 1,
+            transformOrigin: "top center",
+          });
+        }
+
+        if (traveller) {
+          gsap.set(traveller, {
+            autoAlpha: 0,
+          });
+        }
+
+        gsap.set([...cards, ...certRows], {
+          autoAlpha: 1,
+          x: 0,
+          y: 0,
+          rotateY: 0,
+          scale: 1,
+          clearProps: "filter,transform,opacity,visibility,boxShadow",
+        });
+
+        return;
+      }
+
       if (line) {
         gsap.fromTo(
           line,
-          { scaleY: 0, transformOrigin: "top center" },
+          {
+            scaleY: 0,
+            transformOrigin: "top center",
+          },
           {
             scaleY: 1,
-            duration: 1,
+            duration: 0.8,
             ease: "none",
             scrollTrigger: {
-              trigger: sectionRef.current,
-              start: "top 70%",
-              end: "bottom 80%",
-              scrub: 0.5,
+              trigger: section,
+              start: "top 76%",
+              end: "bottom 84%",
+              scrub: 0.35,
             },
           },
         );
       }
 
-      const cards = gsap.utils.toArray<HTMLElement>("[data-exp-card]");
-      cards.forEach((card, i) => {
+      cards.forEach((card, index) => {
         gsap.fromTo(
           card,
-          { autoAlpha: 0, x: -40, rotateY: -5 },
+          {
+            autoAlpha: 0,
+            x: -18,
+            y: 10,
+          },
           {
             autoAlpha: 1,
             x: 0,
-            rotateY: 0,
-            duration: 0.8,
-            delay: i * 0.06,
-            ease: "power3.out",
+            y: 0,
+            duration: 0.45,
+            delay: index * 0.04,
+            ease: "power2.out",
             scrollTrigger: {
               trigger: card,
-              start: "top 88%",
+              start: "top 90%",
               toggleActions: "play none none reverse",
             },
           },
@@ -118,9 +184,9 @@ export function ExperienceSection({
 
         const onEnter = () => {
           gsap.to(card, {
-            y: -4,
-            boxShadow: "0 0 40px rgba(0,180,216,0.15)",
-            duration: 0.3,
+            y: -3,
+            boxShadow: "0 0 28px rgba(0,180,216,0.1)",
+            duration: 0.24,
             ease: "power2.out",
           });
         };
@@ -129,54 +195,52 @@ export function ExperienceSection({
           gsap.to(card, {
             y: 0,
             boxShadow: "0 0 0px rgba(0,180,216,0)",
-            duration: 0.5,
-            ease: "elastic.out(1, 0.6)",
+            duration: 0.28,
+            ease: "power2.out",
           });
         };
 
         card.addEventListener("mouseenter", onEnter);
         card.addEventListener("mouseleave", onLeave);
+
         cleanups.push(() => {
           card.removeEventListener("mouseenter", onEnter);
           card.removeEventListener("mouseleave", onLeave);
         });
       });
 
-      const certRows = gsap.utils.toArray<HTMLElement>("[data-cert-row]");
       certRows.forEach((row) => {
-        const onEnter = () => gsap.to(row, { x: 4, duration: 0.28, ease: "power2.out" });
-        const onLeave = () => gsap.to(row, { x: 0, duration: 0.35, ease: "power2.out" });
+        const onEnter = () => gsap.to(row, { x: 3, duration: 0.22, ease: "power2.out" });
+        const onLeave = () => gsap.to(row, { x: 0, duration: 0.25, ease: "power2.out" });
 
         row.addEventListener("mouseenter", onEnter);
         row.addEventListener("mouseleave", onLeave);
+
         cleanups.push(() => {
           row.removeEventListener("mouseenter", onEnter);
           row.removeEventListener("mouseleave", onLeave);
         });
       });
 
-      const traveller = sectionRef.current?.querySelector<HTMLElement>("[data-timeline-traveller]");
-      const lineEl = sectionRef.current?.querySelector<HTMLElement>("[data-timeline-line]");
-      if (traveller && lineEl && sectionRef.current) {
+      if (traveller && line && section) {
         let previousTop = 0;
         let stopTimer: number | null = null;
         const setTravellerTop = gsap.quickSetter(traveller, "top", "px");
 
         const updateTraveller = () => {
-          if (lineEl.offsetHeight <= 0) return;
+          if (line.offsetHeight <= 0) return;
 
           const offsetParent = traveller.offsetParent;
           if (!(offsetParent instanceof HTMLElement)) return;
 
           const parentRect = offsetParent.getBoundingClientRect();
-
           const viewportCenter = window.innerHeight / 2;
-          const minTop = lineEl.offsetTop;
-          const maxTop = lineEl.offsetTop + lineEl.offsetHeight;
+          const minTop = line.offsetTop;
+          const maxTop = line.offsetTop + line.offsetHeight;
           const targetTop = viewportCenter - parentRect.top;
           const nextTop = gsap.utils.clamp(minTop, maxTop, targetTop);
 
-          if (Math.abs(nextTop - previousTop) > 0.5) {
+          if (Math.abs(nextTop - previousTop) > 0.75) {
             traveller.dataset.travelDirection = nextTop > previousTop ? "down" : "up";
             traveller.dataset.travelState = "moving";
             previousTop = nextTop;
@@ -187,7 +251,7 @@ export function ExperienceSection({
 
             stopTimer = window.setTimeout(() => {
               traveller.dataset.travelState = "stopped";
-            }, 140);
+            }, 160);
           }
 
           setTravellerTop(nextTop);
@@ -197,32 +261,41 @@ export function ExperienceSection({
         traveller.dataset.travelState = "stopped";
 
         ScrollTrigger.create({
-          trigger: sectionRef.current,
+          trigger: section,
           start: "top bottom",
           end: "bottom top",
-          scrub: 0.5,
+          scrub: 0.75,
           onRefresh: () => updateTraveller(),
           onUpdate: () => updateTraveller(),
         });
 
-        return () => {
+        cleanups.push(() => {
           if (stopTimer) {
             window.clearTimeout(stopTimer);
           }
-          cleanups.forEach((cleanup) => cleanup());
-        };
+        });
       }
 
       return () => {
         cleanups.forEach((cleanup) => cleanup());
       };
     },
-    { scope: sectionRef },
+    { dependencies: [lowMotion], revertOnUpdate: true, scope: sectionRef },
   );
 
   return (
     <Section id="experience" surface="subtle" ref={sectionRef}>
-      <BackgroundScene beamCount={44} />
+      {!lowMotion ? (
+        <div aria-hidden className="pointer-events-none absolute inset-0 hidden md:block">
+          <BackgroundScene beamCount={16} />
+        </div>
+      ) : (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(72,202,228,0.08),transparent_42%)]"
+        />
+      )}
+
       <Container className="relative z-[1]">
         <RevealOnScroll>
           <SectionHeading
@@ -232,15 +305,17 @@ export function ExperienceSection({
           />
         </RevealOnScroll>
 
-        <div className="mt-12 grid min-w-0 gap-10 lg:grid-cols-[1.1fr_0.9fr]">
+        <div className="mt-8 grid min-w-0 gap-7 sm:mt-10 sm:gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:gap-10">
           <div className="relative min-w-0">
             <div
               data-timeline-line
-              className="absolute left-0 top-2 bottom-2 hidden w-px md:block"
+              className="absolute bottom-2 left-0 top-2 hidden w-px md:block"
               style={{
-                background: "linear-gradient(to bottom, var(--blue-500), var(--blue-700), transparent)",
+                background:
+                  "linear-gradient(to bottom, var(--blue-500), var(--blue-700), transparent)",
               }}
             />
+
             <div
               data-timeline-traveller
               aria-hidden
@@ -252,18 +327,18 @@ export function ExperienceSection({
               }}
             />
 
-            <div className="space-y-4 md:pl-6">
+            <div className="space-y-3 sm:space-y-4 md:pl-6">
               {experience.map((item) => (
                 <article
                   key={item.id}
                   data-exp-card
-                  className="relative min-w-0 rounded-2xl border border-[rgba(72,202,228,0.14)] bg-[linear-gradient(180deg,rgba(6,12,24,0.92),rgba(8,15,30,0.9))] p-5 transition-colors duration-300 hover:border-[rgba(72,202,228,0.28)] hover:bg-[linear-gradient(180deg,rgba(8,15,30,0.96),rgba(10,18,34,0.94))] md:p-6"
+                  className="relative min-w-0 rounded-2xl border border-[rgba(72,202,228,0.14)] bg-[linear-gradient(180deg,rgba(6,12,24,0.92),rgba(8,15,30,0.9))] p-4 transition-colors duration-300 hover:border-[rgba(72,202,228,0.28)] hover:bg-[linear-gradient(180deg,rgba(8,15,30,0.96),rgba(10,18,34,0.94))] sm:p-5 md:p-6"
                 >
                   <div className="timeline-dot absolute -left-[calc(1.5rem+6px)] top-7 hidden h-3 w-3 rounded-full border-2 border-[var(--blue-500)] bg-[var(--background-subtle)] md:block" />
 
                   <div className="min-w-0">
                     <div className="flex min-w-0 items-start justify-between gap-3">
-                      <h3 className="min-w-0 flex-1 break-words text-lg font-semibold leading-snug text-white">
+                      <h3 className="min-w-0 flex-1 break-words text-base font-semibold leading-snug text-white sm:text-lg">
                         {item.organization}
                       </h3>
 
@@ -276,9 +351,11 @@ export function ExperienceSection({
                       {item.role}
                     </p>
                   </div>
-                  <p className="mt-2 font-mono text-xs uppercase tracking-[0.16em] text-[var(--foreground-subtle)]">
+
+                  <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.16em] text-[var(--foreground-subtle)] sm:text-xs">
                     {item.period}
                   </p>
+
                   <p className="mt-3 text-sm leading-relaxed text-[var(--foreground-muted)]">
                     {item.description}
                   </p>
@@ -287,24 +364,31 @@ export function ExperienceSection({
             </div>
           </div>
 
-          <div className="sui-modular-panel relative min-w-0 space-y-6 overflow-hidden">
-            <span aria-hidden className="sui-stack-ring sui-stack-ring-a" />
-            <span aria-hidden className="sui-stack-ring sui-stack-ring-b" />
-            <RevealOnScroll delay={0.08} variant="scale-in">
+          <div className="sui-modular-panel relative min-w-0 space-y-5 overflow-hidden sm:space-y-6">
+            {!lowMotion ? (
+              <>
+                <span aria-hidden className="sui-stack-ring sui-stack-ring-a" />
+                <span aria-hidden className="sui-stack-ring sui-stack-ring-b" />
+              </>
+            ) : null}
+
+            <RevealOnScroll delay={0.08} variant={lowMotion ? "fade-up" : "scale-in"}>
               <GlowCard
-                intensity={0.35}
+                intensity={lowMotion ? 0.15 : 0.28}
                 tilt={false}
-                className="rounded-2xl border border-[rgba(72,202,228,0.14)] bg-[linear-gradient(180deg,rgba(6,12,24,0.94),rgba(8,15,30,0.92))] p-5 md:p-6"
+                className="rounded-2xl border border-[rgba(72,202,228,0.14)] bg-[linear-gradient(180deg,rgba(6,12,24,0.94),rgba(8,15,30,0.92))] p-4 sm:p-5 md:p-6"
               >
                 <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <h3 className="font-[family-name:var(--font-syne)] text-xl font-semibold text-white">
+                  <div className="min-w-0">
+                    <h3 className="font-[family-name:var(--font-syne)] text-lg font-semibold text-white sm:text-xl">
                       Certifications
                     </h3>
+
                     <p className="mt-2 max-w-sm text-sm leading-relaxed text-[var(--foreground-muted)]">
                       Uploaded credentials grouped by issuer, with direct file links for images and PDFs.
                     </p>
                   </div>
+
                   <div className="shrink-0 whitespace-nowrap rounded-full border border-[var(--border)] bg-white/[0.03] px-3 py-1 text-xs font-medium text-[var(--blue-300)]">
                     {certifications.length} certs
                   </div>
@@ -315,15 +399,16 @@ export function ExperienceSection({
                     <section key={issuer}>
                       <div className="sticky top-0 z-10 mb-3 flex items-center gap-3 py-2">
                         <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[rgba(72,202,228,0.22)] to-[rgba(72,202,228,0.08)]" />
-                        <div className="flex items-center gap-2 rounded-full border border-[rgba(72,202,228,0.16)] bg-[rgba(72,202,228,0.06)] px-3 py-1 shadow-[0_0_24px_rgba(0,180,216,0.08)]">
+
+                        <div className="flex items-center gap-2 rounded-full border border-[rgba(72,202,228,0.16)] bg-[rgba(72,202,228,0.06)] px-3 py-1 shadow-[0_0_20px_rgba(0,180,216,0.06)]">
                           <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--blue-100)]">
                             {issuer}
                           </span>
+
                           <span className="rounded-full bg-[rgba(255,255,255,0.06)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--foreground-muted)]">
                             {items.length}
                           </span>
                         </div>
-                        <div className="h-px flex-1 bg-gradient-to-l from-transparent via-[rgba(72,202,228,0.22)] to-[rgba(72,202,228,0.08)]" />
                       </div>
 
                       <ul className="space-y-3">
@@ -331,24 +416,28 @@ export function ExperienceSection({
                           <li
                             key={cert.id ?? `${issuer}-${cert.name}-${index}`}
                             data-cert-row
-                            className="cert-row flex items-start justify-between gap-4 rounded-2xl border border-[rgba(72,202,228,0.12)] bg-[linear-gradient(180deg,rgba(8,14,28,0.9),rgba(10,18,32,0.88))] p-4"
+                            className="cert-row flex items-start justify-between gap-3 rounded-2xl border border-[rgba(72,202,228,0.12)] bg-[linear-gradient(180deg,rgba(8,14,28,0.9),rgba(10,18,32,0.88))] p-3 sm:gap-4 sm:p-4"
                           >
-                            <div>
-                              <p className="text-sm font-medium text-white">{cert.name}</p>
+                            <div className="min-w-0">
+                              <p className="break-words text-sm font-medium text-white">
+                                {cert.name}
+                              </p>
+
                               <p className="mt-1 text-xs text-[var(--foreground-muted)]">
                                 {[cert.issuer, cert.issued].filter(Boolean).join(" · ")}
                               </p>
                             </div>
+
                             {cert.image ? (
                               <button
                                 type="button"
                                 onClick={() => setActiveCert({ name: cert.name, image: cert.image ?? "" })}
-                                className="inline-flex min-h-11 shrink-0 items-center rounded-full border border-[var(--border)] bg-white/[0.03] px-3 py-2 text-xs font-medium text-[var(--blue-300)] transition-colors duration-300 hover:border-[var(--border-strong)] hover:text-white sm:min-h-0 sm:py-1.5"
+                                className="inline-flex min-h-10 shrink-0 items-center rounded-full border border-[var(--border)] bg-white/[0.03] px-3 py-2 text-xs font-medium text-[var(--blue-300)] transition-colors duration-300 hover:border-[var(--border-strong)] hover:text-white sm:min-h-0 sm:py-1.5"
                               >
                                 View cert
                               </button>
                             ) : (
-                              <span className="inline-flex min-h-11 shrink-0 items-center rounded-full border border-dashed border-[var(--border)] px-3 py-2 text-xs font-medium text-[var(--foreground-subtle)] sm:min-h-0 sm:py-1.5">
+                              <span className="inline-flex min-h-10 shrink-0 items-center rounded-full border border-dashed border-[var(--border)] px-3 py-2 text-xs font-medium text-[var(--foreground-subtle)] sm:min-h-0 sm:py-1.5">
                                 Add image
                               </span>
                             )}
@@ -361,22 +450,24 @@ export function ExperienceSection({
               </GlowCard>
             </RevealOnScroll>
 
-            <RevealOnScroll delay={0.14} variant="scale-in">
+            <RevealOnScroll delay={0.14} variant={lowMotion ? "fade-up" : "scale-in"}>
               <GlowCard
-                intensity={0.35}
+                intensity={lowMotion ? 0.15 : 0.28}
                 tilt={false}
-                className="rounded-2xl border border-[rgba(72,202,228,0.14)] bg-[linear-gradient(180deg,rgba(6,12,24,0.94),rgba(8,15,30,0.92))] p-5 md:p-6"
+                className="rounded-2xl border border-[rgba(72,202,228,0.14)] bg-[linear-gradient(180deg,rgba(6,12,24,0.94),rgba(8,15,30,0.92))] p-4 sm:p-5 md:p-6"
               >
                 <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <h3 className="font-[family-name:var(--font-syne)] text-xl font-semibold text-white">
+                  <div className="min-w-0">
+                    <h3 className="font-[family-name:var(--font-syne)] text-lg font-semibold text-white sm:text-xl">
                       Events
                     </h3>
+
                     <p className="mt-2 max-w-sm text-sm leading-relaxed text-[var(--foreground-muted)]">
                       Structured event history across community town halls, workshops, meetups,
                       conferences, and hackathons.
                     </p>
                   </div>
+
                   <div className="shrink-0 whitespace-nowrap rounded-full border border-[var(--border)] bg-white/[0.03] px-3 py-1 text-xs font-medium text-[var(--blue-300)]">
                     {eventHighlights.length} events
                   </div>
@@ -387,14 +478,17 @@ export function ExperienceSection({
                     <section key={year}>
                       <div className="sticky top-0 z-10 mb-3 flex items-center gap-3 py-2">
                         <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[rgba(72,202,228,0.22)] to-[rgba(72,202,228,0.08)]" />
-                        <div className="flex items-center gap-2 rounded-full border border-[rgba(72,202,228,0.16)] bg-[rgba(72,202,228,0.06)] px-3 py-1 shadow-[0_0_24px_rgba(0,180,216,0.08)]">
+
+                        <div className="flex items-center gap-2 rounded-full border border-[rgba(72,202,228,0.16)] bg-[rgba(72,202,228,0.06)] px-3 py-1 shadow-[0_0_20px_rgba(0,180,216,0.06)]">
                           <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--blue-100)]">
                             {year}
                           </span>
+
                           <span className="rounded-full bg-[rgba(255,255,255,0.06)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--foreground-muted)]">
                             {events.length}
                           </span>
                         </div>
+
                         <div className="h-px flex-1 bg-gradient-to-l from-transparent via-[rgba(72,202,228,0.22)] to-[rgba(72,202,228,0.08)]" />
                       </div>
 
@@ -403,18 +497,20 @@ export function ExperienceSection({
                           <article
                             key={event.id}
                             data-event-card
-                            className="event-card min-w-0 rounded-2xl border border-[rgba(72,202,228,0.12)] bg-[linear-gradient(180deg,rgba(8,14,28,0.9),rgba(10,18,32,0.88))] p-4 transition-colors duration-300 hover:border-[rgba(72,202,228,0.24)]"
+                            className="event-card min-w-0 rounded-2xl border border-[rgba(72,202,228,0.12)] bg-[linear-gradient(180deg,rgba(8,14,28,0.9),rgba(10,18,32,0.88))] p-3 transition-colors duration-300 hover:border-[rgba(72,202,228,0.24)] sm:p-4"
                           >
                             <div className="flex min-w-0 items-start justify-between gap-3">
                               <div className="min-w-0 flex-1">
-                                <p className="text-xs font-mono uppercase tracking-[0.16em] text-[var(--blue-300)]">
+                                <p className="font-mono text-xs uppercase tracking-[0.16em] text-[var(--blue-300)]">
                                   {event.date}
                                 </p>
-                                <h4 className="mt-2 break-words text-base font-semibold leading-snug text-white">
+
+                                <h4 className="mt-2 break-words text-sm font-semibold leading-snug text-white sm:text-base">
                                   {event.title}
                                 </h4>
                               </div>
-                              <span className="rounded-full border border-[var(--border)] bg-white/[0.03] px-2.5 py-1 text-[11px] font-medium capitalize text-[var(--foreground-muted)]">
+
+                              <span className="shrink-0 rounded-full border border-[var(--border)] bg-white/[0.03] px-2.5 py-1 text-[11px] font-medium capitalize text-[var(--foreground-muted)]">
                                 {event.category}
                               </span>
                             </div>
@@ -424,12 +520,14 @@ export function ExperienceSection({
                                 <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--blue-400)]" />
                                 <span className="min-w-0 break-words">{event.venue}</span>
                               </div>
+
                               {event.organizers ? (
                                 <div className="flex items-start gap-2">
                                   <Users className="mt-0.5 h-4 w-4 shrink-0 text-[var(--blue-400)]" />
                                   <span className="min-w-0 break-words">{event.organizers}</span>
                                 </div>
                               ) : null}
+
                               {event.role ? (
                                 <div className="flex items-start gap-2">
                                   <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-[var(--blue-400)]" />
@@ -458,12 +556,16 @@ export function ExperienceSection({
         >
           <div className="animate-modal-in w-full max-w-5xl rounded-3xl border border-white/10 bg-[var(--background-elevated)] p-4 shadow-[0_24px_120px_rgba(0,0,0,0.45)] md:p-5">
             <div className="mb-4 flex items-start justify-between gap-4">
-              <div>
-                <p className="text-lg font-semibold text-white">{activeCert.name}</p>
-                <p className="mt-1 text-xs font-mono uppercase tracking-[0.16em] text-[var(--foreground-subtle)]">
+              <div className="min-w-0">
+                <p className="break-words text-lg font-semibold text-white">
+                  {activeCert.name}
+                </p>
+
+                <p className="mt-1 font-mono text-xs uppercase tracking-[0.16em] text-[var(--foreground-subtle)]">
                   Certificate viewer
                 </p>
               </div>
+
               <button
                 type="button"
                 onClick={() => setActiveCert(null)}
