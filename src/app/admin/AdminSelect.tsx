@@ -79,7 +79,7 @@ export function AdminSelect({
         aria-expanded={open}
         aria-label={label}
         onClick={() => setOpen((current) => !current)}
-        className={`flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left text-sm outline-none transition ${
+        className={`flex w-full items-center justify-between rounded-2xl border px-3 py-2 text-left text-sm outline-none transition ${
           open
             ? "border-[var(--border-strong)] bg-white/[0.05]"
             : "border-[var(--border)] bg-white/[0.03] hover:border-[rgba(72,202,228,0.24)]"

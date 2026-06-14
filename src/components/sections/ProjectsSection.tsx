@@ -122,7 +122,7 @@ function MobileProjectCarousel({
       {" "}
       <div
         ref={scrollerRef}
-        className="-mx-5 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-5 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-4 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {" "}
         {projects.map((project) => (
@@ -206,17 +206,17 @@ function MobileProjectCard({
     >
       {" "}
       {showImage ? (
-        <div className="relative aspect-[16/10] overflow-hidden bg-[linear-gradient(145deg,rgba(10,15,26,0.96),rgba(2,62,138,0.22))]">
+        <div className="relative aspect-[16/10] overflow-hidden rounded-2xl bg-[linear-gradient(145deg,rgba(10,15,26,0.96),rgba(2,62,138,0.22))]">
           {" "}
           {project.image ? (
             <img
               src={project.image}
               alt={project.title}
               loading="lazy"
-              className="h-full w-full object-cover"
+              className="h-full w-full rounded-2xl object-cover"
             />
           ) : (
-            <div className="flex h-full items-center justify-center bg-[radial-gradient(circle_at_24%_24%,rgba(72,202,228,0.16),transparent_28%),radial-gradient(circle_at_78%_76%,rgba(0,119,182,0.2),transparent_32%)] px-6 text-center">
+            <div className="flex h-full items-center justify-center rounded-2xl bg-[radial-gradient(circle_at_24%_24%,rgba(72,202,228,0.16),transparent_28%),radial-gradient(circle_at_78%_76%,rgba(0,119,182,0.2),transparent_32%)] px-6 text-center">
               {" "}
               <p className="font-[family-name:var(--font-syne)] text-xl font-semibold text-white">
                 {" "}
@@ -224,7 +224,7 @@ function MobileProjectCard({
               </p>{" "}
             </div>
           )}{" "}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#030712]/85 via-transparent to-transparent" />{" "}
+          <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-[#030712]/85 via-transparent to-transparent" />{" "}
           {project.status ? (
             <span
               className={cn(
@@ -352,19 +352,19 @@ function FeaturedCard({
       className="project-feature-card group min-w-0 rounded-2xl border border-[var(--border)] bg-[var(--background-elevated)] transition-shadow duration-300 hover:border-[var(--border-strong)] hover:shadow-[0_0_28px_rgba(0,180,216,0.08)]"
     >
       {" "}
-      <div className="relative aspect-[16/10] overflow-hidden bg-[linear-gradient(145deg,rgba(10,15,26,0.96),rgba(2,62,138,0.22))] sm:aspect-[16/9]">
+      <div className="relative aspect-[16/10] overflow-hidden rounded-2xl bg-[linear-gradient(145deg,rgba(10,15,26,0.96),rgba(2,62,138,0.22))] sm:aspect-[16/9]">
         {" "}
         {project.image ? (
           <ZoomableImage
             src={project.image}
             alt={project.title}
             sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
-            className="absolute inset-0"
-            imageClassName="object-cover"
+            className="absolute inset-0 rounded-2xl"
+            imageClassName="rounded-2xl object-cover"
             buttonClassName="right-3 top-3"
           />
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center bg-[radial-gradient(circle_at_24%_24%,rgba(72,202,228,0.16),transparent_28%),radial-gradient(circle_at_78%_76%,rgba(0,119,182,0.2),transparent_32%)] px-6 text-center">
+          <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-[radial-gradient(circle_at_24%_24%,rgba(72,202,228,0.16),transparent_28%),radial-gradient(circle_at_78%_76%,rgba(0,119,182,0.2),transparent_32%)] px-6 text-center">
             {" "}
             <p className="max-w-[80%] font-[family-name:var(--font-syne)] text-2xl font-semibold leading-tight text-white sm:text-3xl">
               {" "}
@@ -372,7 +372,7 @@ function FeaturedCard({
             </p>{" "}
           </div>
         )}{" "}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#030712] via-transparent to-transparent" />{" "}
+        <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-[#030712] via-transparent to-transparent" />{" "}
         {project.status ? (
           <span
             className={cn(
