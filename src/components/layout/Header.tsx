@@ -26,10 +26,10 @@ export function Header({ variant }: HeaderProps) {
   const navItems =
     resolvedVariant === "photography" ? photographyNav : mainNav;
 
-  // Entrance animation
   useGSAP(
     () => {
       registerGsapPlugins();
+
       gsap.fromTo(
         headerRef.current,
         { autoAlpha: 0, y: -20 },
@@ -41,8 +41,10 @@ export function Header({ variant }: HeaderProps) {
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
+
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
+
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
@@ -55,16 +57,15 @@ export function Header({ variant }: HeaderProps) {
       ref={headerRef}
       className={cn(
         "pointer-events-none fixed inset-x-0 top-0 z-50 transition-all duration-500",
-        scrolled
-          ? "border-b border-[var(--border)] bg-[rgba(3,7,18,0.82)] backdrop-blur-xl shadow-[0_1px_40px_rgba(0,180,216,0.06)]"
+        scrolled || open
+          ? "border-b border-[var(--border)] bg-[rgba(3,7,18,0.86)] backdrop-blur-xl shadow-[0_1px_40px_rgba(0,180,216,0.06)]"
           : "bg-transparent",
       )}
     >
-      <div className="container-shell flex h-[var(--header-height)] items-center justify-between">
-        {/* Logo — hover glow */}
+      <div className="container-shell flex h-16 items-center justify-between md:h-[var(--header-height)]">
         <Link
           href="/"
-          className="pointer-events-auto group flex items-center gap-2 font-[family-name:var(--font-syne)] text-lg font-semibold tracking-tight text-white"
+          className="pointer-events-auto group flex min-w-0 items-center gap-2 truncate font-[family-name:var(--font-syne)] text-base font-semibold tracking-tight text-white sm:text-lg"
         >
           {siteConfig.name}
         </Link>
@@ -83,17 +84,17 @@ export function Header({ variant }: HeaderProps) {
 
         <button
           type="button"
-          className="pointer-events-auto inline-flex h-11 w-11 items-center justify-center rounded-full border border-[var(--border)] text-white transition hover:border-[var(--border-strong)] hover:shadow-[0_0_16px_var(--accent-glow)] lg:hidden"
+          className="pointer-events-auto inline-flex h-10 w-10 items-center justify-center rounded-full border border-[var(--border)] text-white transition hover:border-[var(--border-strong)] hover:shadow-[0_0_16px_var(--accent-glow)] sm:h-11 sm:w-11 lg:hidden"
           aria-label={open ? "Close menu" : "Open menu"}
           onClick={() => setOpen((value) => !value)}
         >
-          {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          {open ? <X className="h-4.5 w-4.5 sm:h-5 sm:w-5" /> : <Menu className="h-4.5 w-4.5 sm:h-5 sm:w-5" />}
         </button>
       </div>
 
       {open ? (
-        <div className="pointer-events-auto border-t border-[var(--border)] bg-[rgba(3,7,18,0.96)] px-4 py-4 backdrop-blur-xl lg:hidden animate-slide-down">
-          <nav className="flex flex-col gap-2" aria-label="Mobile">
+        <div className="pointer-events-auto border-t border-[var(--border)] bg-[rgba(3,7,18,0.96)] px-3 py-3 backdrop-blur-xl lg:hidden animate-slide-down sm:px-4 sm:py-4">
+          <nav className="flex flex-col gap-1.5" aria-label="Mobile">
             {navItems.map((item, i) => (
               <NavLink
                 key={item.href}
@@ -104,7 +105,13 @@ export function Header({ variant }: HeaderProps) {
                 onNavigate={() => setOpen(false)}
               />
             ))}
-            <Button href="/#contact" variant="secondary" className="mt-2 w-full" onClick={() => setOpen(false)}>
+
+            <Button
+              href="/#contact"
+              variant="secondary"
+              className="mt-2 w-full"
+              onClick={() => setOpen(false)}
+            >
               Get in touch
             </Button>
           </nav>
@@ -138,7 +145,7 @@ function NavLink({
 
   const className = cn(
     "rounded-full px-4 py-2 text-sm transition-all duration-200",
-    mobile && "flex min-h-11 w-full items-center text-left",
+    mobile && "flex min-h-10 w-full items-center px-3 text-left",
     isActive
       ? "bg-[var(--accent-soft)] text-white shadow-[0_0_12px_var(--accent-glow)]"
       : "text-[var(--foreground-muted)] hover:bg-white/[0.05] hover:text-white hover:shadow-[0_0_8px_rgba(0,180,216,0.15)]",

@@ -261,12 +261,20 @@ export function ExperienceSection({
                 >
                   <div className="timeline-dot absolute -left-[calc(1.5rem+6px)] top-7 hidden h-3 w-3 rounded-full border-2 border-[var(--blue-500)] bg-[var(--background-subtle)] md:block" />
 
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <h3 className="break-words text-lg font-semibold text-white">{item.organization}</h3>
-                      <p className="mt-1 break-words text-sm text-[var(--blue-300)]">{item.role}</p>
+                  <div className="min-w-0">
+                    <div className="flex min-w-0 items-start justify-between gap-3">
+                      <h3 className="min-w-0 flex-1 break-words text-lg font-semibold leading-snug text-white">
+                        {item.organization}
+                      </h3>
+
+                      <span className="shrink-0 pt-0.5">
+                        <Badge>{item.type}</Badge>
+                      </span>
                     </div>
-                    <Badge>{item.type}</Badge>
+
+                    <p className="mt-1 break-words text-sm leading-relaxed text-[var(--blue-300)]">
+                      {item.role}
+                    </p>
                   </div>
                   <p className="mt-2 font-mono text-xs uppercase tracking-[0.16em] text-[var(--foreground-subtle)]">
                     {item.period}

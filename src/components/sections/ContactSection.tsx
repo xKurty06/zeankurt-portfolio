@@ -27,26 +27,30 @@ export function ContactSection({ siteConfig }: ContactSectionProps) {
   useGSAP(
     () => {
       registerGsapPlugins();
+
       const card = cardRef.current;
+
       if (!card) return;
 
-      // Entrance
       gsap.fromTo(
         card,
-        { autoAlpha: 0, y: 60, scale: 0.96 },
+        { autoAlpha: 0, y: 42, scale: 0.97 },
         {
-          autoAlpha: 1, y: 0, scale: 1,
-          duration: 1.1, ease: "power3.out",
+          autoAlpha: 1,
+          y: 0,
+          scale: 1,
+          duration: 0.9,
+          ease: "power3.out",
           scrollTrigger: {
-            trigger: card, start: "top 85%",
+            trigger: card,
+            start: "top 85%",
             toggleActions: "play none none reverse",
           },
         },
       );
 
-      // Continuous glow pulse on the border
       gsap.to(card, {
-        boxShadow: "0 0 80px rgba(0,180,216,0.2), 0 0 120px rgba(2,62,138,0.15)",
+        boxShadow: "0 0 56px rgba(0,180,216,0.16), 0 0 96px rgba(2,62,138,0.12)",
         duration: 2.5,
         repeat: -1,
         yoyo: true,
@@ -54,18 +58,20 @@ export function ContactSection({ siteConfig }: ContactSectionProps) {
         delay: 1,
       });
 
-      // Mouse-tracked glow inside the card
       const glow = card.querySelector<HTMLElement>("[data-contact-glow]");
       let onMouseMove: ((event: MouseEvent) => void) | null = null;
       let onMouseLeave: (() => void) | null = null;
+
       if (glow && !lowMotion) {
-        onMouseMove = (e: MouseEvent) => {
+        onMouseMove = (event: MouseEvent) => {
           const rect = card.getBoundingClientRect();
-          // Position via left/top; margin offsets (128px = half of h-64/w-64) centre it
-          glow.style.left = `${e.clientX - rect.left}px`;
-          glow.style.top  = `${e.clientY - rect.top}px`;
+
+          glow.style.left = `${event.clientX - rect.left}px`;
+          glow.style.top = `${event.clientY - rect.top}px`;
+
           gsap.to(glow, { opacity: 1, duration: 0.3, ease: "power2.out" });
         };
+
         onMouseLeave = () => {
           gsap.to(glow, { opacity: 0, duration: 0.5 });
         };
@@ -75,6 +81,7 @@ export function ContactSection({ siteConfig }: ContactSectionProps) {
       }
 
       const signalItems = gsap.utils.toArray<HTMLElement>("[data-contact-signal]");
+
       gsap.to(signalItems, {
         y: -10,
         opacity: 0.95,
@@ -89,6 +96,7 @@ export function ContactSection({ siteConfig }: ContactSectionProps) {
         if (onMouseMove) {
           card.removeEventListener("mousemove", onMouseMove);
         }
+
         if (onMouseLeave) {
           card.removeEventListener("mouseleave", onMouseLeave);
         }
@@ -102,39 +110,38 @@ export function ContactSection({ siteConfig }: ContactSectionProps) {
       <Container>
         <div
           ref={cardRef}
-          className="relative overflow-hidden rounded-[var(--radius-xl)] border border-[var(--border-strong)] p-5 md:p-12"
+          className="relative overflow-hidden rounded-[1.25rem] border border-[var(--border-strong)] p-4 sm:rounded-[var(--radius-xl)] sm:p-6 md:p-10 lg:p-12"
           style={{
             background: "linear-gradient(135deg, rgba(2,62,138,0.25), rgba(3,7,18,0.92))",
           }}
         >
-          {/* Mouse-tracked glow spot — centred with negative margin, no transform */}
           <div
             data-contact-glow
             aria-hidden
-            className="pointer-events-none absolute z-0 h-64 w-64 rounded-full opacity-0"
+            className="pointer-events-none absolute z-0 h-56 w-56 rounded-full opacity-0 sm:h-64 sm:w-64"
             style={{
-              marginLeft: -128,
-              marginTop:  -128,
+              marginLeft: -112,
+              marginTop: -112,
               background: "radial-gradient(circle, rgba(0,180,216,0.15) 0%, transparent 70%)",
               filter: "blur(20px)",
             }}
           />
 
-          {/* Corner glows */}
-          <div aria-hidden className="pointer-events-none absolute -top-28 -right-28 h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(0,180,216,0.15),transparent_65%)] blur-3xl" />
-          <div aria-hidden className="pointer-events-none absolute -bottom-28 -left-28 h-72 w-72 rounded-full bg-[radial-gradient(circle,rgba(2,62,138,0.3),transparent_65%)] blur-3xl" />
-          <div aria-hidden className="contact-signal-field pointer-events-none absolute inset-0">
+          <div aria-hidden className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(0,180,216,0.12),transparent_65%)] blur-3xl sm:-right-28 sm:-top-28 sm:h-72 sm:w-72" />
+          <div aria-hidden className="pointer-events-none absolute -bottom-20 -left-20 h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(2,62,138,0.25),transparent_65%)] blur-3xl sm:-bottom-28 sm:-left-28 sm:h-72 sm:w-72" />
+
+          <div aria-hidden className="contact-signal-field pointer-events-none absolute inset-0 hidden sm:block">
             <span data-contact-signal className="contact-signal contact-signal-a" />
             <span data-contact-signal className="contact-signal contact-signal-b" />
             <span data-contact-signal className="contact-signal contact-signal-c" />
           </div>
+
           <div aria-hidden className="polygon-stack pointer-events-none absolute right-6 top-6 hidden md:block">
             <span />
             <span />
             <span />
           </div>
 
-          {/* Scan line in the card */}
           <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-px scan-line-card" />
 
           <div className="relative z-10">
@@ -147,9 +154,9 @@ export function ContactSection({ siteConfig }: ContactSectionProps) {
             </RevealOnScroll>
 
             <RevealOnScroll delay={0.1}>
-              <div className="mt-8 flex flex-wrap gap-3">
+              <div className="mt-5 flex flex-wrap gap-3 sm:mt-7 md:mt-8">
                 <MagneticButton>
-                  <Button href={`mailto:${siteConfig.email}`}>
+                  <Button href={`mailto:${siteConfig.email}`} className="w-full min-[420px]:w-auto">
                     <Mail className="h-4 w-4" />
                     Email me
                   </Button>
@@ -158,7 +165,7 @@ export function ContactSection({ siteConfig }: ContactSectionProps) {
             </RevealOnScroll>
 
             <RevealOnScroll delay={0.18}>
-              <div className="mt-10">
+              <div className="mt-7 sm:mt-9 md:mt-10">
                 <SocialLinkGroups
                   personal={socialGroups.personal}
                   photography={socialGroups.photography}

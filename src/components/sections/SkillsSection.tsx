@@ -27,34 +27,48 @@ export function SkillsSection({ skillCategories }: SkillsSectionProps) {
       const section = sectionRef.current;
 
       cards.forEach((card, ci) => {
-        // Card spring-in
         gsap.fromTo(
           card,
-          { autoAlpha: 0, y: 50, scale: 0.93, rotateX: 8 },
+          { autoAlpha: 0, y: 36, scale: 0.95, rotateX: 6 },
           {
-            autoAlpha: 1, y: 0, scale: 1, rotateX: 0,
-            duration: 0.8, delay: ci * 0.07,
+            autoAlpha: 1,
+            y: 0,
+            scale: 1,
+            rotateX: 0,
+            duration: 0.7,
+            delay: ci * 0.06,
             ease: "back.out(1.3)",
             scrollTrigger: {
-              trigger: card, start: "top 90%",
+              trigger: card,
+              start: "top 90%",
               toggleActions: "play none none reverse",
             },
           },
         );
 
-        // Badge "ping" scatter on scroll
         const badges = card.querySelectorAll<HTMLElement>("[data-badge-item]");
+
         if (badges.length) {
           gsap.fromTo(
             badges,
-            { autoAlpha: 0, scale: 0.5, y: 12, rotation: (i: number) => (i % 2 === 0 ? -8 : 8) },
             {
-              autoAlpha: 1, scale: 1, y: 0, rotation: 0,
-              duration: 0.5, stagger: { amount: 0.4, ease: "power2.out" },
+              autoAlpha: 0,
+              scale: 0.55,
+              y: 10,
+              rotation: (i: number) => (i % 2 === 0 ? -6 : 6),
+            },
+            {
+              autoAlpha: 1,
+              scale: 1,
+              y: 0,
+              rotation: 0,
+              duration: 0.45,
+              stagger: { amount: 0.32, ease: "power2.out" },
               ease: "back.out(2)",
-              delay: ci * 0.07 + 0.18,
+              delay: ci * 0.06 + 0.16,
               scrollTrigger: {
-                trigger: card, start: "top 90%",
+                trigger: card,
+                start: "top 90%",
                 toggleActions: "play none none reverse",
               },
             },
@@ -65,6 +79,7 @@ export function SkillsSection({ skillCategories }: SkillsSectionProps) {
       if (section && !lowMotion) {
         const onMove = (event: MouseEvent) => {
           const sectionRect = section.getBoundingClientRect();
+
           section.style.setProperty("--skills-bg-x", `${event.clientX - sectionRect.left}px`);
           section.style.setProperty("--skills-bg-y", `${event.clientY - sectionRect.top}px`);
         };
@@ -99,7 +114,7 @@ export function SkillsSection({ skillCategories }: SkillsSectionProps) {
         </RevealOnScroll>
 
         <div
-          className="relative mt-12 grid min-w-0 gap-5 md:grid-cols-2 xl:grid-cols-3"
+          className="relative mt-7 grid min-w-0 gap-3 sm:mt-9 sm:gap-4 md:grid-cols-2 xl:grid-cols-3"
           style={{ perspective: 1200 }}
         >
           {skillCategories.map((category) => (
@@ -107,12 +122,13 @@ export function SkillsSection({ skillCategories }: SkillsSectionProps) {
               key={category.name}
               data-skill-card
               intensity={0.45}
-              className="h-full min-w-0 rounded-2xl border border-[var(--border)] bg-[var(--background-elevated)] p-5 transition duration-300 hover:border-[var(--border-strong)] hover:shadow-[0_0_32px_rgba(0,180,216,0.08)] md:p-6"
+              className="h-full min-w-0 rounded-2xl border border-[var(--border)] bg-[var(--background-elevated)] p-4 transition duration-300 hover:border-[var(--border-strong)] hover:shadow-[0_0_32px_rgba(0,180,216,0.08)] sm:p-5 md:p-6"
             >
-              <h3 className="font-[family-name:var(--font-syne)] text-lg font-semibold text-white">
+              <h3 className="font-[family-name:var(--font-syne)] text-base font-semibold text-white sm:text-lg">
                 {category.name}
               </h3>
-              <div className="mt-4 flex min-w-0 flex-wrap gap-2">
+
+              <div className="mt-3 flex min-w-0 flex-wrap gap-1.5 sm:mt-4 sm:gap-2">
                 {category.skills.map((skill) => (
                   <span
                     key={skill}

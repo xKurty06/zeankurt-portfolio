@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowUpRight, Link } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { useGSAP } from "@gsap/react";
 import { socialGroups } from "@/data/social";
 import { gsap, registerGsapPlugins, SplitText, ScrollTrigger } from "@/lib/gsap";
@@ -21,22 +21,21 @@ const ROLES = [
   "Photographer & Videographer",
   "Creative Technologist",
   "Photo Editor",
-  "Colorist"
+  "Colorist",
 ];
 
 const HERO_STACK = ["Build", "Ship", "Capture", "Connect"];
 
-// ─── Click-to-shatter name ────────────────────────────────────────────────────
 function ShatterName({ name }: { name: string }) {
   const ref = useRef<HTMLSpanElement>(null);
-  const [key, setKey] = useState(0); // remount to reset
+  const [key, setKey] = useState(0);
 
   const handleClick = () => {
     const el = ref.current;
     if (!el) return;
-    
 
     registerGsapPlugins();
+
     const split = new SplitText(el, { type: "chars" });
 
     gsap.to(split.chars, {
@@ -50,18 +49,17 @@ function ShatterName({ name }: { name: string }) {
       ease: "power2.out",
       onComplete: () => {
         split.revert();
-        // Reassemble
+
         gsap.fromTo(
           el,
           { autoAlpha: 0, scale: 0.8 },
           { autoAlpha: 1, scale: 1, duration: 0.6, ease: "back.out(1.8)" },
         );
-        setKey((k) => k + 1);
+
+        setKey((current) => current + 1);
         redirect("/#about");
       },
-    }
-  );
-    
+    });
   };
 
   return (
@@ -79,20 +77,6 @@ function ShatterName({ name }: { name: string }) {
   );
 }
 
-// ─── Status ticker (live online indicator) ───────────────────────────────────
-// function LiveStatus() {
-//   return (
-//     <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-medium text-emerald-400">
-//       <span className="relative flex h-1.5 w-1.5">
-//         <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-//         <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
-//       </span>
-//       Student
-//     </span>
-//   );
-// }
-
-// ─── Section ──────────────────────────────────────────────────────────────────
 interface HeroSectionProps {
   siteConfig: {
     name: string;
@@ -113,6 +97,7 @@ export function HeroSection({ siteConfig }: HeroSectionProps) {
 
     const handleLoaderComplete = () => setLoaderComplete(true);
     const fallback = window.setTimeout(() => setLoaderComplete(true), 5200);
+
     window.addEventListener("portfolio-loader-complete", handleLoaderComplete);
 
     return () => {
@@ -126,7 +111,9 @@ export function HeroSection({ siteConfig }: HeroSectionProps) {
       if (!loaderComplete) return;
 
       registerGsapPlugins();
+
       gsap.set(sectionRef.current, { autoAlpha: 1 });
+
       const content = sectionRef.current?.querySelector<HTMLElement>("[data-hero-content]");
       const background = sectionRef.current?.querySelector<HTMLElement>("[data-hero-bg]");
       const setContentY = content ? gsap.quickSetter(content, "y", "px") : null;
@@ -134,32 +121,48 @@ export function HeroSection({ siteConfig }: HeroSectionProps) {
 
       const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
 
-      tl.from("[data-hero='name']",    { autoAlpha: 0, scale: 0.85, y: 40, duration: 0.8, ease: "back.out(1.6)" });
-      tl.from("[data-hero='role']",    { autoAlpha: 0, y: 16, duration: 0.55 }, "-=0.3");
-      tl.from("[data-hero='tagline']", { autoAlpha: 0, y: 12, duration: 0.4 }, "-=0.25");
-      tl.from("[data-hero='copy']",    { autoAlpha: 0, y: 18, duration: 0.6 }, "-=0.35");
-      tl.from("[data-hero='actions'] > *", {
-        autoAlpha: 0, y: 16, scale: 0.9,
-        stagger: 0.08, duration: 0.55, ease: "back.out(1.5)",
-      }, "-=0.4");
-      tl.from("[data-hero='meta']",    { autoAlpha: 0, y: 12, duration: 0.5 }, "-=0.3");
+      tl.from("[data-hero='name']", {
+        autoAlpha: 0,
+        scale: 0.85,
+        y: 32,
+        duration: 0.75,
+        ease: "back.out(1.6)",
+      });
+      tl.from("[data-hero='role']", { autoAlpha: 0, y: 14, duration: 0.5 }, "-=0.3");
+      tl.from("[data-hero='tagline']", { autoAlpha: 0, y: 10, duration: 0.35 }, "-=0.25");
+      tl.from("[data-hero='copy']", { autoAlpha: 0, y: 14, duration: 0.5 }, "-=0.3");
+      tl.from(
+        "[data-hero='actions'] > *",
+        {
+          autoAlpha: 0,
+          y: 14,
+          scale: 0.94,
+          stagger: 0.06,
+          duration: 0.5,
+          ease: "back.out(1.5)",
+        },
+        "-=0.35",
+      );
+      tl.from("[data-hero='meta']", { autoAlpha: 0, y: 10, duration: 0.45 }, "-=0.25");
       tl.from("[data-hero='network']", { autoAlpha: 0, x: 24, scale: 0.96, duration: 0.75 }, "-=0.55");
 
-      // Scroll parallax
       ScrollTrigger.create({
         trigger: sectionRef.current,
-        start: "top top", end: "bottom top",
+        start: "top top",
+        end: "bottom top",
         scrub: 1,
         onUpdate: (self) => {
-          setContentY?.(self.progress * 90);
+          setContentY?.(self.progress * 60);
         },
       });
+
       ScrollTrigger.create({
         trigger: sectionRef.current,
-        start: "top top", end: "bottom top",
+        start: "top top",
+        end: "bottom top",
         scrub: 2,
         onUpdate: (self) => {
-          setBackgroundY?.(self.progress * 40);
+          setBackgroundY?.(self.progress * 32);
         },
       });
     },
@@ -169,76 +172,91 @@ export function HeroSection({ siteConfig }: HeroSectionProps) {
   return (
     <section
       ref={sectionRef}
-      className="relative flex min-h-svh items-center overflow-hidden pt-[var(--header-height)]"
+      className="relative flex min-h-[calc(100svh-4rem)] items-center overflow-hidden pt-16 md:min-h-svh md:pt-[var(--header-height)]"
       style={{ visibility: "hidden" }}
     >
       <div data-hero-bg className="absolute inset-0">
         <AnimatedBackground />
       </div>
 
-      <Container className="relative z-10 py-20 text-center md:py-28 lg:text-left" data-hero-content="">
+      <Container
+        className="relative z-10 py-10 text-center sm:py-14 md:py-20 lg:py-24 lg:text-left"
+        data-hero-content=""
+      >
         <div className="mx-auto max-w-3xl lg:mx-0">
-            {/* Name — click to shatter */}
-            <h1 className="max-w-full font-[family-name:var(--font-syne)] text-[clamp(1.875rem,9vw,3rem)] font-semibold leading-[1.05] tracking-tight text-white sm:text-6xl md:text-7xl">
-              <span data-hero="name">
-                <ShatterName name={siteConfig.name} />
-              </span>
+          <h1 className="max-w-full font-[family-name:var(--font-syne)] text-[clamp(2rem,10vw,3rem)] font-semibold leading-[1.04] tracking-tight text-white sm:text-6xl md:text-7xl">
+            <span data-hero="name">
+              <ShatterName name={siteConfig.name} />
+            </span>
 
-              {/* Typewriter role line */}
-              <span
-                data-hero="role"
-                className="mt-1 block max-w-full text-[clamp(1.25rem,6vw,1.75rem)] font-normal text-[var(--blue-300)] sm:text-3xl md:text-4xl"
-              >
-                <TypewriterCycle phrases={ROLES} className="inline-block max-w-full overflow-hidden text-ellipsis whitespace-nowrap font-[family-name:var(--font-syne)] align-bottom" />
-              </span>
-
-              {/* Tagline */}
-              <span data-hero="tagline" className="mt-2 block text-sm text-white/50 font-light tracking-wide">
-                {siteConfig.headline}
-              </span>
-
-            </h1>
-
-            <p
-              data-hero="copy"
-              className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-[var(--foreground-muted)] sm:text-base lg:mx-0"
+            <span
+              data-hero="role"
+              className="mt-1.5 block max-w-full text-[clamp(1.1rem,5.5vw,1.5rem)] font-normal text-[var(--blue-300)] sm:text-3xl md:text-4xl"
             >
-              {siteConfig.description}
-            </p>
+              <TypewriterCycle
+                phrases={ROLES}
+                className="inline-block max-w-full overflow-hidden text-ellipsis whitespace-nowrap font-[family-name:var(--font-syne)] align-bottom"
+              />
+            </span>
 
-            <div data-hero="actions" className="mt-4 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
-              <MagneticButton>
-                <RippleButton>
-                  <Button href="/#projects">
-                    View projects <ArrowUpRight className="h-4 w-4" />
-                  </Button>
-                </RippleButton>
-              </MagneticButton>
-              <MagneticButton>
-                <RippleButton>
-                  <Button href="/photography" variant="secondary">Photography</Button>
-                </RippleButton>
-              </MagneticButton>
-            </div>
+            <span
+              data-hero="tagline"
+              className="mt-2 block text-xs font-light tracking-wide text-white/50 sm:text-sm"
+            >
+              {siteConfig.headline}
+            </span>
+          </h1>
 
-            <div data-hero="meta" className="mt-6">
-              <SocialLinks links={socialGroups.personal} className="justify-center lg:justify-start" />
-            </div>
-          </div>
+          <p
+            data-hero="copy"
+            className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-[var(--foreground-muted)] sm:mt-4 sm:text-base lg:mx-0"
+          >
+            {siteConfig.description}
+          </p>
 
           <div
-            data-hero="network"
-            aria-hidden
-            className="hero-network-panel pointer-events-none absolute right-0 top-1/2 hidden w-[18rem] -translate-y-1/2 lg:block"
+            data-hero="actions"
+            className="mt-5 flex flex-col items-stretch justify-center gap-2 min-[420px]:flex-row min-[420px]:items-center sm:gap-3 lg:justify-start"
           >
-            <div className="hero-network-orbit">
-              {HERO_STACK.map((item, index) => (
-                <span key={item} className={`hero-network-node hero-network-node-${index}`}>
-                  {item}
-                </span>
-              ))}
-            </div>
+            <MagneticButton>
+              <RippleButton>
+                <Button href="/#projects" className="w-full min-[420px]:w-auto">
+                  View projects <ArrowUpRight className="h-4 w-4" />
+                </Button>
+              </RippleButton>
+            </MagneticButton>
+
+            <MagneticButton>
+              <RippleButton>
+                <Button href="/photography" variant="secondary" className="w-full min-[420px]:w-auto">
+                  Photography
+                </Button>
+              </RippleButton>
+            </MagneticButton>
           </div>
+
+          <div data-hero="meta" className="mt-5 sm:mt-6">
+            <SocialLinks
+              links={socialGroups.personal}
+              size="sm"
+              className="justify-center lg:justify-start"
+            />
+          </div>
+        </div>
+
+        <div
+          data-hero="network"
+          aria-hidden
+          className="hero-network-panel pointer-events-none absolute right-0 top-1/2 hidden w-[18rem] -translate-y-1/2 lg:block"
+        >
+          <div className="hero-network-orbit">
+            {HERO_STACK.map((item, index) => (
+              <span key={item} className={`hero-network-node hero-network-node-${index}`}>
+                {item}
+              </span>
+            ))}
+          </div>
+        </div>
       </Container>
     </section>
   );

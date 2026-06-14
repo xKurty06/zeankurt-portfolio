@@ -43,7 +43,11 @@ export const Section = forwardRef<HTMLElement, SectionProps>(
       <section
         ref={ref}
         id={id}
-        className={cn("section-padding relative overflow-hidden", surfaceClass, className)}
+        className={cn(
+          "relative overflow-hidden py-10 sm:py-14 md:py-20 lg:py-24",
+          surfaceClass,
+          className,
+        )}
       >
         {children}
       </section>
