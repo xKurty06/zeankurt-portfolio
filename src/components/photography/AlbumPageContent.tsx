@@ -13,7 +13,10 @@ import { resolvePhotoAspectRatio } from "@/lib/photo-aspect";
 const ALBUM_PHOTOS_PER_PAGE = 24;
 
 interface AlbumPageContentProps {
-  album: Pick<PhotoAlbum, "slug" | "title" | "description" | "category" | "coverImage">;
+  album: Pick<
+    PhotoAlbum,
+    "slug" | "title" | "description" | "category" | "coverImage"
+  >;
   photos?: PhotoItem[];
 }
 
@@ -25,7 +28,9 @@ export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const featuredPhoto = albumPhotos.find((photo) => photo.featured) ?? albumPhotos[0] ?? null;
+  const featuredPhoto =
+    albumPhotos.find((photo) => photo.featured) ?? albumPhotos[0] ?? null;
+
   const supportingPhotos = albumPhotos
     .filter((photo) => photo.id !== featuredPhoto?.id)
     .slice(0, 4);
@@ -35,11 +40,15 @@ export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
 
   const featuredImage = album.coverImage ?? featuredPhoto?.image ?? null;
 
-  const [featuredAspectRatio, setFeaturedAspectRatio] = useState<PhotoItem["aspectRatio"]>(
-    featuredPhoto?.aspectRatio ?? "landscape",
+  const [featuredAspectRatio, setFeaturedAspectRatio] = useState<
+    PhotoItem["aspectRatio"]
+  >(featuredPhoto?.aspectRatio ?? "landscape");
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(albumPhotos.length / ALBUM_PHOTOS_PER_PAGE),
   );
 
-  const totalPages = Math.max(1, Math.ceil(albumPhotos.length / ALBUM_PHOTOS_PER_PAGE));
   const safeCurrentPage = Math.min(currentPage, totalPages);
 
   const paginatedPhotos = useMemo(() => {
@@ -60,7 +69,11 @@ export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
     img.onload = () => {
       if (!mounted) return;
 
-      const aspect = resolvePhotoAspectRatio(img.naturalWidth, img.naturalHeight);
+      const aspect = resolvePhotoAspectRatio(
+        img.naturalWidth,
+        img.naturalHeight,
+      );
+
       setFeaturedAspectRatio(aspect);
     };
 
@@ -151,7 +164,7 @@ export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
               type="button"
               onClick={openFeaturedInLightbox}
               className={cn(
-                "relative col-span-2 row-span-2 min-h-11 overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))] text-left transition hover:border-white/30 hover:shadow-lg lg:col-span-2 lg:row-span-3 lg:aspect-auto lg:h-full",
+                "relative col-span-2 row-span-2 min-h-11 overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))] text-left shadow-[0_16px_44px_rgba(0,0,0,0.18)] transition hover:border-white/30 hover:shadow-lg lg:col-span-2 lg:row-span-3 lg:aspect-auto lg:h-full",
                 getAspectClass(featuredAspectRatio),
               )}
             >
@@ -159,15 +172,19 @@ export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
                 <img
                   src={featuredImage}
                   alt={album.title}
-                  className="absolute inset-0 h-full w-full object-cover"
+                  className="absolute inset-0 h-full w-full rounded-2xl object-cover"
                   loading="eager"
                   onLoad={(event) => {
-                    const { naturalWidth, naturalHeight } = event.currentTarget;
-                    setFeaturedAspectRatio(resolvePhotoAspectRatio(naturalWidth, naturalHeight));
+                    const { naturalWidth, naturalHeight } =
+                      event.currentTarget;
+
+                    setFeaturedAspectRatio(
+                      resolvePhotoAspectRatio(naturalWidth, naturalHeight),
+                    );
                   }}
                 />
               ) : (
-                <div className="absolute inset-0 flex items-end p-6">
+                <div className="absolute inset-0 flex items-end rounded-2xl p-6">
                   <p className="text-sm uppercase tracking-[0.2em] text-white/45">
                     No showcase image uploaded
                   </p>
@@ -181,7 +198,7 @@ export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
                 type="button"
                 onClick={() => openPhotoInLightbox(photo)}
                 className={cn(
-                  "group relative min-h-11 overflow-hidden rounded-xl bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70",
+                  "group relative min-h-11 overflow-hidden rounded-2xl bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))] shadow-[0_16px_44px_rgba(0,0,0,0.18)] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70",
                   getAspectClass(photo.aspectRatio),
                 )}
               >
@@ -189,21 +206,23 @@ export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
                   <img
                     src={photo.image}
                     alt={photo.title}
-                    className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.03]"
+                    className="absolute inset-0 h-full w-full rounded-2xl object-cover transition duration-700 group-hover:scale-[1.03]"
                     loading="lazy"
                   />
                 ) : (
-                  <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))]" />
+                  <div className="absolute inset-0 rounded-2xl bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))]" />
                 )}
 
-                <div className="absolute inset-0 bg-black/0 transition duration-300 group-hover:bg-black/20" />
+                <div className="absolute inset-0 rounded-2xl bg-black/0 transition duration-300 group-hover:bg-black/20" />
 
-                <div className="absolute inset-x-0 bottom-0 translate-y-2 p-4 opacity-0 transition duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+                <div className="absolute inset-x-0 bottom-0 translate-y-2 rounded-b-2xl p-4 opacity-0 transition duration-300 group-hover:translate-y-0 group-hover:opacity-100">
                   <p className="text-[10px] uppercase tracking-[0.18em] text-white/80">
                     {photo.category}
                   </p>
 
-                  <p className="mt-1 text-sm font-medium text-white">{photo.title}</p>
+                  <p className="mt-1 text-sm font-medium text-white">
+                    {photo.title}
+                  </p>
                 </div>
               </button>
             ))}
