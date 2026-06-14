@@ -1,7 +1,19 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
-import { ArrowUpRight, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  ArrowUpRight,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 import { useGSAP } from "@gsap/react";
 import type { Project } from "@/types";
 import { RevealOnScroll } from "@/components/animation/RevealOnScroll";
@@ -22,6 +34,256 @@ const STATUS_STYLES = {
   wip: "bg-amber-500/15 text-amber-400 border-amber-500/30",
   archived: "bg-zinc-500/15 text-zinc-400 border-zinc-500/30",
 } as const;
+
+function MobileProjectCarousel({
+  projects,
+  emptyMessage = "No projects available.",
+}: {
+  projects: Project[];
+  emptyMessage?: string;
+}) {
+  const scrollerRef = useRef<HTMLDivElement>(null);
+
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [canScrollPrev, setCanScrollPrev] = useState(false);
+  const [canScrollNext, setCanScrollNext] = useState(projects.length > 1);
+
+  const updateState = useCallback(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+
+    const items = Array.from(
+      scroller.querySelectorAll<HTMLElement>("[data-carousel-card]"),
+    );
+
+    if (items.length === 0) {
+      setCurrentSlide(0);
+      setCanScrollPrev(false);
+      setCanScrollNext(false);
+      return;
+    }
+
+    const scrollerCenter = scroller.scrollLeft + scroller.clientWidth / 2;
+
+    let closestIndex = 0;
+    let closestDistance = Number.POSITIVE_INFINITY;
+
+    items.forEach((item, index) => {
+      const itemCenter = item.offsetLeft + item.offsetWidth / 2;
+      const distance = Math.abs(scrollerCenter - itemCenter);
+
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestIndex = index;
+      }
+    });
+
+    setCurrentSlide(closestIndex);
+    setCanScrollPrev(scroller.scrollLeft > 8);
+    setCanScrollNext(
+      scroller.scrollLeft + scroller.clientWidth < scroller.scrollWidth - 8,
+    );
+  }, []);
+
+  const scrollToIndex = useCallback(
+    (index: number) => {
+      const scroller = scrollerRef.current;
+      if (!scroller) return;
+
+      const items = Array.from(
+        scroller.querySelectorAll<HTMLElement>("[data-carousel-card]"),
+      );
+
+      const target = items[index];
+      if (!target) return;
+
+      const left =
+        target.offsetLeft - (scroller.clientWidth - target.offsetWidth) / 2;
+
+      scroller.scrollTo({
+        left,
+        behavior: "smooth",
+      });
+    },
+    [],
+  );
+
+  const scrollPrev = () => {
+    scrollToIndex(Math.max(0, currentSlide - 1));
+  };
+
+  const scrollNext = () => {
+    scrollToIndex(Math.min(projects.length - 1, currentSlide + 1));
+  };
+
+  useEffect(() => {
+    updateState();
+
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+
+    const handleScroll = () => {
+      window.requestAnimationFrame(updateState);
+    };
+
+    scroller.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("resize", updateState);
+
+    return () => {
+      scroller.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", updateState);
+    };
+  }, [projects, updateState]);
+
+  if (projects.length === 0) {
+    return (
+      <p className="py-8 text-center text-sm text-[var(--foreground-subtle)]">
+        {emptyMessage}
+      </p>
+    );
+  }
+
+  return (
+    <div className="relative md:hidden">
+      <div
+        ref={scrollerRef}
+        className="-mx-5 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-5 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {projects.map((project) => (
+          <div
+            key={project.slug}
+            data-carousel-card
+            className="w-[82vw] max-w-[21rem] shrink-0 snap-center"
+          >
+            <MobileProjectCard project={project} />
+          </div>
+        ))}
+      </div>
+
+      {projects.length > 1 ? (
+        <>
+          <button
+            type="button"
+            aria-label="Previous project"
+            onClick={scrollPrev}
+            disabled={!canScrollPrev}
+            className="absolute left-0 top-[42%] z-10 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--border)] bg-[rgba(8,14,28,0.82)] text-white shadow-[0_12px_30px_rgba(0,0,0,0.32)] backdrop-blur-xl transition hover:border-[var(--border-strong)] disabled:cursor-not-allowed disabled:opacity-35"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+
+          <button
+            type="button"
+            aria-label="Next project"
+            onClick={scrollNext}
+            disabled={!canScrollNext}
+            className="absolute right-0 top-[42%] z-10 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--border)] bg-[rgba(8,14,28,0.82)] text-white shadow-[0_12px_30px_rgba(0,0,0,0.32)] backdrop-blur-xl transition hover:border-[var(--border-strong)] disabled:cursor-not-allowed disabled:opacity-35"
+          >
+            <ArrowRight className="h-4 w-4" />
+          </button>
+
+          <div className="mt-5 flex justify-center gap-2">
+            {projects.map((project, index) => (
+              <button
+                key={project.slug}
+                type="button"
+                aria-label={`Go to project ${index + 1}`}
+                onClick={() => scrollToIndex(index)}
+                className={cn(
+                  "h-2 rounded-full transition-all duration-300",
+                  currentSlide === index
+                    ? "w-6 bg-[var(--blue-300)] shadow-[0_0_12px_rgba(72,202,228,0.45)]"
+                    : "w-2 bg-white/20 hover:bg-white/40",
+                )}
+              />
+            ))}
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+function MobileProjectCard({ project }: { project: Project }) {
+  return (
+    <article className="h-full overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--background-elevated)] shadow-[0_16px_44px_rgba(0,0,0,0.24)]">
+      <div className="relative aspect-[16/10] overflow-hidden bg-[linear-gradient(145deg,rgba(10,15,26,0.96),rgba(2,62,138,0.22))]">
+        {project.image ? (
+          <img
+            src={project.image}
+            alt={project.title}
+            loading="lazy"
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center bg-[radial-gradient(circle_at_24%_24%,rgba(72,202,228,0.16),transparent_28%),radial-gradient(circle_at_78%_76%,rgba(0,119,182,0.2),transparent_32%)] px-6 text-center">
+            <p className="font-[family-name:var(--font-syne)] text-xl font-semibold text-white">
+              {project.title}
+            </p>
+          </div>
+        )}
+
+        <div className="absolute inset-0 bg-gradient-to-t from-[#030712]/85 via-transparent to-transparent" />
+
+        {project.status ? (
+          <span
+            className={cn(
+              "absolute right-3 top-3 rounded-full border px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-widest",
+              STATUS_STYLES[project.status],
+            )}
+          >
+            {project.status}
+          </span>
+        ) : null}
+      </div>
+
+      <div className="space-y-3 p-4 text-left">
+        <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--blue-400)]">
+          {project.year} · {project.role}
+        </p>
+
+        <h3 className="font-[family-name:var(--font-syne)] text-lg font-semibold leading-tight text-white">
+          {project.title}
+        </h3>
+
+        <p className="line-clamp-3 text-sm leading-7 text-[var(--foreground-muted)]">
+          {project.description}
+        </p>
+
+        <div className="flex flex-wrap gap-1.5">
+          {project.tags.slice(0, 4).map((tag) => (
+            <Badge key={tag}>{tag}</Badge>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 pt-1">
+          {project.liveUrl ? (
+            <a
+              href={project.liveUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-9 items-center gap-1 rounded-full border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--blue-300)] transition hover:border-[var(--border-strong)] hover:text-white"
+            >
+              View live <ArrowUpRight className="h-3.5 w-3.5" />
+            </a>
+          ) : null}
+
+          {project.githubUrl ? (
+            <a
+              href={project.githubUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`GitHub — ${project.title}`}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border)] text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white"
+            >
+              <SocialIcon platform="github" className="h-3.5 w-3.5" />
+            </a>
+          ) : null}
+        </div>
+      </div>
+    </article>
+  );
+}
 
 function FeaturedCard({
   project,
@@ -374,8 +636,12 @@ export function ProjectsSection({ projects }: ProjectsSectionProps) {
           />
         </RevealOnScroll>
 
+        <div className="mt-7 md:hidden">
+          <MobileProjectCarousel projects={featuredProjects} />
+        </div>
+
         <div
-          className="mt-7 grid min-w-0 gap-4 sm:mt-10 sm:gap-5 md:grid-cols-2 xl:grid-cols-3"
+          className="mt-7 hidden min-w-0 gap-4 sm:mt-10 sm:gap-5 md:grid md:grid-cols-2 xl:grid-cols-3"
           style={{ perspective: lowMotion ? undefined : 1200 }}
         >
           {featuredProjects.map((project, index) => (
@@ -423,9 +689,16 @@ export function ProjectsSection({ projects }: ProjectsSectionProps) {
               </div>
             </RevealOnScroll>
 
+            <div className="mt-5 md:hidden">
+              <MobileProjectCarousel
+                projects={visible}
+                emptyMessage="No projects match that filter."
+              />
+            </div>
+
             <div
               ref={allProjectsGridRef}
-              className="mt-5 grid min-w-0 grid-cols-1 gap-3 sm:mt-6 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3"
+              className="mt-5 hidden min-w-0 grid-cols-1 gap-3 sm:mt-6 sm:grid-cols-2 sm:gap-4 md:grid xl:grid-cols-3"
             >
               {visible.map((project) => (
                 <div key={project.slug} data-all-project-frame>
