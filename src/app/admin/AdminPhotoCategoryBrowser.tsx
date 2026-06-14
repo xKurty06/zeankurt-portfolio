@@ -250,7 +250,12 @@ function comparePhotoItems(
     if (result !== 0) return result * modifier;
   }
 
-  return a.title.localeCompare(b.title) * modifier;
+  return (
+    a.title.localeCompare(b.title, undefined, {
+      numeric: true,
+      sensitivity: "base",
+    }) * modifier
+  );
 }
 
 const GRID_AUTO_ROW_HEIGHT = 4;
@@ -730,7 +735,7 @@ function PhotoManagerModal({
           {visiblePhotos.length > 0 ? (
             <div
               ref={photoGridRef}
-              className="mt-4 grid grid-cols-2 auto-rows-[4px] gap-2 [grid-auto-flow:dense] min-[430px]:gap-3 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
+              className="mt-4 grid grid-cols-2 auto-rows-[4px] gap-2 [grid-auto-flow:row] min-[430px]:gap-3 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
             >
               <AnimatePresence initial={false}>
                 {visiblePhotos.map((photo) => {
