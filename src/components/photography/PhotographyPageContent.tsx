@@ -24,29 +24,35 @@ interface PhotographyPageContentProps {
 
 export function PhotographyPageContent({ creativeCategories }: PhotographyPageContentProps) {
   const heroRef = useRef<HTMLDivElement>(null);
+
   const photoAlbums = useMemo(
     () => buildPhotographyAlbums(creativeCategories),
     [creativeCategories],
   );
+
   const photoCategories = useMemo(
     () => buildPhotoCategories(creativeCategories),
     [creativeCategories],
   );
+
   const photos = useMemo(
     () => buildPhotographyPhotos(creativeCategories),
     [creativeCategories],
   );
+
   const [activeCategory, setActiveCategory] = useState<string>("All");
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   const filteredPhotos = useMemo(() => {
     if (activeCategory === "All") return photos;
+
     return photos.filter((photo) => photo.category === activeCategory);
-  }, [activeCategory]);
+  }, [activeCategory, photos]);
 
   useGSAP(
     () => {
       registerGsapPlugins();
+
       gsap.from("[data-photo-hero='line']", {
         autoAlpha: 0,
         y: 30,
@@ -66,12 +72,11 @@ export function PhotographyPageContent({ creativeCategories }: PhotographyPageCo
       >
         <div className="absolute inset-0">
           <div className="absolute inset-0 bg-slate-950/80" />
+
           <div className="absolute inset-0 opacity-80 [mask-image:linear-gradient(180deg,transparent,white_7%,white_88%,transparent)]">
-            <BackgroundBoxes
-              variant="full"
-              className="[filter:brightness(0.88)]"
-            />
+            <BackgroundBoxes variant="full" className="[filter:brightness(0.88)]" />
           </div>
+
           <div className="pointer-events-none absolute inset-0 z-[1] bg-slate-950/40 [mask-image:radial-gradient(transparent,white)]" />
         </div>
 
@@ -82,12 +87,14 @@ export function PhotographyPageContent({ creativeCategories }: PhotographyPageCo
           >
             {siteConfig.photographyBrand}
           </p>
+
           <h1
             data-photo-hero="line"
             className="mt-4 max-w-3xl break-words font-[family-name:var(--font-syne)] text-[clamp(1.875rem,8vw,2.5rem)] font-semibold leading-tight text-white sm:text-5xl md:text-6xl"
           >
             Photography & visual stories from events, portraits, and the streets.
           </h1>
+
           <p
             data-photo-hero="line"
             className="mt-5 max-w-2xl text-base leading-relaxed text-white/65 sm:text-lg"
@@ -95,6 +102,7 @@ export function PhotographyPageContent({ creativeCategories }: PhotographyPageCo
             Work published under shot.by.zk and produced with Studio Nomads — covering Web3
             community events, campus activations, and editorial shoots.
           </p>
+
           <div data-photo-hero="line" className="pointer-events-auto mt-8">
             <SocialLinks links={socialGroups.photography} />
           </div>
@@ -111,20 +119,19 @@ export function PhotographyPageContent({ creativeCategories }: PhotographyPageCo
         </div>
 
         <Container className="relative z-10 py-14 md:py-20">
-          <section
-            id="albums"
-            className="scroll-mt-28 px-0 py-0"
-          >
+          <section id="albums" className="scroll-mt-28 px-0 py-0">
             <div className="mb-8 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
               <div>
                 <p className="font-mono text-xs uppercase tracking-[0.22em] text-white/45">
                   Albums
                 </p>
+
                 <h2 className="mt-2 font-[family-name:var(--font-syne)] text-3xl font-semibold text-white">
                   Collections
                 </h2>
               </div>
             </div>
+
             {photoAlbums.length > 0 ? (
               <div className="grid max-w-full grid-cols-2 gap-3 sm:gap-4 md:gap-5 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4">
                 {photoAlbums.map((album) => (
@@ -144,10 +151,12 @@ export function PhotographyPageContent({ creativeCategories }: PhotographyPageCo
                 <p className="font-mono text-xs uppercase tracking-[0.22em] text-white/45">
                   Gallery
                 </p>
+
                 <h2 className="mt-2 font-[family-name:var(--font-syne)] text-3xl font-semibold text-white">
                   All frames
                 </h2>
               </div>
+
               {photos.length > 0 ? (
                 <GalleryFilter
                   categories={photoCategories}

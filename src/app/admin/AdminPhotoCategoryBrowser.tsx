@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { createPortal } from "react-dom";
-import { useDeferredValue, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   Check,
   ChevronDown,
@@ -51,12 +51,14 @@ interface AdminPhotoCategoryBrowserProps {
 }
 
 const PAGE_SIZE_OPTIONS = [24, 48, 96];
+
 const SORT_OPTIONS: Array<{ label: string; value: SortField }> = [
   { label: "Custom order", value: "custom" },
   { label: "Name", value: "name" },
   { label: "Featured", value: "featured" },
   { label: "Status", value: "status" },
 ];
+
 const PAGE_SIZE_DROPDOWN_OPTIONS = PAGE_SIZE_OPTIONS.map((option) => ({
   label: `${option} / page`,
   value: String(option),
@@ -96,6 +98,7 @@ function PickerButton<T extends string>({
 
     window.addEventListener("mousedown", onPointerDown);
     window.addEventListener("keydown", onKeyDown);
+
     return () => {
       window.removeEventListener("mousedown", onPointerDown);
       window.removeEventListener("keydown", onKeyDown);
@@ -112,7 +115,8 @@ function PickerButton<T extends string>({
         onClick={() => setOpen((current) => !current)}
         className={cn(
           "group inline-flex min-h-11 items-center gap-3 rounded-full border border-[var(--border)] bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] px-4 text-sm font-medium text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:border-[var(--border-strong)] hover:bg-white/[0.06] sm:min-h-10",
-          open && "border-[var(--blue-400)] bg-[var(--accent-soft)]/50 text-[var(--blue-100)] shadow-[0_0_0_1px_rgba(72,202,228,0.25)]",
+          open &&
+          "border-[var(--blue-400)] bg-[var(--accent-soft)]/50 text-[var(--blue-100)] shadow-[0_0_0_1px_rgba(72,202,228,0.25)]",
           className,
         )}
       >
@@ -129,6 +133,7 @@ function PickerButton<T extends string>({
         >
           {options.map((option) => {
             const active = option.value === value;
+
             return (
               <button
                 key={option.value}
@@ -161,6 +166,60 @@ function PickerButton<T extends string>({
   );
 }
 
+const PHOTO_GRID_AUTO_ROW_HEIGHT = 4;
+const ADMIN_FALLBACK_COLUMN_WIDTH = 220;
+
+interface PhotoGridMetrics {
+  columnWidth: number;
+  rowGap: number;
+}
+
+function getFallbackPhotoBrowserRatio(aspectRatio: PhotoBrowserItem["aspectRatio"]) {
+  if (aspectRatio === "portrait") return 3 / 4;
+  if (aspectRatio === "square") return 1;
+
+  return 4 / 3;
+}
+
+function readPhotoGridMetrics(element: HTMLElement): PhotoGridMetrics {
+  const styles = window.getComputedStyle(element);
+  const columns = styles.gridTemplateColumns
+    .split(" ")
+    .filter(Boolean).length;
+
+  const columnCount = Math.max(1, columns);
+  const columnGap = Number.parseFloat(styles.columnGap) || 0;
+  const rowGap = Number.parseFloat(styles.rowGap) || 0;
+
+  const columnWidth =
+    (element.clientWidth - columnGap * (columnCount - 1)) / columnCount;
+
+  return {
+    columnWidth: Number.isFinite(columnWidth) && columnWidth > 0
+      ? columnWidth
+      : ADMIN_FALLBACK_COLUMN_WIDTH,
+    rowGap,
+  };
+}
+
+function getPhotoBrowserRowSpan(
+  photo: PhotoBrowserItem,
+  imageRatios: Record<string, number>,
+  gridMetrics: PhotoGridMetrics,
+) {
+  const ratio =
+    imageRatios[photo.id] ?? getFallbackPhotoBrowserRatio(photo.aspectRatio);
+
+  const targetHeight = gridMetrics.columnWidth / ratio;
+
+  return Math.max(
+    4,
+    Math.ceil(
+      (targetHeight + gridMetrics.rowGap) /
+      (PHOTO_GRID_AUTO_ROW_HEIGHT + gridMetrics.rowGap),
+    ),
+  );
+}
 function comparePhotoItems(
   a: PhotoBrowserItem,
   b: PhotoBrowserItem,
@@ -185,6 +244,8 @@ function comparePhotoItems(
 
   return a.title.localeCompare(b.title) * modifier;
 }
+
+const GRID_AUTO_ROW_HEIGHT = 4;
 
 function PhotoManagerModal({
   category,
@@ -213,6 +274,28 @@ function PhotoManagerModal({
   const descriptionId = useId();
   const portalNodeRef = useRef<HTMLDivElement | null>(null);
   const [mounted, setMounted] = useState(false);
+  const photoGridRef = useRef<HTMLDivElement>(null);
+  const [imageRatios, setImageRatios] = useState<Record<string, number>>({});
+  const [photoGridMetrics, setPhotoGridMetrics] = useState<PhotoGridMetrics>({
+    columnWidth: ADMIN_FALLBACK_COLUMN_WIDTH,
+    rowGap: 12,
+  });
+  const registerImageRatio = useCallback((id: string, width: number, height: number) => {
+    if (width <= 0 || height <= 0) return;
+
+    const ratio = width / height;
+
+    setImageRatios((current) => {
+      if (Math.abs((current[id] ?? 0) - ratio) < 0.001) {
+        return current;
+      }
+
+      return {
+        ...current,
+        [id]: ratio,
+      };
+    });
+  }, []);
 
   useEffect(() => {
     const portalNode = document.createElement("div");
@@ -230,8 +313,6 @@ function PhotoManagerModal({
   useEffect(() => {
     if (!open) return;
 
-    const previousOverflow = document.body.style.overflow;
-    const previousOverscroll = document.body.style.overscrollBehavior;
     const siblings = Array.from(document.body.children).filter(
       (element) => element !== portalNodeRef.current,
     );
@@ -253,20 +334,23 @@ function PhotoManagerModal({
     });
 
     window.addEventListener("keydown", onKeyDown);
+
     return () => {
-      // Clear any inline scroll-lock styles so scrolling is reliably restored.
       document.body.style.overflow = "";
       document.body.style.overscrollBehavior = "";
+
       siblings.forEach((element) => {
         element.removeAttribute("inert");
         element.removeAttribute("aria-hidden");
       });
+
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [onClose, open]);
 
   useEffect(() => {
     if (!open) return;
+
     setMode("edit");
     setQuery("");
     setSortField("custom");
@@ -287,11 +371,13 @@ function PhotoManagerModal({
 
   const filteredPhotos = useMemo(() => {
     const normalizedQuery = deferredQuery.trim().toLowerCase();
+
     const filtered = normalizedQuery
       ? category.photos.filter((photo) => {
-          const haystack = `${photo.title} ${photo.subtitle ?? ""} ${photo.meta ?? ""}`.toLowerCase();
-          return haystack.includes(normalizedQuery);
-        })
+        const haystack = `${photo.title} ${photo.subtitle ?? ""} ${photo.meta ?? ""}`.toLowerCase();
+
+        return haystack.includes(normalizedQuery);
+      })
       : category.photos;
 
     return [...filtered].sort((a, b) => comparePhotoItems(a, b, sortField, sortDirection));
@@ -318,10 +404,46 @@ function PhotoManagerModal({
   const visiblePhotos = filteredPhotos.slice(startIndex, startIndex + pageSize);
   const rangeStart = filteredPhotos.length === 0 ? 0 : startIndex + 1;
   const rangeEnd = Math.min(startIndex + pageSize, filteredPhotos.length);
+
   const allFilteredSelected =
     filteredPhotos.length > 0 && filteredPhotos.every((photo) => selectedIds.includes(photo.id));
-  const allVisibleSelected = visiblePhotos.length > 0 && visiblePhotos.every((photo) => selectedIds.includes(photo.id));
 
+  const allVisibleSelected =
+    visiblePhotos.length > 0 && visiblePhotos.every((photo) => selectedIds.includes(photo.id));
+
+  useEffect(() => {
+    const element = photoGridRef.current;
+
+    if (!open || !element) return;
+
+    const updateGridMetrics = () => {
+      const nextMetrics = readPhotoGridMetrics(element);
+
+      setPhotoGridMetrics((current) => {
+        const sameColumnWidth =
+          Math.abs(current.columnWidth - nextMetrics.columnWidth) < 0.5;
+        const sameRowGap = Math.abs(current.rowGap - nextMetrics.rowGap) < 0.5;
+
+        if (sameColumnWidth && sameRowGap) {
+          return current;
+        }
+
+        return nextMetrics;
+      });
+    };
+
+    updateGridMetrics();
+
+    const observer = new ResizeObserver(updateGridMetrics);
+    observer.observe(element);
+
+    window.addEventListener("resize", updateGridMetrics);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updateGridMetrics);
+    };
+  }, [open, visiblePhotos.length]);
   const toggleSelected = (id: string) => {
     setSelectedIds((current) =>
       current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
@@ -336,12 +458,14 @@ function PhotoManagerModal({
 
       const next = new Set(current);
       visiblePhotos.forEach((photo) => next.add(photo.id));
+
       return Array.from(next);
     });
   };
 
   const handleDeleteSelected = async () => {
     const idsToRemove = selectedIds.filter(Boolean);
+
     if (idsToRemove.length === 0 || isDeleting) return;
 
     setDeleteError(null);
@@ -349,19 +473,25 @@ function PhotoManagerModal({
 
     try {
       await deleteCreativePhotosByIds(idsToRemove);
+
       for (const [index, id] of idsToRemove.entries()) {
         window.setTimeout(() => {
           setRemovingIds((current) => (current.includes(id) ? current : [...current, id]));
         }, index * 55);
       }
-      await new Promise((resolve) => window.setTimeout(resolve, Math.max(260, idsToRemove.length * 55 + 220)));
+
+      await new Promise((resolve) =>
+        window.setTimeout(resolve, Math.max(260, idsToRemove.length * 55 + 220)),
+      );
 
       const remainingPhotos = category.photos.filter((photo) => !idsToRemove.includes(photo.id));
+
       onCategoryChange({
         ...category,
         photoCount: remainingPhotos.length,
         photos: remainingPhotos,
       });
+
       setSelectedIds((current) => current.filter((id) => !idsToRemove.includes(id)));
       setRemovingIds([]);
     } catch (error) {
@@ -390,13 +520,18 @@ function PhotoManagerModal({
         <div className="flex items-start justify-between gap-4 border-b border-[var(--border)] px-4 py-4 sm:px-5">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h3 id={titleId} className="font-[family-name:var(--font-syne)] text-lg font-semibold text-white">
+              <h3
+                id={titleId}
+                className="font-[family-name:var(--font-syne)] text-lg font-semibold text-white"
+              >
                 {category.name}
               </h3>
+
               <span className="inline-flex items-center gap-1 rounded-full border border-[var(--border)] bg-[var(--background)] px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--foreground-muted)]">
                 <Images className="h-3 w-3" />
                 {category.photoCount} photos
               </span>
+
               {featuredCount > 0 ? (
                 <span className="inline-flex items-center gap-1 rounded-full border border-[var(--blue-400)]/30 bg-[var(--accent-soft)] px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--blue-200)]">
                   <Star className="h-3 w-3 fill-current" />
@@ -404,10 +539,12 @@ function PhotoManagerModal({
                 </span>
               ) : null}
             </div>
+
             <p id={descriptionId} className="mt-1 text-sm text-[var(--foreground-muted)]">
               {category.description || `${category.slug} category`} Manage photos in grid view.
             </p>
           </div>
+
           <button
             type="button"
             aria-label={`Close ${category.name}`}
@@ -450,6 +587,7 @@ function PhotoManagerModal({
                     <SquarePen className="h-4 w-4" />
                     Edit
                   </button>
+
                   <button
                     type="button"
                     onClick={() => setMode("select")}
@@ -474,7 +612,7 @@ function PhotoManagerModal({
                   onChange={(nextValue) => {
                     setSortField(nextValue);
                     setPage(1);
-                    // Default to showing featured/published items first
+
                     if (nextValue === "featured" || nextValue === "status") {
                       setSortDirection("desc");
                     } else if (nextValue === "name") {
@@ -482,6 +620,7 @@ function PhotoManagerModal({
                     }
                   }}
                 />
+
                 <button
                   type="button"
                   onClick={() => {
@@ -492,6 +631,7 @@ function PhotoManagerModal({
                 >
                   {sortDirection === "asc" ? "Asc" : "Desc"}
                 </button>
+
                 <PickerButton
                   ariaLabel={`Items per page for ${category.name}`}
                   value={String(pageSize)}
@@ -521,6 +661,7 @@ function PhotoManagerModal({
                   >
                     Select all
                   </button>
+
                   <button
                     type="button"
                     onClick={toggleSelectVisible}
@@ -529,6 +670,7 @@ function PhotoManagerModal({
                   >
                     {allVisibleSelected ? "Clear visible" : "Select visible"}
                   </button>
+
                   <button
                     type="button"
                     onClick={() => setSelectedIds([])}
@@ -537,6 +679,7 @@ function PhotoManagerModal({
                   >
                     Clear all
                   </button>
+
                   <button
                     type="button"
                     onClick={handleDeleteSelected}
@@ -562,117 +705,143 @@ function PhotoManagerModal({
           ) : null}
 
           {visiblePhotos.length > 0 ? (
-            <div className="mt-4 columns-2 gap-2 min-[430px]:gap-3 md:columns-3 xl:columns-4 2xl:columns-5">
+            <div
+              ref={photoGridRef}
+              className="mt-4 grid grid-cols-2 auto-rows-[4px] gap-2 [grid-auto-flow:dense] min-[430px]:gap-3 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
+            >
               <AnimatePresence initial={false}>
                 {visiblePhotos.map((photo) => {
-                const selected = selectedIds.includes(photo.id);
-                const removing = removingIds.includes(photo.id);
-                return (
-                  <motion.article
-                    key={photo.id}
-                    layout
-                    initial={{ opacity: 1, scale: 1, y: 0 }}
-                    animate={
-                      removing
-                        ? { opacity: 0, scale: 0.92, y: 24, filter: "blur(6px)" }
-                        : { opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }
-                    }
-                    exit={{ opacity: 0, scale: 0.92, y: 24, filter: "blur(6px)" }}
-                    transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-                    className={cn(
-                      "group mb-3 block break-inside-avoid overflow-hidden rounded-3xl border bg-white/[0.02] transition",
-                      selected
-                        ? "border-[var(--blue-400)] shadow-[0_0_0_1px_rgba(72,202,228,0.4)]"
-                        : "border-[var(--border)] hover:border-[var(--border-strong)]",
-                    )}
-                  >
-                    <div
+                  const selected = selectedIds.includes(photo.id);
+                  const removing = removingIds.includes(photo.id);
+
+                  return (
+                    <motion.article
+                      key={photo.id}
+                      layout
+                      initial={{ opacity: 1, scale: 1, y: 0 }}
+                      animate={
+                        removing
+                          ? { opacity: 0, scale: 0.92, y: 24, filter: "blur(6px)" }
+                          : { opacity: 1, scale: 1, y: 0, filter: "blur(0px)" }
+                      }
+                      exit={{ opacity: 0, scale: 0.92, y: 24, filter: "blur(6px)" }}
+                      transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+                      style={{
+                        gridRowEnd: `span ${getPhotoBrowserRowSpan(
+                          photo,
+                          imageRatios,
+                          photoGridMetrics,
+                        )}`,
+                      }}
                       className={cn(
-                        "relative overflow-hidden bg-black/20",
-                        photo.aspectRatio === "portrait" && "aspect-[3/4]",
-                        photo.aspectRatio === "landscape" && "aspect-[4/3]",
-                        photo.aspectRatio === "square" && "aspect-square",
+                        "relative h-full overflow-hidden bg-black/20",
                         mode === "select" ? "cursor-pointer" : photo.imagePath ? "cursor-zoom-in" : undefined,
                       )}
-                      onClick={() => {
-                        if (mode === "select") {
-                          toggleSelected(photo.id);
-                          return;
-                        }
-
-                        if (mode === "edit" && photo.imagePath) {
-                          const index = filteredPhotos.findIndex((item) => item.id === photo.id);
-                          setLightboxIndex(index);
-                        }
-                      }}
                     >
-                      {photo.imagePath ? (
-                        <img
-                          src={photo.imagePath}
-                          alt={photo.title}
-                          className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
-                          loading="lazy"
-                        />
-                      ) : null}
-
-                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-
-                      {mode === "edit" ? (
-                        <div
-                          className="absolute right-3 top-3"
-                          onClick={(event) => event.stopPropagation()}
-                        >
-                          {photo.editAction}
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            if (isDeleting) return;
+                      <div
+                        className={cn(
+                          "relative h-full overflow-hidden bg-black/20",
+                          mode === "select"
+                            ? "cursor-pointer"
+                            : photo.imagePath
+                              ? "cursor-zoom-in"
+                              : undefined,
+                        )}
+                        onClick={() => {
+                          if (mode === "select") {
                             toggleSelected(photo.id);
-                          }}
-                          className={cn(
-                            "absolute right-2 top-2 inline-flex h-11 w-11 items-center justify-center rounded-full border transition sm:right-3 sm:top-3",
-                            selected
-                              ? "border-[var(--blue-400)] bg-[var(--blue-500)] text-[#03121a]"
-                              : "border-white/20 bg-black/45 text-white",
-                          )}
-                          aria-label={selected ? `Deselect ${photo.title}` : `Select ${photo.title}`}
-                          disabled={isDeleting}
-                        >
-                          <Check className="h-4 w-4" />
-                        </button>
-                      )}
+                            return;
+                          }
 
-                      <div className="absolute inset-x-0 bottom-0 p-3">
-                        <div className="flex flex-wrap items-center gap-2">
-                          {photo.featured ? (
-                            <span className="inline-flex items-center gap-1 rounded-full border border-[var(--blue-400)]/30 bg-[var(--accent-soft)] px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-[var(--blue-200)]">
-                              <Star className="h-3 w-3 fill-current" />
-                              Featured
-                            </span>
-                          ) : null}
-                          <span
-                            className={cn(
-                              "inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em]",
-                              photo.published
-                                ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-200"
-                                : "border-white/10 bg-black/35 text-white/70",
-                            )}
+                          if (mode === "edit" && photo.imagePath) {
+                            const index = filteredPhotos.findIndex((item) => item.id === photo.id);
+                            setLightboxIndex(index);
+                          }
+                        }}
+                      >
+                        {photo.imagePath ? (
+                          <img
+                            src={photo.imagePath}
+                            alt={photo.title}
+                            className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+                            loading="lazy"
+                            ref={(element) => {
+                              if (element?.complete) {
+                                registerImageRatio(photo.id, element.naturalWidth, element.naturalHeight);
+                              }
+                            }}
+                            onLoad={(event) => {
+                              const { naturalWidth, naturalHeight } = event.currentTarget;
+                              registerImageRatio(photo.id, naturalWidth, naturalHeight);
+                            }}
+                          />
+                        ) : null}
+
+                        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+
+                        {mode === "edit" ? (
+                          <div
+                            className="absolute right-3 top-3"
+                            onClick={(event) => event.stopPropagation()}
                           >
-                            {photo.published ? "Published" : "Draft"}
-                          </span>
-                        </div>
-                        <p className="mt-2 truncate text-sm font-semibold text-white">{photo.title}</p>
-                        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-white/65">
-                          {photo.subtitle ? <span>{photo.subtitle}</span> : null}
-                          {photo.meta ? <span>{photo.meta}</span> : null}
+                            {photo.editAction}
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+
+                              if (isDeleting) return;
+
+                              toggleSelected(photo.id);
+                            }}
+                            className={cn(
+                              "absolute right-2 top-2 inline-flex h-11 w-11 items-center justify-center rounded-full border transition sm:right-3 sm:top-3",
+                              selected
+                                ? "border-[var(--blue-400)] bg-[var(--blue-500)] text-[#03121a]"
+                                : "border-white/20 bg-black/45 text-white",
+                            )}
+                            aria-label={selected ? `Deselect ${photo.title}` : `Select ${photo.title}`}
+                            disabled={isDeleting}
+                          >
+                            <Check className="h-4 w-4" />
+                          </button>
+                        )}
+
+                        <div className="absolute inset-x-0 bottom-0 p-3">
+                          <div className="flex flex-wrap items-center gap-2">
+                            {photo.featured ? (
+                              <span className="inline-flex items-center gap-1 rounded-full border border-[var(--blue-400)]/30 bg-[var(--accent-soft)] px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-[var(--blue-200)]">
+                                <Star className="h-3 w-3 fill-current" />
+                                Featured
+                              </span>
+                            ) : null}
+
+                            <span
+                              className={cn(
+                                "inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em]",
+                                photo.published
+                                  ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-200"
+                                  : "border-white/10 bg-black/35 text-white/70",
+                              )}
+                            >
+                              {photo.published ? "Published" : "Draft"}
+                            </span>
+                          </div>
+
+                          <p className="mt-2 truncate text-sm font-semibold text-white">
+                            {photo.title}
+                          </p>
+
+                          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-white/65">
+                            {photo.subtitle ? <span>{photo.subtitle}</span> : null}
+                            {photo.meta ? <span>{photo.meta}</span> : null}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </motion.article>
-                );
+                    </motion.article>
+                  );
                 })}
               </AnimatePresence>
             </div>
@@ -690,6 +859,7 @@ function PhotoManagerModal({
               <p className="text-xs text-[var(--foreground-muted)]">
                 Page {currentPage} of {totalPages}
               </p>
+
               <div className="flex items-center gap-2">
                 <button
                   type="button"
@@ -700,6 +870,7 @@ function PhotoManagerModal({
                   <ChevronLeft className="h-4 w-4" />
                   Prev
                 </button>
+
                 <button
                   type="button"
                   onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
@@ -713,6 +884,7 @@ function PhotoManagerModal({
             </div>
           ) : null}
         </div>
+
         <Lightbox
           photos={lightboxPhotos}
           activeIndex={lightboxIndex}
@@ -745,10 +917,12 @@ function PhotoCategoryCard({ category }: { category: PhotoBrowserCategory }) {
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-sm font-semibold text-white">{localCategory.name}</p>
+
               <span className="inline-flex items-center gap-1 rounded-full border border-[var(--border)] bg-[var(--background)] px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--foreground-muted)]">
                 <Images className="h-3 w-3" />
                 {localCategory.photoCount}
               </span>
+
               {featuredCount > 0 ? (
                 <span className="inline-flex items-center gap-1 rounded-full border border-[var(--blue-400)]/30 bg-[var(--accent-soft)] px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.14em] text-[var(--blue-200)]">
                   <Star className="h-3 w-3 fill-current" />
@@ -756,6 +930,7 @@ function PhotoCategoryCard({ category }: { category: PhotoBrowserCategory }) {
                 </span>
               ) : null}
             </div>
+
             <p className="mt-1 text-xs text-[var(--foreground-muted)]">
               {localCategory.description || `${localCategory.slug} category`}
             </p>
@@ -783,9 +958,7 @@ function PhotoCategoryCard({ category }: { category: PhotoBrowserCategory }) {
   );
 }
 
-export function AdminPhotoCategoryBrowser({
-  categories,
-}: AdminPhotoCategoryBrowserProps) {
+export function AdminPhotoCategoryBrowser({ categories }: AdminPhotoCategoryBrowserProps) {
   if (categories.length === 0) return null;
 
   return (
