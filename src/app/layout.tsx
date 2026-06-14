@@ -10,6 +10,7 @@ import { SavingIndicator } from "@/components/ui/SavingIndicator";
 import { SavingProvider } from "@/lib/saving";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { siteConfig } from "@/data/site";
+import { ScrollToTopButton } from "@/components/ui/ScrollToTopButton";
 import "./globals.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -47,14 +48,15 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col bg-background text-foreground" suppressHydrationWarning>
         <ThemeProvider>
           <SavingProvider>
-          <GsapInit />
-          <LoaderWrapper />
-          <ScrollProgressBar />
-          <ConditionalHeader />
-          <main className="flex-1">{children}</main>
-          <SavingIndicator />
-          <Footer />
-        </SavingProvider>
+            <GsapInit />
+            <LoaderWrapper/>
+              <ScrollProgressBar />
+              <ConditionalHeader />
+
+              {children}
+
+              <ScrollToTopButton />
+          </SavingProvider>
         </ThemeProvider>
       </body>
     </html>
