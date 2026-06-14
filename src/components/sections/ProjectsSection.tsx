@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useMemo } from "react";
+import { useMemo, useRef, useState } from "react";
 import { ArrowUpRight, ChevronDown, ChevronUp } from "lucide-react";
 import { useGSAP } from "@gsap/react";
 import type { Project } from "@/types";
@@ -42,8 +42,8 @@ function FeaturedCard({
         gsap.set(cardRef.current, {
           autoAlpha: 1,
           y: 0,
-          rotateY: 0,
           scale: 1,
+          rotateY: 0,
           clearProps: "filter,transform,opacity,visibility",
         });
 
@@ -54,21 +54,19 @@ function FeaturedCard({
         cardRef.current,
         {
           autoAlpha: 0,
-          y: 34,
-          rotateY: index % 2 === 0 ? -5 : 5,
-          scale: 0.96,
+          y: 18,
+          scale: 0.98,
         },
         {
           autoAlpha: 1,
           y: 0,
-          rotateY: 0,
           scale: 1,
-          duration: 0.65,
-          delay: index * 0.06,
-          ease: "power3.out",
+          duration: 0.42,
+          delay: index * 0.04,
+          ease: "power2.out",
           scrollTrigger: {
             trigger: cardRef.current,
-            start: "top 88%",
+            start: "top 90%",
             toggleActions: "play none none reverse",
           },
         },
@@ -80,10 +78,10 @@ function FeaturedCard({
   return (
     <GlowCard
       ref={cardRef}
-      intensity={lowMotion ? 0.2 : 0.55}
-      className="project-feature-card group min-w-0 rounded-2xl border border-[var(--border)] bg-[var(--background-elevated)] transition-shadow duration-300 hover:border-[var(--border-strong)] hover:shadow-[0_0_32px_rgba(0,180,216,0.08)] sm:duration-500 sm:hover:shadow-[0_0_60px_rgba(0,180,216,0.13)]"
+      intensity={lowMotion ? 0.18 : 0.35}
+      className="project-feature-card group min-w-0 rounded-2xl border border-[var(--border)] bg-[var(--background-elevated)] transition-shadow duration-300 hover:border-[var(--border-strong)] hover:shadow-[0_0_28px_rgba(0,180,216,0.08)]"
     >
-      <div className="relative aspect-[16/10] overflow-hidden bg-[linear-gradient(145deg,rgba(10,15,26,0.96),rgba(2,62,138,0.22))]">
+      <div className="relative aspect-[16/10] overflow-hidden bg-[linear-gradient(145deg,rgba(10,15,26,0.96),rgba(2,62,138,0.22))] sm:aspect-[16/9]">
         {project.image ? (
           <ZoomableImage
             src={project.image}
@@ -102,8 +100,6 @@ function FeaturedCard({
         )}
 
         <div className="absolute inset-0 bg-gradient-to-t from-[#030712] via-transparent to-transparent" />
-
-        <div className="absolute inset-0 opacity-0 transition duration-300 group-hover:opacity-100 bg-[radial-gradient(ellipse_at_50%_0%,rgba(0,180,216,0.1),transparent_65%)]" />
 
         {project.status ? (
           <span
@@ -126,12 +122,12 @@ function FeaturedCard({
         </div>
 
         <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--blue-400)]">
+          <div className="min-w-0 flex-1">
+            <p className="break-words font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--blue-400)]">
               {project.year} · {project.role}
             </p>
 
-            <h3 className="mt-1.5 font-[family-name:var(--font-syne)] text-lg font-semibold leading-tight text-white sm:text-xl xl:text-lg">
+            <h3 className="mt-1.5 break-words font-[family-name:var(--font-syne)] text-lg font-semibold leading-tight text-white sm:text-xl xl:text-lg">
               {project.title}
             </h3>
           </div>
@@ -150,7 +146,7 @@ function FeaturedCard({
           ) : null}
         </div>
 
-        <p className="text-sm leading-relaxed text-[var(--foreground-muted)]">
+        <p className="text-sm leading-7 text-[var(--foreground-muted)]">
           {project.description}
         </p>
 
@@ -166,7 +162,7 @@ function FeaturedCard({
             target="_blank"
             rel="noopener noreferrer"
             data-interactive
-            className="inline-flex items-center gap-1 text-sm font-medium text-[var(--blue-300)] transition hover:text-white"
+            className="inline-flex min-h-9 items-center gap-1 text-sm font-medium text-[var(--blue-300)] transition hover:text-white"
           >
             View live <ArrowUpRight className="h-3.5 w-3.5" />
           </a>
@@ -179,8 +175,8 @@ function FeaturedCard({
 function CompactCard({ project }: { project: Project }) {
   return (
     <GlowCard
-      intensity={0.35}
-      className="project-compact-card group flex h-full min-w-0 flex-col rounded-xl border border-[var(--border)] bg-[var(--background-elevated)] p-4 transition duration-300 hover:border-[var(--border-strong)] hover:shadow-[0_0_22px_rgba(0,180,216,0.08)] sm:p-5"
+      intensity={0.22}
+      className="project-compact-card group flex h-full min-w-0 flex-col rounded-2xl border border-[var(--border)] bg-[var(--background-elevated)] p-4 transition duration-300 hover:border-[var(--border-strong)] hover:shadow-[0_0_22px_rgba(0,180,216,0.08)] sm:p-5"
     >
       <span aria-hidden className="project-corner project-corner-tl" />
       <span aria-hidden className="project-corner project-corner-br" />
@@ -192,7 +188,7 @@ function CompactCard({ project }: { project: Project }) {
             {project.year}
           </p>
 
-          <h3 className="mt-1 font-[family-name:var(--font-syne)] text-base font-semibold leading-snug text-white">
+          <h3 className="mt-1 break-words font-[family-name:var(--font-syne)] text-base font-semibold leading-snug text-white">
             {project.title}
           </h3>
         </div>
@@ -216,7 +212,7 @@ function CompactCard({ project }: { project: Project }) {
               rel="noopener noreferrer"
               aria-label={`GitHub — ${project.title}`}
               data-interactive
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border)] text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white sm:h-7 sm:w-7"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border)] text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white sm:h-8 sm:w-8"
             >
               <SocialIcon platform="github" className="h-3.5 w-3.5" />
             </a>
@@ -229,7 +225,7 @@ function CompactCard({ project }: { project: Project }) {
               rel="noopener noreferrer"
               aria-label={`Live — ${project.title}`}
               data-interactive
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border)] text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white sm:h-7 sm:w-7"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border)] text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white sm:h-8 sm:w-8"
             >
               <ArrowUpRight className="h-3.5 w-3.5" />
             </a>
@@ -237,7 +233,7 @@ function CompactCard({ project }: { project: Project }) {
         </div>
       </div>
 
-      <p className="mt-2.5 flex-1 text-xs leading-relaxed text-[var(--foreground-muted)]">
+      <p className="mt-2.5 flex-1 text-sm leading-7 text-[var(--foreground-muted)] sm:text-xs sm:leading-relaxed">
         {project.description}
       </p>
 
@@ -267,30 +263,6 @@ export function ProjectsSection({ projects }: ProjectsSectionProps) {
   const [activeTag, setActiveTag] = useState("All");
   const [expanded, setExpanded] = useState(false);
 
-  useGSAP(
-    () => {
-      if (lowMotion) return;
-
-      const section = sectionRef.current;
-
-      if (!section) return;
-
-      const onMove = (event: MouseEvent) => {
-        const rect = section.getBoundingClientRect();
-
-        section.style.setProperty("--projects-x", `${event.clientX - rect.left}px`);
-        section.style.setProperty("--projects-y", `${event.clientY - rect.top}px`);
-      };
-
-      section.addEventListener("mousemove", onMove);
-
-      return () => {
-        section.removeEventListener("mousemove", onMove);
-      };
-    },
-    { dependencies: [lowMotion], revertOnUpdate: true, scope: sectionRef },
-  );
-
   const featuredProjects = useMemo(
     () => projects.filter((project) => project.featured),
     [projects],
@@ -317,9 +289,36 @@ export function ProjectsSection({ projects }: ProjectsSectionProps) {
 
   useGSAP(
     () => {
+      if (lowMotion) return;
+
+      const section = sectionRef.current;
+
+      if (!section) return;
+
+      const onMove = (event: MouseEvent) => {
+        const rect = section.getBoundingClientRect();
+
+        section.style.setProperty("--projects-x", `${event.clientX - rect.left}px`);
+        section.style.setProperty("--projects-y", `${event.clientY - rect.top}px`);
+      };
+
+      section.addEventListener("mousemove", onMove);
+
+      return () => {
+        section.removeEventListener("mousemove", onMove);
+      };
+    },
+    { dependencies: [lowMotion], revertOnUpdate: true, scope: sectionRef },
+  );
+
+  useGSAP(
+    () => {
       registerGsapPlugins();
 
-      const items = gsap.utils.toArray<HTMLElement>("[data-all-project-frame]");
+      const items = gsap.utils.toArray<HTMLElement>(
+        "[data-all-project-frame]",
+        allProjectsGridRef.current,
+      );
 
       if (items.length === 0) return;
 
@@ -338,15 +337,15 @@ export function ProjectsSection({ projects }: ProjectsSectionProps) {
         items,
         {
           autoAlpha: 0,
-          y: 10,
+          y: 8,
           scale: 0.99,
         },
         {
           autoAlpha: 1,
           y: 0,
           scale: 1,
-          duration: 0.28,
-          stagger: 0.02,
+          duration: 0.24,
+          stagger: 0.018,
           ease: "power2.out",
           clearProps: "filter",
         },
@@ -358,7 +357,7 @@ export function ProjectsSection({ projects }: ProjectsSectionProps) {
   return (
     <Section id="projects" ref={sectionRef}>
       {!lowMotion ? (
-        <div aria-hidden className="projects-interactive-bg">
+        <div aria-hidden className="projects-interactive-bg hidden sm:block">
           <span className="projects-bg-band projects-bg-band-a" />
           <span className="projects-bg-band projects-bg-band-b" />
           <span className="projects-bg-pulse projects-bg-pulse-a" />
@@ -376,8 +375,8 @@ export function ProjectsSection({ projects }: ProjectsSectionProps) {
         </RevealOnScroll>
 
         <div
-          className="mt-8 grid min-w-0 gap-4 sm:mt-10 sm:gap-5 md:grid-cols-2 xl:grid-cols-3"
-          style={{ perspective: lowMotion ? undefined : 1400 }}
+          className="mt-7 grid min-w-0 gap-4 sm:mt-10 sm:gap-5 md:grid-cols-2 xl:grid-cols-3"
+          style={{ perspective: lowMotion ? undefined : 1200 }}
         >
           {featuredProjects.map((project, index) => (
             <FeaturedCard
@@ -390,9 +389,9 @@ export function ProjectsSection({ projects }: ProjectsSectionProps) {
         </div>
 
         {nonFeatured.length > 0 ? (
-          <div className="mt-12 sm:mt-16">
+          <div className="mt-10 sm:mt-14">
             <RevealOnScroll>
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-center sm:justify-between sm:text-left">
                 <h3 className="font-[family-name:var(--font-syne)] text-lg font-semibold text-white">
                   All projects
                   <span className="ml-2 font-mono text-sm font-normal text-[var(--foreground-subtle)]">
@@ -400,7 +399,7 @@ export function ProjectsSection({ projects }: ProjectsSectionProps) {
                   </span>
                 </h3>
 
-                <div className="flex min-w-0 flex-wrap gap-2">
+                <div className="flex max-w-full gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-wrap sm:justify-end sm:overflow-visible [&::-webkit-scrollbar]:hidden">
                   {["All", ...nonFeaturedProjectTags].map((tag) => (
                     <button
                       key={tag}
@@ -411,7 +410,7 @@ export function ProjectsSection({ projects }: ProjectsSectionProps) {
                         setExpanded(false);
                       }}
                       className={cn(
-                        "min-h-10 rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200 sm:min-h-0 sm:py-1",
+                        "min-h-10 shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200 sm:min-h-0 sm:py-1",
                         activeTag === tag
                           ? "border-[var(--blue-500)] bg-[var(--accent-soft)] text-white shadow-[0_0_12px_var(--accent-glow)]"
                           : "border-[var(--border)] text-[var(--foreground-muted)] hover:border-[var(--border-strong)] hover:text-white",
@@ -426,7 +425,7 @@ export function ProjectsSection({ projects }: ProjectsSectionProps) {
 
             <div
               ref={allProjectsGridRef}
-              className="mt-5 grid min-w-0 gap-3 sm:mt-6 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3"
+              className="mt-5 grid min-w-0 grid-cols-1 gap-3 sm:mt-6 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3"
             >
               {visible.map((project) => (
                 <div key={project.slug} data-all-project-frame>

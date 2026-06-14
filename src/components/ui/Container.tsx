@@ -1,56 +1,46 @@
 import { forwardRef } from "react";
 import { cn } from "@/lib/cn";
 
-interface ContainerProps {
+interface ContainerProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
-  className?: string;
-  as?: "div" | "section" | "header" | "footer" | "main";
-  id?: string;
-  [key: string]: unknown;
 }
 
-export function Container({
-  children,
-  className,
-  as: Tag = "div",
-  id,
-  ...rest
-}: ContainerProps) {
+export function Container({ children, className, ...props }: ContainerProps) {
   return (
-    <Tag id={id} className={cn("container-shell", className)} {...rest}>
+    <div
+      className={cn(
+        "container-shell relative mx-auto w-full px-5 sm:px-6 lg:px-8",
+        className,
+      )}
+      {...props}
+    >
       {children}
-    </Tag>
+    </div>
   );
 }
 
-interface SectionProps {
+interface SectionProps extends React.HTMLAttributes<HTMLElement> {
   children: React.ReactNode;
-  className?: string;
-  id?: string;
-  surface?: "default" | "elevated" | "subtle";
+  surface?: "default" | "subtle" | "elevated";
 }
 
 export const Section = forwardRef<HTMLElement, SectionProps>(
-  function Section({ children, className, id, surface = "default" }, ref) {
-    const surfaceClass =
-      surface === "elevated"
-        ? "bg-[var(--background-elevated)]"
-        : surface === "subtle"
-          ? "bg-[var(--background-subtle)]"
-          : "";
-
+  ({ children, className, surface = "default", ...props }, ref) => {
     return (
       <section
         ref={ref}
-        id={id}
         className={cn(
-          "relative overflow-hidden py-10 sm:py-14 md:py-20 lg:py-24",
-          surfaceClass,
+          "relative scroll-mt-[var(--header-height)] overflow-hidden py-12 sm:py-16 md:py-20 lg:py-24",
+          surface === "subtle" && "bg-[var(--background-subtle)]",
+          surface === "elevated" && "bg-[var(--background-elevated)]",
           className,
         )}
+        {...props}
       >
         {children}
       </section>
     );
   },
 );
+
+Section.displayName = "Section";

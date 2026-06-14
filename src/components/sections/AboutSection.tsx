@@ -7,7 +7,6 @@ import { AnimatedCounter } from "@/components/animation/AnimatedCounter";
 import { GlowCard } from "@/components/animation/GlowCard";
 import { Container, Section } from "@/components/ui/Container";
 import { FlickeringGrid } from "@/components/ui/FlickeringGridHero";
-import { SectionHeading } from "@/components/ui/SectionHeading";
 import { gsap, registerGsapPlugins } from "@/lib/gsap";
 import { useLowMotionDevice } from "@/hooks/useLowMotionDevice";
 import type { Certification, EventHighlight, SkillCategory } from "@/types";
@@ -53,6 +52,24 @@ export function AboutSection({
       registerGsapPlugins();
 
       const sweep = sectionRef.current?.querySelector<HTMLElement>("[data-about-sweep]");
+      const paras = sectionRef.current?.querySelectorAll<HTMLElement>("[data-about-para]");
+
+      if (lowMotion) {
+        if (sweep) {
+          gsap.set(sweep, { autoAlpha: 0 });
+        }
+
+        if (paras?.length) {
+          gsap.set(paras, {
+            autoAlpha: 1,
+            y: 0,
+            rotateX: 0,
+            clearProps: "filter,transform,opacity,visibility",
+          });
+        }
+
+        return;
+      }
 
       if (sweep) {
         gsap.fromTo(
@@ -60,114 +77,128 @@ export function AboutSection({
           { x: "-110%" },
           {
             x: "110%",
-            duration: 1.4,
+            duration: 1.2,
             ease: "power2.inOut",
             scrollTrigger: {
               trigger: sweep,
-              start: "top 85%",
+              start: "top 88%",
               toggleActions: "play none none reset",
             },
           },
         );
       }
 
-      const paras = sectionRef.current?.querySelectorAll<HTMLElement>("[data-about-para]");
-
       if (paras?.length) {
         gsap.fromTo(
           paras,
-          { autoAlpha: 0, y: 22, rotateX: 4 },
+          {
+            autoAlpha: 0,
+            y: 14,
+          },
           {
             autoAlpha: 1,
             y: 0,
-            rotateX: 0,
-            stagger: 0.1,
-            duration: 0.75,
-            ease: "power3.out",
+            stagger: 0.07,
+            duration: 0.45,
+            ease: "power2.out",
             scrollTrigger: {
               trigger: paras[0],
-              start: "top 88%",
+              start: "top 90%",
               toggleActions: "play none none reverse",
             },
           },
         );
       }
     },
-    { scope: sectionRef },
+    { dependencies: [lowMotion], revertOnUpdate: true, scope: sectionRef },
   );
 
   return (
-    <Section id="about" surface="elevated" ref={sectionRef} className="overflow-hidden">
+    <Section
+      id="about"
+      surface="elevated"
+      ref={sectionRef}
+      className="overflow-hidden pb-24 sm:pb-28"
+    >
       <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-[rgba(72,202,228,0.08)] to-transparent sm:h-32" />
-        <div className="absolute -left-20 top-10 h-44 w-44 rounded-full bg-[radial-gradient(circle,rgba(72,202,228,0.1),transparent_70%)] blur-2xl sm:h-56 sm:w-56" />
-        <div className="absolute right-0 top-1/2 h-56 w-56 -translate-y-1/2 bg-[radial-gradient(circle,rgba(0,119,182,0.1),transparent_72%)] blur-3xl sm:h-72 sm:w-72" />
+        <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-[rgba(72,202,228,0.07)] to-transparent sm:h-32" />
+        <div className="absolute -left-24 top-16 h-44 w-44 rounded-full bg-[radial-gradient(circle,rgba(72,202,228,0.1),transparent_70%)] blur-2xl sm:h-56 sm:w-56" />
+        <div className="absolute right-0 top-1/2 h-56 w-56 -translate-y-1/2 bg-[radial-gradient(circle,rgba(0,119,182,0.08),transparent_72%)] blur-3xl sm:h-72 sm:w-72" />
 
         {!lowMotion ? (
           <FlickeringGrid
-            className="absolute inset-0 hidden opacity-70 [mask-image:radial-gradient(circle_at_center,white,transparent_78%)] sm:block"
+            className="absolute inset-0 hidden opacity-50 [mask-image:radial-gradient(circle_at_center,white,transparent_78%)] sm:block"
             color="var(--blue-400)"
             squareSize={3}
-            gridGap={7}
-            flickerChance={0.18}
-            maxOpacity={0.18}
+            gridGap={8}
+            flickerChance={0.12}
+            maxOpacity={0.13}
           />
         ) : null}
       </div>
 
       <Container>
-        <div className="relative z-10 grid min-w-0 gap-7 lg:grid-cols-[0.9fr_1.1fr] lg:items-start lg:gap-10">
+        <div className="relative z-10 grid min-w-0 gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-start lg:gap-12">
           <RevealOnScroll>
-            <div className="relative">
+            <div className="relative max-w-3xl">
               <div
                 aria-hidden
                 data-about-sweep
-                className="pointer-events-none absolute inset-y-0 w-16 bg-gradient-to-r from-transparent via-[rgba(0,180,216,0.12)] to-transparent blur-sm sm:w-20"
+                className="pointer-events-none absolute inset-y-0 w-14 bg-gradient-to-r from-transparent via-[rgba(0,180,216,0.1)] to-transparent blur-sm sm:w-20"
               />
 
-              <SectionHeading
-                eyebrow="About"
-                title="Developer, builder, and visual storyteller."
-                description="Computer Science at Cavite State University. Full-stack developer and Co-founder at Studio Nomads. Based in Cavite, Philippines."
-              />
+              <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.32em] text-[var(--blue-400)] sm:text-xs">
+                About
+              </p>
+
+              <h2 className="mt-4 max-w-3xl font-[family-name:var(--font-syne)] text-[clamp(2.05rem,8.5vw,3.15rem)] font-semibold leading-[1.12] tracking-[-0.04em] text-white sm:text-5xl lg:text-6xl">
+                Developer, builder, and visual storyteller.
+              </h2>
+
+              <p className="mt-5 max-w-2xl text-base leading-8 text-[var(--foreground-muted)] sm:text-lg sm:leading-8">
+                Computer Science at Cavite State University. Full-stack developer and
+                Co-founder at Studio Nomads. Based in Cavite, Philippines.
+              </p>
             </div>
           </RevealOnScroll>
 
-          <div className="min-w-0 space-y-4 sm:space-y-5">
-            {aboutContent.paragraphs.map((paragraph) => (
-              <p
-                key={paragraph.slice(0, 24)}
-                data-about-para
-                className="text-sm leading-relaxed text-[var(--foreground-muted)] sm:text-base md:text-lg"
-                style={{ perspective: 600 }}
-              >
-                {paragraph}
-              </p>
-            ))}
+          <div className="min-w-0">
+            <div className="space-y-5 sm:space-y-6">
+              {aboutContent.paragraphs.map((paragraph) => (
+                <p
+                  key={paragraph.slice(0, 24)}
+                  data-about-para
+                  className="max-w-3xl text-base leading-8 text-[var(--foreground-muted)] sm:text-[1.05rem] sm:leading-8 lg:max-w-none"
+                  style={{ perspective: 600 }}
+                >
+                  {paragraph}
+                </p>
+              ))}
+            </div>
 
-            <RevealOnScroll delay={0.2}>
-              <dl className="grid grid-cols-2 gap-2.5 sm:gap-3">
+            <RevealOnScroll delay={0.16}>
+              <dl className="mt-8 grid grid-cols-1 gap-3 min-[430px]:grid-cols-2 sm:mt-9 sm:gap-4">
                 {aboutContent.highlights.map((item) => {
                   const counter = counterMap[item.label as CounterLabel];
 
                   return (
                     <GlowCard
                       key={item.label}
-                      className="min-w-0 cursor-default rounded-lg border border-[var(--border)] bg-white/[0.02] p-3 sm:p-4"
-                      intensity={0.4}
+                      className="min-w-0 cursor-default rounded-2xl border border-[var(--border)] bg-white/[0.02] p-4 sm:p-5"
+                      intensity={lowMotion ? 0.2 : 0.35}
                       data-interactive
                     >
-                      <dt className="font-mono text-[9px] uppercase tracking-[0.12em] text-[var(--blue-400)] sm:text-[10px]">
+                      <dt className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--blue-400)]">
                         {item.label}
                       </dt>
 
-                      <dd className="mt-1.5 break-words text-sm font-medium text-white">
+                      <dd className="mt-2 break-words text-xl font-semibold leading-tight text-white sm:text-2xl">
                         {counter ? (
                           <AnimatedCounter
                             to={counter.to}
                             suffix={counter.suffix}
                             prefix={counter.prefix}
-                            className="font-semibold text-[var(--blue-300)]"
+                            className="text-[var(--blue-300)]"
                           />
                         ) : (
                           item.value

@@ -4,37 +4,37 @@ interface SectionHeadingProps {
   eyebrow?: string;
   title: string;
   description?: string;
-  align?: "left" | "center";
   className?: string;
+  centered?: boolean;
 }
 
 export function SectionHeading({
   eyebrow,
   title,
   description,
-  align = "left",
   className,
+  centered = false,
 }: SectionHeadingProps) {
   return (
     <div
       className={cn(
-        "max-w-xl min-w-0 sm:max-w-2xl",
-        align === "center" && "mx-auto text-center",
+        "max-w-3xl",
+        centered ? "mx-auto text-center" : "mx-auto text-center lg:mx-0 lg:text-left",
         className,
       )}
     >
       {eyebrow ? (
-        <p className="mb-2 break-words font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--blue-400)] sm:mb-3 sm:text-xs sm:tracking-[0.24em]">
+        <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.28em] text-[var(--blue-400)] sm:text-xs sm:tracking-[0.32em]">
           {eyebrow}
         </p>
       ) : null}
 
-      <h2 className="break-words font-[family-name:var(--font-syne)] text-[clamp(1.65rem,7vw,2.25rem)] font-semibold tracking-tight text-white sm:text-4xl md:text-5xl">
+      <h2 className="mt-3 font-[family-name:var(--font-syne)] text-[clamp(2rem,8vw,3.1rem)] font-semibold leading-[1.12] tracking-[-0.04em] text-white sm:mt-4 sm:text-5xl lg:text-6xl">
         {title}
       </h2>
 
       {description ? (
-        <p className="mt-3 text-sm leading-relaxed text-[var(--foreground-muted)] sm:mt-4 sm:text-base md:text-lg">
+        <p className="mt-4 text-base leading-8 text-[var(--foreground-muted)] sm:mt-5 sm:text-lg sm:leading-8">
           {description}
         </p>
       ) : null}

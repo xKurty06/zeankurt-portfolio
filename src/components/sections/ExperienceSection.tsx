@@ -397,10 +397,10 @@ export function ExperienceSection({
                 <div className="events-scroll mt-5 max-h-[60dvh] space-y-5 overflow-y-auto pr-2 md:max-h-[28rem]">
                   {certificationGroups.map(([issuer, items]) => (
                     <section key={issuer}>
-                      <div className="sticky top-0 z-10 mb-3 flex items-center gap-3 py-2">
+                      <div className="sticky top-0 z-10 mb-3 flex items-center justify-center gap-3 py-2">
                         <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[rgba(72,202,228,0.22)] to-[rgba(72,202,228,0.08)]" />
 
-                        <div className="flex items-center gap-2 rounded-full border border-[rgba(72,202,228,0.16)] bg-[rgba(72,202,228,0.06)] px-3 py-1 shadow-[0_0_20px_rgba(0,180,216,0.06)]">
+                        <div className="flex shrink-0 items-center gap-2 rounded-full border border-[rgba(72,202,228,0.16)] bg-[rgba(72,202,228,0.06)] px-3 py-1 shadow-[0_0_20px_rgba(0,180,216,0.06)]">
                           <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--blue-100)]">
                             {issuer}
                           </span>
@@ -409,6 +409,8 @@ export function ExperienceSection({
                             {items.length}
                           </span>
                         </div>
+
+                        <div className="h-px flex-1 bg-gradient-to-l from-transparent via-[rgba(72,202,228,0.22)] to-[rgba(72,202,228,0.08)]" />
                       </div>
 
                       <ul className="space-y-3">
