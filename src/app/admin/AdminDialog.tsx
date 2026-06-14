@@ -263,8 +263,10 @@ export function AdminDialog({
       }
 
       if (status === "success") {
-        initialSnapshotRef.current = snapshotFields();
-        setDirty(false);
+        requestAnimationFrame(() => {
+          initialSnapshotRef.current = snapshotFields();
+          setDirty(false);
+        });
       }
     };
 
@@ -333,110 +335,110 @@ export function AdminDialog({
 
       {open && mounted && portalNodeRef.current
         ? createPortal(
-            <SavingScopeProvider value={savingKey}>
+          <SavingScopeProvider value={savingKey}>
+            <div
+              aria-hidden="false"
+              className="animate-fade-in fixed inset-0 z-[1000] flex items-center justify-center overflow-hidden bg-[rgba(3,7,18,0.76)] p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))] md:p-6"
+              onPointerDown={(event) => {
+                event.preventDefault();
+              }}
+              onDragStart={(event) => event.preventDefault()}
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={(event) => event.preventDefault()}
+            >
               <div
-                aria-hidden="false"
-                className="animate-fade-in fixed inset-0 z-[1000] flex items-center justify-center overflow-hidden bg-[rgba(3,7,18,0.76)] p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))] md:p-6"
-                onPointerDown={(event) => {
-                  event.preventDefault();
-                }}
-                onDragStart={(event) => event.preventDefault()}
-                onDragOver={(event) => event.preventDefault()}
-                onDrop={(event) => event.preventDefault()}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby={titleId}
+                aria-describedby={description ? descriptionId : undefined}
+                className="animate-modal-in flex max-h-[calc(100dvh-1.5rem)] w-full max-w-3xl flex-col rounded-[1.25rem] border border-[var(--border-strong)] bg-[var(--background-elevated)] shadow-[0_20px_80px_rgba(0,0,0,0.45)] sm:rounded-[1.75rem] md:max-h-[calc(100dvh-3rem)]"
+                onClick={(event) => event.stopPropagation()}
+                onPointerDown={(event) => event.stopPropagation()}
+                onDragStart={(event) => event.stopPropagation()}
+                onDragOver={(event) => event.stopPropagation()}
+                onDrop={(event) => event.stopPropagation()}
               >
+                <div className="flex items-start justify-between gap-4 border-b border-[var(--border)] px-4 py-4 sm:px-5">
+                  <div className="min-w-0">
+                    <h3
+                      id={titleId}
+                      className="font-[family-name:var(--font-syne)] text-lg font-semibold text-white"
+                    >
+                      {title}
+                    </h3>
+
+                    {description ? (
+                      <p id={descriptionId} className="mt-1 text-sm text-[var(--foreground-muted)]">
+                        {description}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <button
+                    type="button"
+                    aria-label={`Close ${title}`}
+                    onClick={() => setOpen(false)}
+                    className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[var(--border)] text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white"
+                  >
+                    <svg
+                      viewBox="0 0 16 16"
+                      className="h-4 w-4"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                    >
+                      <path d="M4 4l8 8M12 4l-8 8" strokeLinecap="round" />
+                    </svg>
+                  </button>
+                </div>
+
                 <div
-                  role="dialog"
-                  aria-modal="true"
-                  aria-labelledby={titleId}
-                  aria-describedby={description ? descriptionId : undefined}
-                  className="animate-modal-in flex max-h-[calc(100dvh-1.5rem)] w-full max-w-3xl flex-col rounded-[1.25rem] border border-[var(--border-strong)] bg-[var(--background-elevated)] shadow-[0_20px_80px_rgba(0,0,0,0.45)] sm:rounded-[1.75rem] md:max-h-[calc(100dvh-3rem)]"
-                  onClick={(event) => event.stopPropagation()}
-                  onPointerDown={(event) => event.stopPropagation()}
-                  onDragStart={(event) => event.stopPropagation()}
-                  onDragOver={(event) => event.stopPropagation()}
-                  onDrop={(event) => event.stopPropagation()}
+                  ref={contentRef}
+                  className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-5"
+                  onInput={handleFieldChange}
+                  onChange={handleFieldChange}
                 >
-                  <div className="flex items-start justify-between gap-4 border-b border-[var(--border)] px-4 py-4 sm:px-5">
-                    <div className="min-w-0">
-                      <h3
-                        id={titleId}
-                        className="font-[family-name:var(--font-syne)] text-lg font-semibold text-white"
-                      >
-                        {title}
-                      </h3>
+                  {children}
+                </div>
 
-                      {description ? (
-                        <p id={descriptionId} className="mt-1 text-sm text-[var(--foreground-muted)]">
-                          {description}
-                        </p>
-                      ) : null}
-                    </div>
-
+                <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--border)] px-4 py-4 sm:px-5">
+                  {uploadIntent && hasFileInput && uploadDialogState === "uploading" && canCancel && cancelSaving ? (
                     <button
                       type="button"
-                      aria-label={`Close ${title}`}
-                      onClick={() => setOpen(false)}
-                      className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[var(--border)] text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white"
+                      onClick={cancelSaving}
+                      className="rounded-full border border-red-400/20 px-4 py-2 text-sm font-medium text-red-200 transition hover:bg-red-500/10 hover:text-red-100"
                     >
-                      <svg
-                        viewBox="0 0 16 16"
-                        className="h-4 w-4"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                      >
-                        <path d="M4 4l8 8M12 4l-8 8" strokeLinecap="round" />
-                      </svg>
+                      Cancel upload
                     </button>
-                  </div>
+                  ) : null}
 
-                  <div
-                    ref={contentRef}
-                    className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-5"
-                    onInput={handleFieldChange}
-                    onChange={handleFieldChange}
-                  >
-                    {children}
-                  </div>
+                  {uploadDialogState !== "complete" ? (
+                    <button
+                      type="button"
+                      onClick={handleDiscard}
+                      disabled={!dirty || (uploadIntent && uploadDialogState === "uploading")}
+                      className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--foreground-muted)] transition enabled:hover:border-[var(--border-strong)] enabled:hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
+                    >
+                      Discard
+                    </button>
+                  ) : null}
 
-                  <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--border)] px-4 py-4 sm:px-5">
-                    {uploadIntent && hasFileInput && uploadDialogState === "uploading" && canCancel && cancelSaving ? (
-                      <button
-                        type="button"
-                        onClick={cancelSaving}
-                        className="rounded-full border border-red-400/20 px-4 py-2 text-sm font-medium text-red-200 transition hover:bg-red-500/10 hover:text-red-100"
-                      >
-                        Cancel upload
-                      </button>
-                    ) : null}
-
-                    {uploadDialogState !== "complete" ? (
-                      <button
-                        type="button"
-                        onClick={handleDiscard}
-                        disabled={!dirty || (uploadIntent && uploadDialogState === "uploading")}
-                        className="rounded-full border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--foreground-muted)] transition enabled:hover:border-[var(--border-strong)] enabled:hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
-                      >
-                        Discard
-                      </button>
-                    ) : null}
-
-                    {hasForm ? (
-                      <SaveButton
-                        type="button"
-                        onClick={handleSave}
-                        loadingLabel={uploadIntent && hasFileInput ? "Uploading..." : "Saving..."}
-                        savingKey={savingKey}
-                      >
-                        {primaryActionLabel}
-                      </SaveButton>
-                    ) : null}
-                  </div>
+                  {hasForm ? (
+                    <SaveButton
+                      type="button"
+                      onClick={handleSave}
+                      loadingLabel={uploadIntent && hasFileInput ? "Uploading..." : "Saving..."}
+                      savingKey={savingKey}
+                    >
+                      {primaryActionLabel}
+                    </SaveButton>
+                  ) : null}
                 </div>
               </div>
-            </SavingScopeProvider>,
-            portalNodeRef.current,
-          )
+            </div>
+          </SavingScopeProvider>,
+          portalNodeRef.current,
+        )
         : null}
     </>
   );

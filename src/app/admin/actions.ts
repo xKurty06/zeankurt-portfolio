@@ -1,7 +1,7 @@
 "use server";
 
 import { headers } from "next/headers";
-import { revalidateTag } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import sharp from "sharp";
 import { optimizePhotographyImage } from "@/lib/photography-image";
@@ -343,6 +343,8 @@ async function mutateAndRefresh<T extends Record<string, unknown>>(
   if (error) throw error;
 
   revalidateTag("portfolio-content", "max");
+  revalidatePath("/admin");
+
   if (options?.redirect !== false) {
     redirect("/admin");
   }
