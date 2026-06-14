@@ -41,7 +41,9 @@ function getHeaderOffset() {
   const header = document.querySelector<HTMLElement>("[data-site-header]");
   const headerHeight = header?.getBoundingClientRect().height ?? 64;
 
-  return headerHeight + 22;
+  // Use only the actual fixed header height.
+  // No extra gap, so the selected section starts directly below the nav.
+  return Math.ceil(headerHeight) - 1;
 }
 
 function scrollToHash(hash: string, behavior: ScrollBehavior = "smooth") {
@@ -55,7 +57,7 @@ function scrollToHash(hash: string, behavior: ScrollBehavior = "smooth") {
   const top = target.getBoundingClientRect().top + window.scrollY - getHeaderOffset();
 
   window.scrollTo({
-    top: Math.max(0, top),
+    top: Math.max(0, Math.round(top)),
     behavior,
   });
 }
@@ -95,7 +97,9 @@ function handleInternalAnchorClick(
     onNavigate?.();
 
     requestAnimationFrame(() => {
-      scrollToHash(url.hash);
+      requestAnimationFrame(() => {
+        scrollToHash(url.hash);
+      });
     });
 
     return;
@@ -405,22 +409,35 @@ function getMobileNavIcon(item: NavItem): LucideIcon {
   return Home;
 }
 
+function getStableHrefParts(href: string) {
+  if (href.startsWith("http")) return null;
+
+  const [rawPathname, rawHash] = href.split("#");
+
+  return {
+    pathname: rawPathname || "/",
+    hash: rawHash ? `#${rawHash}` : "",
+  };
+}
+
 function isNavItemActive(item: NavItem, pathname: string, currentHash: string) {
   const isExternal = item.external || item.href.startsWith("http");
 
   if (isExternal) return false;
 
-  const url = getUrlFromHref(item.href);
+  const hrefParts = getStableHrefParts(item.href);
 
-  if (!url) return false;
+  if (!hrefParts) return false;
 
-  if (url.pathname !== pathname) return false;
-
-  if (url.hash) {
-    return currentHash === url.hash;
+  if (hrefParts.hash) {
+    return pathname === hrefParts.pathname && currentHash === hrefParts.hash;
   }
 
-  return pathname === url.pathname;
+  if (hrefParts.pathname === "/") {
+    return pathname === "/" && currentHash === "";
+  }
+
+  return pathname === hrefParts.pathname && currentHash === "";
 }
 
 function NavLink({
@@ -445,7 +462,7 @@ function NavLink({
     "rounded-full px-4 py-2 text-sm transition-all duration-200",
     mobile && "flex min-h-10 w-full items-center px-3 text-left",
     isActive
-      ? "bg-[var(--accent-soft)] text-white shadow-[0_0_12px_var(--accent-glow)]"
+      ? "text-[var(--foreground-muted)] hover:bg-white/[0.05] hover:text-white hover:shadow-[0_0_8px_rgba(0,180,216,0.15)]"
       : "text-[var(--foreground-muted)] hover:bg-white/[0.05] hover:text-white hover:shadow-[0_0_8px_rgba(0,180,216,0.15)]",
   );
 
