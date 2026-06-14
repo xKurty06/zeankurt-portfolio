@@ -31,6 +31,7 @@ import { Award, BriefcaseBusiness, Camera, CalendarDays, Check, Code2, FileText,
 import SaveButton from "@/components/ui/SaveButton";
 import UploadWithValidation from "@/components/admin/UploadWithValidationClient";
 import UploadField from "@/components/admin/UploadFieldClient";
+import { AdminActionForm } from "@/app/admin/AdminActionForm";
 
 type Row = Record<string, unknown>;
 
@@ -290,9 +291,12 @@ function RowForm({
   action: (formData: FormData) => void | Promise<void>;
 }) {
   return (
-    <form action={action} className="rounded-2xl border border-[var(--border)] bg-white/[0.02] p-4">
+    <AdminActionForm
+      action={action}
+      className="rounded-2xl border border-[var(--border)] bg-white/[0.02] p-4"
+    >
       <div className="flex min-w-0 flex-col gap-3">{children}</div>
-    </form>
+    </AdminActionForm>
   );
 }
 
@@ -1215,8 +1219,8 @@ export default async function AdminPage() {
                       photos: categoryPhotos.map((photo) => ({
                         aspectRatio:
                           value(photo, "aspect_ratio") === "portrait" ||
-                          value(photo, "aspect_ratio") === "square" ||
-                          value(photo, "aspect_ratio") === "landscape"
+                            value(photo, "aspect_ratio") === "square" ||
+                            value(photo, "aspect_ratio") === "landscape"
                             ? (value(photo, "aspect_ratio") as "portrait" | "landscape" | "square")
                             : "landscape",
                         id: value(photo, "id"),
@@ -1236,7 +1240,7 @@ export default async function AdminPage() {
                                 type="submit"
                                 aria-label={`Delete ${value(photo, "title")}`}
                                 title="Delete"
-                    className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-red-400/20 bg-black/45 text-red-200 transition hover:bg-red-500/10 sm:h-8 sm:w-8"
+                                className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-red-400/20 bg-black/45 text-red-200 transition hover:bg-red-500/10 sm:h-8 sm:w-8"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
                               </button>

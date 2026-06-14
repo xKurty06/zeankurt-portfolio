@@ -123,6 +123,22 @@ function bool(formData: FormData, key: string) {
   return formData.get(key) === "on";
 }
 
+function shouldRedirectAfterAction(formData: FormData) {
+  return text(formData, "keep_modal_open") !== "1";
+}
+
+function redirectAfterAction(formData: FormData, href = "/admin") {
+  if (shouldRedirectAfterAction(formData)) {
+    redirect(href);
+  }
+}
+
+function mutationOptionsForForm(formData: FormData) {
+  return {
+    redirect: shouldRedirectAfterAction(formData),
+  };
+}
+
 function parseBoolean(value: string, fallback = false) {
   const normalized = value.trim().toLowerCase();
   if (!normalized) return fallback;
@@ -455,13 +471,16 @@ export async function signOut() {
 
 export async function saveProject(formData: FormData) {
   await requireAdmin();
+
   const title = requiredText(formData, "title", "Title");
   const slug = text(formData, "slug") || slugify(title);
   const currentSlug = optionalText(formData, "current_slug");
   const year = requiredText(formData, "year", "Year");
   const role = requiredText(formData, "role", "Role");
   const description = requiredText(formData, "description", "Description");
+
   await ensureUniqueByKey("projects", "slug", slug, currentSlug);
+
   const existingImagePath = optionalText(formData, "existing_image_path");
   const image = await uploadAssetIfPresent(
     formData,
@@ -490,6 +509,7 @@ export async function saveProject(formData: FormData) {
       published: bool(formData, "published"),
     },
     "slug",
+    mutationOptionsForForm(formData),
   );
 }
 
@@ -617,7 +637,7 @@ export async function importProjectsCsv(formData: FormData) {
   if (error) throw error;
 
   revalidateTag("portfolio-content", "max");
-  redirect("/admin#projects");
+  redirectAfterAction(formData, "/admin#projects");
 }
 
 export async function importExperienceCsv(formData: FormData) {
@@ -696,7 +716,7 @@ export async function importExperienceCsv(formData: FormData) {
   if (error) throw error;
 
   revalidateTag("portfolio-content", "max");
-  redirect("/admin#experience");
+  redirectAfterAction(formData, "/admin#experience");
 }
 
 export async function importCertificationsCsv(formData: FormData) {
@@ -777,7 +797,7 @@ export async function importCertificationsCsv(formData: FormData) {
   if (error) throw error;
 
   revalidateTag("portfolio-content", "max");
-  redirect("/admin#certifications");
+  redirectAfterAction(formData, "/admin#certifications");
 }
 
 export async function importEventsCsv(formData: FormData) {
@@ -863,7 +883,7 @@ export async function importEventsCsv(formData: FormData) {
   if (error) throw error;
 
   revalidateTag("portfolio-content", "max");
-  redirect("/admin#events");
+  redirectAfterAction(formData, "/admin#events");
 }
 
 export async function importSkillsCsv(formData: FormData) {
@@ -980,7 +1000,7 @@ export async function importSkillsCsv(formData: FormData) {
   }
 
   revalidateTag("portfolio-content", "max");
-  redirect("/admin#skills");
+  redirectAfterAction(formData, "/admin#skills");
 }
 
 export async function saveExperience(formData: FormData) {
@@ -991,7 +1011,9 @@ export async function saveExperience(formData: FormData) {
   const period = requiredText(formData, "period", "Period");
   const description = requiredText(formData, "description", "Description");
   const type = requiredText(formData, "type", "Type");
+
   await ensureUniqueByKey("experience_items", "slug", slug, currentSlug);
+
   await mutateAndRefresh(
     "experience_items",
     {
@@ -1005,15 +1027,18 @@ export async function saveExperience(formData: FormData) {
       published: bool(formData, "published"),
     },
     "slug",
+    mutationOptionsForForm(formData),
   );
 }
 
 export async function saveCertification(formData: FormData) {
   await requireAdmin();
+
   const name = requiredText(formData, "name", "Name");
   const issuer = requiredText(formData, "issuer", "Issuer");
   const id = optionalText(formData, "id") ?? crypto.randomUUID();
   const existingImagePath = optionalText(formData, "existing_image_path");
+
   const image = await uploadAssetIfPresent(
     formData,
     "image_file",
@@ -1021,26 +1046,35 @@ export async function saveCertification(formData: FormData) {
     existingImagePath,
   );
 
-  await mutateAndRefresh("certifications", {
-    id,
-    name,
-    issuer,
-    issued: optionalText(formData, "issued"),
-    expires: optionalText(formData, "expires"),
-    image_path: image ?? existingImagePath,
-    sort_order: await resolveSortOrder("certifications", formData),
-    published: bool(formData, "published"),
-  });
+  await mutateAndRefresh(
+    "certifications",
+    {
+      id,
+      name,
+      issuer,
+      issued: optionalText(formData, "issued"),
+      expires: optionalText(formData, "expires"),
+      image_path: image ?? existingImagePath,
+      sort_order: await resolveSortOrder("certifications", formData),
+      published: bool(formData, "published"),
+    },
+    undefined,
+    mutationOptionsForForm(formData),
+  );
 }
+
 
 export async function saveEvent(formData: FormData) {
   await requireAdmin();
+
   const title = requiredText(formData, "title", "Title");
   const slug = text(formData, "slug") || slugify(title);
   const currentSlug = optionalText(formData, "current_slug");
   const eventDate = requiredText(formData, "event_date", "Date");
   const venue = requiredText(formData, "venue", "Venue");
+
   await ensureUniqueByKey("events", "slug", slug, currentSlug);
+
   const existingImagePath = optionalText(formData, "existing_image_path");
   const image = await uploadAssetIfPresent(
     formData,
@@ -1065,35 +1099,53 @@ export async function saveEvent(formData: FormData) {
       published: bool(formData, "published"),
     },
     "slug",
+    mutationOptionsForForm(formData),
   );
 }
 
+
 export async function saveSkillCategory(formData: FormData) {
   const id = optionalText(formData, "id");
-  await mutateAndRefresh("skill_categories", {
-    ...(id ? { id } : {}),
-    name: requiredText(formData, "name", "Name"),
-    sort_order: await resolveSortOrder("skill_categories", formData),
-    published: bool(formData, "published"),
-  });
+
+  await mutateAndRefresh(
+    "skill_categories",
+    {
+      ...(id ? { id } : {}),
+      name: requiredText(formData, "name", "Name"),
+      sort_order: await resolveSortOrder("skill_categories", formData),
+      published: bool(formData, "published"),
+    },
+    undefined,
+    mutationOptionsForForm(formData),
+  );
 }
+
 
 export async function saveSkill(formData: FormData) {
   const id = optionalText(formData, "id");
-  await mutateAndRefresh("skills", {
-    ...(id ? { id } : {}),
-    category_id: requiredText(formData, "category_id", "Category"),
-    name: requiredText(formData, "name", "Name"),
-    sort_order: await resolveSortOrder("skills", formData),
-  });
+
+  await mutateAndRefresh(
+    "skills",
+    {
+      ...(id ? { id } : {}),
+      category_id: requiredText(formData, "category_id", "Category"),
+      name: requiredText(formData, "name", "Name"),
+      sort_order: await resolveSortOrder("skills", formData),
+    },
+    undefined,
+    mutationOptionsForForm(formData),
+  );
 }
+
 
 export async function saveCreativeCategory(formData: FormData) {
   await requireAdmin();
+
   const name = requiredText(formData, "name", "Name");
   const slug = text(formData, "slug") || slugify(name);
   const id = optionalText(formData, "id");
   const currentSlug = optionalText(formData, "current_slug");
+
   await ensureUniqueByKey("creative_categories", "slug", slug, currentSlug);
 
   const existingImagePath = optionalText(formData, "existing_image_path");
@@ -1105,16 +1157,22 @@ export async function saveCreativeCategory(formData: FormData) {
     PHOTOGRAPHY_BUCKET,
   );
 
-  await mutateAndRefresh("creative_categories", {
-    ...(id ? { id } : {}),
-    slug,
-    name,
-    description: optionalText(formData, "description"),
-    showcase_image_path: image ?? existingImagePath,
-    sort_order: await resolveSortOrder("creative_categories", formData),
-    published: bool(formData, "published"),
-  });
+  await mutateAndRefresh(
+    "creative_categories",
+    {
+      ...(id ? { id } : {}),
+      slug,
+      name,
+      description: optionalText(formData, "description"),
+      showcase_image_path: image ?? existingImagePath,
+      sort_order: await resolveSortOrder("creative_categories", formData),
+      published: bool(formData, "published"),
+    },
+    undefined,
+    mutationOptionsForForm(formData),
+  );
 }
+
 
 const DEFAULT_CREATIVE_CATEGORIES = [
   {
@@ -1164,9 +1222,11 @@ export async function seedDefaultCreativeCategories() {
 
 export async function saveCreativePhoto(formData: FormData) {
   await requireAdmin();
+
   const id = optionalText(formData, "id") ?? crypto.randomUUID();
   const categoryId = requiredText(formData, "category_id", "Category");
   const existingImagePath = optionalText(formData, "existing_image_path");
+
   const uploadedPhoto = await uploadCreativePhotoIfPresent(
     formData,
     "image_file",
@@ -1174,7 +1234,9 @@ export async function saveCreativePhoto(formData: FormData) {
     PHOTOGRAPHY_BUCKET,
   );
 
-  if (!uploadedPhoto && !existingImagePath) throw new Error("Photo image is required.");
+  if (!uploadedPhoto && !existingImagePath) {
+    throw new Error("Photo image is required.");
+  }
 
   await mutateAndRefresh(
     "creative_photos",
@@ -1189,9 +1251,10 @@ export async function saveCreativePhoto(formData: FormData) {
       published: bool(formData, "published"),
     },
     undefined,
-    { redirect: false },
+    mutationOptionsForForm(formData),
   );
 }
+
 
 export async function uploadCreativePhotos(formData: FormData) {
   const admin = await requireAdmin();
@@ -1311,11 +1374,12 @@ export async function saveSiteContent(formData: FormData) {
   const key = requiredText(formData, "key", "Key");
   const rawValue = requiredText(formData, "value", "Value");
   const value = JSON.parse(rawValue);
+
   const { error } = await admin.from("site_content").upsert({ key, value }, { onConflict: "key" });
   if (error) throw error;
 
   revalidateTag("portfolio-content", "max");
-  redirect("/admin");
+  redirectAfterAction(formData, "/admin");
 }
 
 export async function updateSortOrder({
