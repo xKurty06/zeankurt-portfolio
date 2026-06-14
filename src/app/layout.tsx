@@ -11,6 +11,7 @@ import { SavingProvider } from "@/lib/saving";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { siteConfig } from "@/data/site";
 import { ScrollToTopButton } from "@/components/ui/ScrollToTopButton";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -58,6 +59,7 @@ export default function RootLayout({
             <ScrollToTopButton />
           </SavingProvider>
         </ThemeProvider>
+        <Analytics />
       </body>
     </html>
   );
