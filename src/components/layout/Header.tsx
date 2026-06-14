@@ -402,6 +402,7 @@ function getMobileNavIcon(item: NavItem): LucideIcon {
   if (label.includes("project")) return FolderKanban;
   if (label.includes("experience")) return BriefcaseBusiness;
   if (label.includes("skill")) return Code2;
+  if (label.includes("creative") || label.includes("photography")) return Camera;
   if (label.includes("contact")) return Mail;
   if (label.includes("gallery")) return Images;
   if (label.includes("album")) return Camera;

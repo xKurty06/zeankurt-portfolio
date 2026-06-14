@@ -251,11 +251,11 @@ function comparePhotoItems(
   }
 
   return (
-    a.title.localeCompare(b.title, undefined, {
-      numeric: true,
-      sensitivity: "base",
-    }) * modifier
-  );
+  a.title.localeCompare(b.title, undefined, {
+    numeric: true,
+    sensitivity: "base",
+  }) * modifier
+);
 }
 
 const GRID_AUTO_ROW_HEIGHT = 4;
