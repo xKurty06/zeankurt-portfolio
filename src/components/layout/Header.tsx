@@ -109,7 +109,7 @@ function handleInternalAnchorClick(
   onNavigate?.();
 }
 
-export function Header({ variant = "default", siteConfig }: HeaderProps) {
+export function Header({ variant, siteConfig }: HeaderProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);

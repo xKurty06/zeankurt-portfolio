@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import type { PhotoAlbum, PhotoItem } from "@/types";
 import { Lightbox } from "@/components/photography/Lightbox";
 import { Container } from "@/components/ui/Container";
@@ -11,6 +11,7 @@ import { resolvePhotoAspectRatio } from "@/lib/photo-aspect";
 const GRID_AUTO_ROW_HEIGHT = 8;
 const FALLBACK_COLUMN_WIDTH = 280;
 const DEFAULT_GRID_GAP = 16;
+const PHOTOS_PER_PAGE = 24;
 
 interface AlbumPageContentProps {
   album: Pick<
@@ -120,6 +121,7 @@ function getDynamicGridRowSpan({
 
 export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
   const gridRef = useRef<HTMLDivElement>(null);
+  const gallerySectionRef = useRef<HTMLDivElement>(null);
 
   const albumPhotos = useMemo(
     () => sortPhotosByNaturalOrder(photos ?? []),
@@ -127,6 +129,7 @@ export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
   );
 
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const [imageRatios, setImageRatios] = useState<Record<string, number>>({});
   const [gridMetrics, setGridMetrics] = useState<AlbumGridMetrics>({
     columnWidth: FALLBACK_COLUMN_WIDTH,
@@ -272,6 +275,16 @@ export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
     return albumPhotos;
   }, [albumPhotos]);
 
+  const totalPages = Math.max(1, Math.ceil(galleryPhotos.length / PHOTOS_PER_PAGE));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+
+  const paginatedGalleryPhotos = useMemo(() => {
+    const start = (safeCurrentPage - 1) * PHOTOS_PER_PAGE;
+    const end = start + PHOTOS_PER_PAGE;
+
+    return galleryPhotos.slice(start, end);
+  }, [galleryPhotos, safeCurrentPage]);
+
   const lightboxPhotos = useMemo(() => {
     if (!displayedFeaturedPhoto) return albumPhotos;
 
@@ -289,6 +302,31 @@ export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
     */
     return [displayedFeaturedPhoto, ...albumPhotos];
   }, [albumPhotos, displayedFeaturedPhoto, isFeaturedImageFromAlbum]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+    setLightboxIndex(null);
+  }, [album.slug]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  const goToPage = (page: number) => {
+    const nextPage = Math.min(Math.max(1, page), totalPages);
+
+    setCurrentPage(nextPage);
+    setLightboxIndex(null);
+
+    requestAnimationFrame(() => {
+      gallerySectionRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+  };
 
   const openPhotoInLightbox = (photo: PhotoItem | null) => {
     if (!photo) return;
@@ -334,29 +372,14 @@ export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
     const featuredId = displayedFeaturedPhoto?.id ?? "featured";
     const ratio =
       imageRatios[featuredId] ?? getFallbackRatio(featuredAspectRatio);
-
-    if (featuredAspectRatio === "portrait") {
-      /*
-        Manual baseline: 44
-        Portrait featured image should never shrink below your manual height.
-        Extra-tall portrait images can grow more.
-      */
-      return Math.max(44, Math.min(64, Math.round(44 * (0.75 / ratio))));
-    }
-
-    if (featuredAspectRatio === "square") {
-      /*
-        Manual baseline: 26
-        Keep square featured stable.
-      */
-      return 26;
-    }
-
-    /*
-      Manual baseline: 17
-      Landscape featured image should not become taller than your manual size.
-    */
-    return Math.min(17, Math.max(13, Math.round(17 * (4 / 3 / ratio))));
+    
+      if (displayedFeaturedPhoto?.aspectRatio === "portrait") {
+        return Math.max(36, Math.round(24 * (0.75 / ratio)));
+      }
+      if (displayedFeaturedPhoto?.aspectRatio === "square") {
+        return 18;
+      }
+      return Math.min(16, Math.max(20, Math.round(24 * (4 / 3 / ratio))));
   };
 
   return (
@@ -379,27 +402,66 @@ export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
             Back to photography
           </Link>
 
-          <div
-            ref={gridRef}
+          <div ref={gallerySectionRef}>
+            <div
+              ref={gridRef}
             className="mt-0 grid min-w-0 grid-cols-2 auto-rows-[8px] gap-4 [grid-auto-flow:dense] lg:grid-cols-4"
-          >
+            >
             <div
               className="col-span-2 min-w-0 self-start lg:col-start-1 lg:row-start-1"
-              style={{ gridRowEnd: "span 6" }}
+              style={{ gridRowEnd: "span 8" }}
             >
               {showCategoryLabel ? (
-                <p className="font-mono text-xs uppercase tracking-[0.22em] text-white/45">
-                  {album.category}
-                </p>
+                <div className="inline-flex items-center gap-3 text-[var(--blue-200)]">
+                  <span className="h-px w-10 bg-gradient-to-r from-[rgba(72,202,228,0.8)] to-transparent" />
+                  <p className="font-[family-name:var(--font-syne)] text-[0.78rem] font-medium tracking-[0.18em] sm:text-[0.82rem]">
+                    {album.category}
+                  </p>
+                </div>
               ) : null}
 
-              <h1 className="mt-3 break-words font-[family-name:var(--font-syne)] text-[clamp(1.875rem,8vw,2.5rem)] font-semibold text-white sm:text-5xl">
+              <h1 className="mt-4 break-words font-[family-name:var(--font-syne)] text-[clamp(1.875rem,8vw,2.5rem)] font-semibold tracking-[-0.03em] text-white sm:text-5xl">
                 {album.title}
               </h1>
 
               <p className="mt-4 max-w-2xl text-base leading-relaxed text-white/65">
                 {album.description}
               </p>
+              {totalPages > 1 ? (
+                <div className="relative z-20 mt-6 flex w-full max-w-2xl flex-col gap-3 sm:gap-4">
+                  <div className="flex justify-center lg:hidden">
+                    <div className="inline-flex min-h-10 items-center rounded-full border border-[rgba(72,202,228,0.18)] bg-[rgba(72,202,228,0.08)] px-3 py-2 font-mono text-xs text-[var(--blue-300)]">
+                      {safeCurrentPage} / {totalPages}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 lg:grid-cols-[1fr_auto_1fr] lg:items-center">
+                    <button
+                      type="button"
+                      onClick={() => goToPage(safeCurrentPage - 1)}
+                      disabled={safeCurrentPage <= 1}
+                      className="inline-flex min-h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.02] px-3 py-2 text-xs font-medium text-white/70 transition enabled:hover:border-white/20 enabled:hover:bg-white/[0.05] enabled:hover:text-white disabled:cursor-not-allowed disabled:opacity-40 lg:min-h-10 lg:w-auto lg:justify-self-start"
+                    >
+                      <ArrowLeft className="h-3.5 w-3.5" />
+                      Previous
+                    </button>
+
+                    <div className="hidden lg:inline-flex lg:min-h-10 lg:justify-self-center lg:items-center lg:rounded-full lg:border lg:border-[rgba(72,202,228,0.18)] lg:bg-[rgba(72,202,228,0.08)] lg:px-3 lg:py-2 lg:font-mono lg:text-xs lg:text-[var(--blue-300)]">
+                      {safeCurrentPage} / {totalPages}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => goToPage(safeCurrentPage + 1)}
+                      disabled={safeCurrentPage >= totalPages}
+                      className="inline-flex min-h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-full border border-white/10 bg-white/[0.02] px-3 py-2 text-xs font-medium text-white/70 transition enabled:hover:border-white/20 enabled:hover:bg-white/[0.05] enabled:hover:text-white disabled:cursor-not-allowed disabled:opacity-40 lg:min-h-10 lg:w-auto lg:justify-self-end"
+                    >
+                      Next
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ) : null}
             </div>
 
             {featuredImage || displayedFeaturedPhoto ? (
@@ -451,7 +513,7 @@ export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
               </button>
             ) : null}
 
-            {galleryPhotos.map((photo) => (
+              {paginatedGalleryPhotos.map((photo) => (
               <button
                 key={photo.id}
                 type="button"
@@ -492,8 +554,17 @@ export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
                   </p>
                 </div>
               </button>
-            ))}
+              ))}
+            </div>
           </div>
+
+          <PaginationControls
+            currentPage={safeCurrentPage}
+            totalPages={totalPages}
+            totalItems={galleryPhotos.length}
+            pageSize={PHOTOS_PER_PAGE}
+            onPageChange={goToPage}
+          />
         </Container>
       </section>
 
@@ -504,5 +575,64 @@ export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
         onNavigate={setLightboxIndex}
       />
     </>
+  );
+}
+
+function PaginationControls({
+  currentPage,
+  totalPages,
+  totalItems,
+  pageSize,
+  onPageChange,
+}: {
+  currentPage: number;
+  totalPages: number;
+  totalItems: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
+}) {
+  if (totalPages <= 1) return null;
+
+  const start = (currentPage - 1) * pageSize + 1;
+  const end = Math.min(currentPage * pageSize, totalItems);
+
+  return (
+    <div className="mt-10 flex flex-col gap-4 rounded-2xl border border-[var(--border)] bg-white/[0.02] px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+      <p className="text-center font-mono text-xs uppercase tracking-[0.18em] text-[var(--foreground-subtle)] sm:text-left">
+        Showing {start}-{end} of {totalItems}
+      </p>
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-2">
+        <span className="inline-flex min-h-10 items-center justify-center rounded-full border border-[rgba(72,202,228,0.18)] bg-[rgba(72,202,228,0.08)] px-3 py-2 font-mono text-xs text-[var(--blue-300)] sm:hidden">
+          Page {currentPage} / {totalPages}
+        </span>
+
+        <div className="grid grid-cols-2 gap-3 sm:flex sm:items-center sm:gap-2">
+        <button
+          type="button"
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage <= 1}
+          className="inline-flex min-h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-full border border-[var(--border)] px-3 py-2 text-xs font-medium text-[var(--foreground-muted)] transition enabled:hover:border-[var(--border-strong)] enabled:hover:text-white disabled:cursor-not-allowed disabled:opacity-40 sm:min-h-10 sm:w-auto"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Previous
+        </button>
+
+        <span className="hidden min-h-10 items-center rounded-full border border-[rgba(72,202,228,0.18)] bg-[rgba(72,202,228,0.08)] px-3 py-2 font-mono text-xs text-[var(--blue-300)] sm:inline-flex">
+          {currentPage} / {totalPages}
+        </span>
+
+        <button
+          type="button"
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage >= totalPages}
+          className="inline-flex min-h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-full border border-[var(--border)] px-3 py-2 text-xs font-medium text-[var(--foreground-muted)] transition enabled:hover:border-[var(--border-strong)] enabled:hover:text-white disabled:cursor-not-allowed disabled:opacity-40 sm:min-h-10 sm:w-auto"
+        >
+          Next
+          <ArrowRight className="h-3.5 w-3.5" />
+        </button>
+        </div>
+      </div>
+    </div>
   );
 }

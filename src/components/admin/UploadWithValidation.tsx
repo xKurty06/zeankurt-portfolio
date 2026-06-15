@@ -386,8 +386,8 @@ export default function UploadWithValidation({
     const progressPercent = Math.min(100, Math.max(0, Math.round((loadedBytes / Math.max(1, totalBytes)) * 100)));
     const uploadIndicatorLabel =
       processingCount > 0
-        ? `${baseUploadIndicatorLabel.replace(/\.\s*$/, "")} ${processingCount} photo${processingCount === 1 ? " is" : "s are"} processing on the server.`
-        : baseUploadIndicatorLabel;
+        ? `Uploading ${selectedFiles.length} photo${selectedFiles.length === 1 ? "" : "s"}. You can close this modal and keep working.`
+        : `Uploading ${selectedFiles.length} photo${selectedFiles.length === 1 ? "" : "s"}. You can close this modal and keep working.`;
 
     setSaving(true, uploadIndicatorLabel, {
       cancelAction: cancelUpload,
@@ -530,7 +530,7 @@ export default function UploadWithValidation({
         </div>
       ) : null}
 
-      {overLimit ? (
+      {overLimit && !selectionApproved ? (
         <div className="mt-3 rounded-2xl border border-yellow-500/20 bg-yellow-500/8 p-3">
           <div className="flex items-start gap-3">
             <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-yellow-400/20 bg-yellow-500/10 text-yellow-200">
@@ -547,7 +547,7 @@ export default function UploadWithValidation({
                 <button
                   type="button"
                   onClick={() => setSelectionApproved(true)}
-                  className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-2 text-xs font-medium text-emerald-200 transition hover:bg-emerald-500/15"
+                  className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-2 text-xs font-medium text-emerald-200 transition hover:bg-emerald-500/15"
                 >
                   <Check className="h-3.5 w-3.5" />
                   Keep selection

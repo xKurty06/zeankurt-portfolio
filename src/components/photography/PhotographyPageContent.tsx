@@ -128,7 +128,7 @@ export function PhotographyPageContent({
         <Container className="pointer-events-none relative z-10">
           <p
             data-photo-hero="line"
-            className="font-mono text-xs uppercase tracking-[0.28em] text-white/50"
+            className="font-[family-name:var(--font-syne)] text-[0.8rem] font-medium tracking-[0.18em] text-[var(--blue-200)]"
           >
             {siteConfig.photographyBrand}
           </p>
@@ -167,11 +167,14 @@ export function PhotographyPageContent({
           <section id="albums" className="scroll-mt-28 px-0 py-0">
             <div className="mb-8 flex flex-col items-center gap-3 text-center md:flex-row md:items-end md:justify-between md:text-left">
               <div>
-                <p className="font-mono text-xs uppercase tracking-[0.22em] text-white/45">
-                  Albums
-                </p>
+                <div className="inline-flex items-center gap-3 text-[var(--blue-200)]">
+                  <span className="h-px w-10 bg-gradient-to-r from-[rgba(72,202,228,0.8)] to-transparent" />
+                  <p className="font-[family-name:var(--font-syne)] text-[0.78rem] font-medium tracking-[0.18em] sm:text-[0.82rem]">
+                    Albums
+                  </p>
+                </div>
 
-                <h2 className="mt-2 font-[family-name:var(--font-syne)] text-3xl font-semibold text-white">
+                <h2 className="mt-4 font-[family-name:var(--font-syne)] text-3xl font-semibold tracking-[-0.02em] text-white">
                   Collections
                 </h2>
               </div>
@@ -193,12 +196,15 @@ export function PhotographyPageContent({
           <section ref={gallerySectionRef} className="mt-20 scroll-mt-28">
             <div className="mb-8 flex flex-col items-center gap-4 text-center sm:flex-row sm:items-center sm:justify-between sm:text-left">
               <div className="min-w-0">
-                <p className="font-mono text-xs uppercase tracking-[0.22em] text-white/45">
-                  Gallery
-                </p>
+                <div className="inline-flex items-center gap-3 text-[var(--blue-200)]">
+                  <span className="h-px w-10 bg-gradient-to-r from-[rgba(72,202,228,0.8)] to-transparent" />
+                  <p className="font-[family-name:var(--font-syne)] text-[0.78rem] font-medium tracking-[0.18em] sm:text-[0.82rem]">
+                    Gallery
+                  </p>
+                </div>
 
-                <div className="mt-2 flex flex-col items-center gap-2 sm:flex-row sm:items-center sm:justify-start">
-                  <h2 className="font-[family-name:var(--font-syne)] text-3xl font-semibold leading-tight text-white">
+                <div className="mt-4 flex flex-col items-center gap-2 sm:flex-row sm:items-center sm:justify-start">
+                  <h2 className="font-[family-name:var(--font-syne)] text-3xl font-semibold leading-tight tracking-[-0.02em] text-white">
                     All frames
                   </h2>
 

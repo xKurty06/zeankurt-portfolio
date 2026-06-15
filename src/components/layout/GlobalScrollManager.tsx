@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 
 function removeHashFromUrl() {
@@ -13,6 +13,7 @@ function removeHashFromUrl() {
 
 export function GlobalScrollManager() {
     const pathname = usePathname();
+    const hasHandledInitialLoadRef = useRef(false);
 
     useEffect(() => {
         if (typeof window === "undefined") return;
@@ -34,6 +35,7 @@ export function GlobalScrollManager() {
 
             const url = new URL(window.location.href);
             const isAdminPage = pathname?.startsWith("/admin");
+            const isInitialLoad = !hasHandledInitialLoadRef.current;
 
             if (isAdminPage) {
                 if (url.hash) {
@@ -52,11 +54,13 @@ export function GlobalScrollManager() {
             }
 
             if (url.hash) {
-                // Let the browser or custom nav finish scrolling to the section first,
-                // then clean the URL so refresh does not reopen the same section.
-                hashTimer = setTimeout(() => {
-                    removeHashFromUrl();
-                }, 700);
+                // Only clear hash on the initial document load/refresh.
+                // During in-app navigation we keep the hash so section state stays stable.
+                if (isInitialLoad) {
+                    hashTimer = setTimeout(() => {
+                        removeHashFromUrl();
+                    }, 700);
+                }
 
                 return;
             }
@@ -71,12 +75,10 @@ export function GlobalScrollManager() {
         };
 
         handleScrollBehavior();
-
-        window.addEventListener("hashchange", handleScrollBehavior);
+        hasHandledInitialLoadRef.current = true;
 
         return () => {
             clearHashTimer();
-            window.removeEventListener("hashchange", handleScrollBehavior);
             window.history.scrollRestoration = previousScrollRestoration;
         };
     }, [pathname]);
