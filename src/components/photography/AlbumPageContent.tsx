@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import type { PhotoAlbum, PhotoItem } from "@/types";
@@ -8,12 +8,22 @@ import { Lightbox } from "@/components/photography/Lightbox";
 import { Container } from "@/components/ui/Container";
 import { resolvePhotoAspectRatio } from "@/lib/photo-aspect";
 
+const GRID_AUTO_ROW_HEIGHT = 8;
+const FALLBACK_COLUMN_WIDTH = 280;
+const DEFAULT_GRID_GAP = 16;
+
 interface AlbumPageContentProps {
   album: Pick<
     PhotoAlbum,
     "slug" | "title" | "description" | "category" | "coverImage"
   >;
   photos?: PhotoItem[];
+}
+
+interface AlbumGridMetrics {
+  columnWidth: number;
+  columnGap: number;
+  rowGap: number;
 }
 
 function getPhotoOrderNumber(photo: PhotoItem) {
@@ -56,13 +66,73 @@ function sortPhotosByNaturalOrder(photos: PhotoItem[]) {
   });
 }
 
+function getFallbackRatio(aspectRatio: PhotoItem["aspectRatio"]) {
+  if (aspectRatio === "portrait") return 3 / 4;
+  if (aspectRatio === "square") return 1;
+
+  return 4 / 3;
+}
+
+function readAlbumGridMetrics(element: HTMLElement): AlbumGridMetrics {
+  const styles = window.getComputedStyle(element);
+
+  const parsedColumns = styles.gridTemplateColumns
+    .split(" ")
+    .map((value) => Number.parseFloat(value))
+    .filter((value) => Number.isFinite(value) && value > 0);
+
+  const columnGap = Number.parseFloat(styles.columnGap) || DEFAULT_GRID_GAP;
+  const rowGap = Number.parseFloat(styles.rowGap) || DEFAULT_GRID_GAP;
+
+  return {
+    columnWidth: parsedColumns[0] ?? FALLBACK_COLUMN_WIDTH,
+    columnGap,
+    rowGap,
+  };
+}
+
+function getGridItemWidth(metrics: AlbumGridMetrics, columnSpan: number) {
+  return metrics.columnWidth * columnSpan + metrics.columnGap * (columnSpan - 1);
+}
+
+function getDynamicGridRowSpan({
+  ratio,
+  columnSpan,
+  metrics,
+  minimumRows,
+}: {
+  ratio: number;
+  columnSpan: number;
+  metrics: AlbumGridMetrics;
+  minimumRows: number;
+}) {
+  const safeRatio = Number.isFinite(ratio) && ratio > 0 ? ratio : 4 / 3;
+  const itemWidth = getGridItemWidth(metrics, columnSpan);
+  const targetHeight = itemWidth / safeRatio;
+
+  return Math.max(
+    minimumRows,
+    Math.ceil(
+      (targetHeight + metrics.rowGap) / (GRID_AUTO_ROW_HEIGHT + metrics.rowGap),
+    ),
+  );
+}
+
 export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
+  const gridRef = useRef<HTMLDivElement>(null);
+
   const albumPhotos = useMemo(
     () => sortPhotosByNaturalOrder(photos ?? []),
     [photos],
   );
 
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [imageRatios, setImageRatios] = useState<Record<string, number>>({});
+  const [gridMetrics, setGridMetrics] = useState<AlbumGridMetrics>({
+    columnWidth: FALLBACK_COLUMN_WIDTH,
+    columnGap: DEFAULT_GRID_GAP,
+    rowGap: DEFAULT_GRID_GAP,
+  });
 
   const fallbackFeaturedPhoto =
     albumPhotos.find((photo) => photo.featured) ?? albumPhotos[0] ?? null;
@@ -75,6 +145,62 @@ export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
   const [featuredAspectRatio, setFeaturedAspectRatio] = useState<
     PhotoItem["aspectRatio"]
   >(fallbackFeaturedPhoto?.aspectRatio ?? "landscape");
+
+  useEffect(() => {
+    const grid = gridRef.current;
+
+    if (!grid) return;
+
+    const updateGridMetrics = () => {
+      const nextMetrics = readAlbumGridMetrics(grid);
+
+      setGridMetrics((current) => {
+        const sameColumnWidth =
+          Math.abs(current.columnWidth - nextMetrics.columnWidth) < 0.5;
+        const sameColumnGap =
+          Math.abs(current.columnGap - nextMetrics.columnGap) < 0.5;
+        const sameRowGap = Math.abs(current.rowGap - nextMetrics.rowGap) < 0.5;
+
+        if (sameColumnWidth && sameColumnGap && sameRowGap) {
+          return current;
+        }
+
+        return nextMetrics;
+      });
+    };
+
+    updateGridMetrics();
+
+    const observer = new ResizeObserver(updateGridMetrics);
+    observer.observe(grid);
+
+    window.addEventListener("resize", updateGridMetrics);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updateGridMetrics);
+    };
+  }, []);
+
+  const registerImageRatio = useCallback(
+    (id: string, width: number, height: number) => {
+      if (width <= 0 || height <= 0) return;
+
+      const ratio = width / height;
+
+      setImageRatios((current) => {
+        if (Math.abs((current[id] ?? 0) - ratio) < 0.001) {
+          return current;
+        }
+
+        return {
+          ...current,
+          [id]: ratio,
+        };
+      });
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!featuredImage) return;
@@ -176,27 +302,61 @@ export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
     }
   };
 
-  const getGalleryRowSpan = (aspectRatio: PhotoItem["aspectRatio"]) => {
-    if (aspectRatio === "portrait") return 18;
-    if (aspectRatio === "square") return 12;
+  const getGalleryRowSpan = (photo: PhotoItem) => {
+    const ratio = imageRatios[photo.id] ?? getFallbackRatio(photo.aspectRatio);
 
-    return 8;
-  };
-
-  const getFeaturedRowSpan = (aspectRatio: PhotoItem["aspectRatio"]) => {
-    if (aspectRatio === "portrait") {
-      return 44;
+    if (photo.aspectRatio === "portrait") {
+      /*
+        Manual baseline: 18
+        Portrait should never become shorter than your manual size.
+        Extra-tall portrait images can become slightly taller.
+      */
+      return Math.max(18, Math.min(26, Math.round(18 * (0.75 / ratio))));
     }
 
-    if (aspectRatio === "square") {
+    if (photo.aspectRatio === "square") {
+      /*
+        Manual baseline: 12
+        Keep square stable.
+      */
+      return 12;
+    }
+
+    /*
+      Manual baseline: 8
+      Landscape should not become taller than your manual size.
+      Wider landscape images can become slightly shorter.
+    */
+    return Math.min(8, Math.max(6, Math.round(8 * (4 / 3 / ratio))));
+  };
+
+  const getFeaturedRowSpan = () => {
+    const featuredId = displayedFeaturedPhoto?.id ?? "featured";
+    const ratio =
+      imageRatios[featuredId] ?? getFallbackRatio(featuredAspectRatio);
+
+    if (featuredAspectRatio === "portrait") {
+      /*
+        Manual baseline: 44
+        Portrait featured image should never shrink below your manual height.
+        Extra-tall portrait images can grow more.
+      */
+      return Math.max(44, Math.min(64, Math.round(44 * (0.75 / ratio))));
+    }
+
+    if (featuredAspectRatio === "square") {
+      /*
+        Manual baseline: 26
+        Keep square featured stable.
+      */
       return 26;
     }
 
     /*
-      Landscape featured image should have similar height
-      to a normal portrait gallery card.
+      Manual baseline: 17
+      Landscape featured image should not become taller than your manual size.
     */
-    return 17;
+    return Math.min(17, Math.max(13, Math.round(17 * (4 / 3 / ratio))));
   };
 
   return (
@@ -219,7 +379,10 @@ export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
             Back to photography
           </Link>
 
-          <div className="mt-0 grid min-w-0 grid-cols-2 auto-rows-[8px] gap-4 [grid-auto-flow:dense] lg:grid-cols-4">
+          <div
+            ref={gridRef}
+            className="mt-0 grid min-w-0 grid-cols-2 auto-rows-[8px] gap-4 [grid-auto-flow:dense] lg:grid-cols-4"
+          >
             <div
               className="col-span-2 min-w-0 self-start lg:col-start-1 lg:row-start-1"
               style={{ gridRowEnd: "span 6" }}
@@ -245,7 +408,7 @@ export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
                 onClick={() => openPhotoInLightbox(displayedFeaturedPhoto)}
                 className="group relative col-span-2 min-h-11 overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))] text-left transition hover:border-white/30 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 lg:col-start-3 lg:row-start-1"
                 style={{
-                  gridRowEnd: `span ${getFeaturedRowSpan(featuredAspectRatio)}`,
+                  gridRowEnd: `span ${getFeaturedRowSpan()}`,
                 }}
               >
                 {featuredImage ? (
@@ -256,6 +419,9 @@ export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
                     loading="eager"
                     onLoad={(event) => {
                       const { naturalWidth, naturalHeight } = event.currentTarget;
+                      const featuredId = displayedFeaturedPhoto?.id ?? "featured";
+
+                      registerImageRatio(featuredId, naturalWidth, naturalHeight);
 
                       setFeaturedAspectRatio(
                         resolvePhotoAspectRatio(naturalWidth, naturalHeight),
@@ -292,7 +458,7 @@ export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
                 onClick={() => openPhotoInLightbox(photo)}
                 className="group relative min-h-11 overflow-hidden rounded-2xl bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))] text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
                 style={{
-                  gridRowEnd: `span ${getGalleryRowSpan(photo.aspectRatio)}`,
+                  gridRowEnd: `span ${getGalleryRowSpan(photo)}`,
                 }}
               >
                 {photo.image ? (
@@ -301,6 +467,11 @@ export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
                     alt={photo.title}
                     className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.03]"
                     loading="lazy"
+                    onLoad={(event) => {
+                      const { naturalWidth, naturalHeight } = event.currentTarget;
+
+                      registerImageRatio(photo.id, naturalWidth, naturalHeight);
+                    }}
                   />
                 ) : (
                   <div className="absolute inset-0 flex items-end bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))] p-6">
