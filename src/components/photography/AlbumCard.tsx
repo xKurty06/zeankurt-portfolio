@@ -26,10 +26,6 @@ export function AlbumCard({ album }: AlbumCardProps) {
         <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-[#030712]/88 via-[#030712]/18 to-transparent" />
 
         <div className="absolute inset-x-0 bottom-0 p-3 sm:p-4">
-          <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-white/55 sm:text-[10px]">
-            {album.category}
-          </p>
-
           <h3 className="mt-1 break-words font-[family-name:var(--font-syne)] text-base font-semibold leading-snug text-white sm:text-lg">
             {album.title}
           </h3>

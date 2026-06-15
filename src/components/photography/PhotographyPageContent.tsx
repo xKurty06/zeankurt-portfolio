@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, ChevronDown, X } from "lucide-react";
 import { useGSAP } from "@gsap/react";
 import type { SiteConfig } from "@/types/site";
 import { socialGroups } from "@/data/social";
@@ -21,6 +21,17 @@ import { SocialLinks } from "@/components/ui/SocialLinks";
 import type { CreativeCategory } from "@/types";
 
 const PHOTOS_PER_PAGE = 24;
+
+function shufflePhotos<T>(items: T[]) {
+  const next = [...items];
+
+  for (let index = next.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [next[index], next[swapIndex]] = [next[swapIndex], next[index]];
+  }
+
+  return next;
+}
 
 interface PhotographyPageContentProps {
   creativeCategories: CreativeCategory[];
@@ -49,15 +60,24 @@ export function PhotographyPageContent({
     [creativeCategories],
   );
 
+  // Shuffle only on the client to avoid SSR / hydration mismatches
+  const [shuffledPhotos, setShuffledPhotos] = useState(() => photos);
+
+  useEffect(() => {
+    // Run shuffle after mount so server and initial client render stay consistent
+    setShuffledPhotos(shufflePhotos(photos));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [photos]);
+
   const [activeCategory, setActiveCategory] = useState<string>("All");
   const [currentPage, setCurrentPage] = useState(1);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   const filteredPhotos = useMemo(() => {
-    if (activeCategory === "All") return photos;
+    if (activeCategory === "All") return shuffledPhotos;
 
-    return photos.filter((photo) => photo.category === activeCategory);
-  }, [activeCategory, photos]);
+    return shuffledPhotos.filter((photo) => photo.category === activeCategory);
+  }, [activeCategory, shuffledPhotos]);
 
   const totalPages = Math.max(1, Math.ceil(filteredPhotos.length / PHOTOS_PER_PAGE));
   const safeCurrentPage = Math.min(currentPage, totalPages);
@@ -168,7 +188,7 @@ export function PhotographyPageContent({
             <div className="mb-8 flex flex-col items-center gap-3 text-center md:flex-row md:items-end md:justify-between md:text-left">
               <div>
                 <div className="inline-flex items-center gap-3 text-[var(--blue-200)]">
-                  <span className="h-px w-10 bg-gradient-to-r from-[rgba(72,202,228,0.8)] to-transparent" />
+                  <span className="hidden h-px w-10 bg-gradient-to-r from-[rgba(72,202,228,0.8)] to-transparent sm:block" />
                   <p className="font-[family-name:var(--font-syne)] text-[0.78rem] font-medium tracking-[0.18em] sm:text-[0.82rem]">
                     Albums
                   </p>
@@ -181,7 +201,7 @@ export function PhotographyPageContent({
             </div>
 
             {photoAlbums.length > 0 ? (
-              <div className="grid max-w-full grid-cols-2 gap-3 sm:gap-4 md:gap-5 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4">
+              <div className="grid max-w-full grid-cols-2 gap-1 sm:gap-4 md:gap-5 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4">
                 {photoAlbums.map((album) => (
                   <AlbumCard key={album.slug} album={album} />
                 ))}
@@ -197,13 +217,13 @@ export function PhotographyPageContent({
             <div className="mb-8 flex flex-col items-center gap-4 text-center sm:flex-row sm:items-center sm:justify-between sm:text-left">
               <div className="min-w-0">
                 <div className="inline-flex items-center gap-3 text-[var(--blue-200)]">
-                  <span className="h-px w-10 bg-gradient-to-r from-[rgba(72,202,228,0.8)] to-transparent" />
+                  <span className="hidden h-px w-10 bg-gradient-to-r from-[rgba(72,202,228,0.8)] to-transparent sm:block" />
                   <p className="font-[family-name:var(--font-syne)] text-[0.78rem] font-medium tracking-[0.18em] sm:text-[0.82rem]">
                     Gallery
                   </p>
                 </div>
 
-                <div className="mt-4 flex flex-col items-center gap-2 sm:flex-row sm:items-center sm:justify-start">
+                <div className="mt-4 flex flex-row items-center justify-center gap-2 sm:flex-row sm:items-center sm:justify-start">
                   <h2 className="font-[family-name:var(--font-syne)] text-3xl font-semibold leading-tight tracking-[-0.02em] text-white">
                     All frames
                   </h2>
@@ -214,11 +234,32 @@ export function PhotographyPageContent({
                 </div>
               </div>
 
+              <div className="flex w-full flex-col gap-3 sm:hidden">
+                <div className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+                  <InlinePaginationControls
+                    currentPage={safeCurrentPage}
+                    totalPages={totalPages}
+                    onPageChange={goToPage}
+                    className="min-w-0 flex-1"
+                  />
+
+                  {photos.length > 0 ? (
+                    <GalleryFilter
+                      categories={photoCategories}
+                      active={activeCategory}
+                      onChange={setActiveCategory}
+                      className={totalPages > 1 ? "w-auto min-w-[9.25rem] shrink-0" : "w-full"}
+                    />
+                  ) : null}
+                </div>
+              </div>
+
               {photos.length > 0 ? (
                 <GalleryFilter
                   categories={photoCategories}
                   active={activeCategory}
                   onChange={setActiveCategory}
+                  className="hidden sm:flex"
                 />
               ) : null}
             </div>
@@ -267,29 +308,162 @@ function GalleryFilter({
   categories,
   active,
   onChange,
+  className,
 }: {
   categories: readonly string[];
   active: string;
   onChange: (category: string) => void;
+  className?: string;
+}) {
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const hasActiveFilter = active !== "All";
+  const mobileFilterRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [active]);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+      if (!mobileFilterRef.current) return;
+
+      const target = event.target;
+
+      if (target instanceof Node && !mobileFilterRef.current.contains(target)) {
+        setMobileOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("touchstart", handlePointerDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("touchstart", handlePointerDown);
+    };
+  }, [mobileOpen]);
+
+  return (
+    <div className={cn("w-full sm:w-auto", className)}>
+      <div ref={mobileFilterRef} className="relative sm:hidden">
+        <div className="flex min-h-11 items-center rounded-full border border-[var(--border)] bg-white/[0.02] pr-1">
+          <button
+            type="button"
+            onClick={() => setMobileOpen((current) => !current)}
+            className="flex min-h-11 min-w-0 flex-1 items-center justify-between gap-3 px-4 text-left text-xs font-medium text-white/80"
+            aria-expanded={mobileOpen}
+            aria-label="Open gallery filters"
+          >
+            <span className="truncate">All filters</span>
+            {!hasActiveFilter ? (
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 shrink-0 text-white/60 transition duration-200 ease-out",
+                  mobileOpen && "rotate-180 text-white/85",
+                )}
+              />
+            ) : null}
+          </button>
+
+          {hasActiveFilter ? (
+            <button
+              type="button"
+              onClick={() => onChange("All")}
+              className="inline-flex h-9 w-9 cursor-pointer items-center justify-center text-white/70 transition hover:border-white/20 hover:text-white mr-2"
+              aria-label="Clear filter"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          ) : null}
+        </div>
+
+        <div
+          className={cn(
+            "absolute left-0 right-0 top-full z-20 mt-2 rounded-2xl border border-[var(--border)] bg-[rgba(4,8,18,0.96)] p-2 shadow-[0_18px_48px_rgba(2,8,23,0.42)] backdrop-blur transition duration-200 ease-out",
+            mobileOpen
+              ? "translate-y-0 opacity-100 pointer-events-auto"
+              : "pointer-events-none -translate-y-2 opacity-0",
+          )}
+          aria-hidden={!mobileOpen}
+        >
+          {categories.map((category) => (
+            <button
+              key={category}
+              type="button"
+              onClick={() => onChange(category)}
+              className={cn(
+                "flex min-h-11 w-full cursor-pointer items-center rounded-xl px-3 text-left text-sm transition",
+                active === category
+                  ? "bg-[var(--accent-soft)] text-white"
+                  : "text-[var(--foreground-muted)] hover:bg-white/[0.04] hover:text-white",
+              )}
+            >
+              {category}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="hidden max-w-full gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:flex sm:flex-wrap sm:justify-end sm:overflow-visible [&::-webkit-scrollbar]:hidden">
+        {categories.map((category) => (
+          <button
+            key={category}
+            type="button"
+            data-interactive
+            onClick={() => onChange(category)}
+            className={cn(
+              "min-h-10 shrink-0 cursor-pointer rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200 sm:min-h-0 sm:py-1",
+              active === category
+                ? "border-[var(--blue-500)] bg-[var(--accent-soft)] text-white shadow-[0_0_12px_var(--accent-glow)]"
+                : "border-[var(--border)] text-[var(--foreground-muted)] hover:border-[var(--border-strong)] hover:text-white",
+            )}
+          >
+            {category}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function InlinePaginationControls({
+  currentPage,
+  totalPages,
+  onPageChange,
+  className,
+}: {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+  className?: string;
 }) {
   return (
-    <div className="flex max-w-full gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-wrap sm:justify-end sm:overflow-visible [&::-webkit-scrollbar]:hidden">
-      {categories.map((category) => (
-        <button
-          key={category}
-          type="button"
-          data-interactive
-          onClick={() => onChange(category)}
-          className={cn(
-            "min-h-10 shrink-0 cursor-pointer rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200 sm:min-h-0 sm:py-1",
-            active === category
-              ? "border-[var(--blue-500)] bg-[var(--accent-soft)] text-white shadow-[0_0_12px_var(--accent-glow)]"
-              : "border-[var(--border)] text-[var(--foreground-muted)] hover:border-[var(--border-strong)] hover:text-white",
-          )}
-        >
-          {category}
-        </button>
-      ))}
+    <div className={cn("grid min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1.5", className)}>
+      <button
+        type="button"
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={currentPage <= 1}
+        className="inline-flex min-h-11 min-w-0 cursor-pointer items-center justify-center gap-1 rounded-full border border-[var(--border)] px-2.5 py-2 text-[11px] font-medium text-[var(--foreground-muted)] transition enabled:hover:border-[var(--border-strong)] enabled:hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        <ArrowLeft className="h-3.5 w-3.5" />
+        <span className="truncate">Prev</span>
+      </button>
+
+      <span className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-full border border-[rgba(72,202,228,0.18)] bg-[rgba(72,202,228,0.08)] px-2.5 py-2 font-mono text-[11px] text-[var(--blue-300)]">
+        {currentPage} / {totalPages}
+      </span>
+
+      <button
+        type="button"
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={currentPage >= totalPages}
+        className="inline-flex min-h-11 min-w-0 cursor-pointer items-center justify-center gap-1 rounded-full border border-[var(--border)] px-2.5 py-2 text-[11px] font-medium text-[var(--foreground-muted)] transition enabled:hover:border-[var(--border-strong)] enabled:hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        <span className="truncate">Next</span>
+        <ArrowRight className="h-3.5 w-3.5" />
+      </button>
     </div>
   );
 }
@@ -313,23 +487,28 @@ function PaginationControls({
   const end = Math.min(currentPage * pageSize, totalItems);
 
   return (
-    <div className="mt-10 flex flex-col items-center justify-between gap-4 rounded-2xl border border-[var(--border)] bg-white/[0.02] px-4 py-4 sm:flex-row">
+    <div className="mt-10 flex flex-col gap-4 sm:rounded-2xl sm:border sm:border-[var(--border)] sm:bg-white/[0.02] sm:px-4 sm:py-4 sm:flex-row sm:items-center sm:justify-between">
       <p className="text-center font-mono text-xs uppercase tracking-[0.18em] text-[var(--foreground-subtle)] sm:text-left">
         Showing {start}-{end} of {totalItems}
       </p>
 
-      <div className="flex items-center gap-2">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-2">
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 sm:flex sm:items-center sm:gap-2">
         <button
           type="button"
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage <= 1}
-          className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-full border border-[var(--border)] px-3 py-2 text-xs font-medium text-[var(--foreground-muted)] transition enabled:hover:border-[var(--border-strong)] enabled:hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex min-h-11 w-auto justify-self-start cursor-pointer items-center justify-start gap-2 rounded-full border border-[var(--border)] bg-white/[0.02] px-3 py-2 text-xs font-medium text-[var(--foreground-muted)] transition enabled:hover:border-[var(--border-strong)] enabled:hover:text-white disabled:cursor-not-allowed disabled:opacity-40 sm:min-h-10 sm:justify-center"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           Previous
         </button>
 
-        <span className="inline-flex min-h-10 items-center rounded-full border border-[rgba(72,202,228,0.18)] bg-[rgba(72,202,228,0.08)] px-3 py-2 font-mono text-xs text-[var(--blue-300)]">
+        <span className="inline-flex min-h-10 min-w-[3.75rem] items-center justify-center rounded-full border border-[rgba(72,202,228,0.18)] bg-[rgba(72,202,228,0.08)] px-2.5 py-2 font-mono text-xs text-[var(--blue-300)] sm:hidden">
+          {currentPage}/{totalPages}
+        </span>
+
+        <span className="hidden min-h-10 items-center rounded-full border border-[rgba(72,202,228,0.18)] bg-[rgba(72,202,228,0.08)] px-3 py-2 font-mono text-xs text-[var(--blue-300)] sm:inline-flex">
           {currentPage} / {totalPages}
         </span>
 
@@ -337,11 +516,12 @@ function PaginationControls({
           type="button"
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage >= totalPages}
-          className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-full border border-[var(--border)] px-3 py-2 text-xs font-medium text-[var(--foreground-muted)] transition enabled:hover:border-[var(--border-strong)] enabled:hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex min-h-11 w-auto justify-self-end cursor-pointer items-center justify-end gap-2 rounded-full border border-[var(--border)] bg-white/[0.02] px-3 py-2 text-xs font-medium text-[var(--foreground-muted)] transition enabled:hover:border-[var(--border-strong)] enabled:hover:text-white disabled:cursor-not-allowed disabled:opacity-40 sm:min-h-10 sm:justify-center"
         >
           Next
           <ArrowRight className="h-3.5 w-3.5" />
         </button>
+        </div>
       </div>
     </div>
   );

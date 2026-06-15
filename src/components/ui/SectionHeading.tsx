@@ -25,7 +25,7 @@ export function SectionHeading({
     >
       {eyebrow ? (
         <div className="inline-flex items-center gap-3 text-[var(--blue-200)]">
-          <span className="h-px w-10 bg-gradient-to-r from-[rgba(72,202,228,0.8)] to-transparent" />
+          <span className="hidden h-px w-10 bg-gradient-to-r from-[rgba(72,202,228,0.8)] to-transparent sm:block" />
           <p className="font-[family-name:var(--font-syne)] text-[0.78rem] font-medium tracking-[0.18em] sm:text-[0.82rem]">
             {eyebrow}
           </p>
