@@ -4,7 +4,7 @@ export const siteConfig = {
   title: "Full-Stack Developer & Photographer",
   headline: "Building modern systems. Capturing real moments.",
   description:
-    "Full-Stack Developer, Co-Founder at Studio Nomads, Web3 community contributor, and photographer/videographer and editor at Studio Nomads — based in Cavite, Philippines.",
+    "Co-Founder at Studio Nomads, Co-Founder at WebX, Aspiring Full-Stack Developer, , Web3 community contributor, and photographer/videographer and editor at Studio Nomads — based in Cavite, Philippines.",
   location: "Cavite, Philippines",
   email: "zkg.balboa@gmail.com",
   photographyBrand: "shot.by.zk",
