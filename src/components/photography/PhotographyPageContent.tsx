@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useGSAP } from "@gsap/react";
-import { siteConfig } from "@/data/site";
+import type { SiteConfig } from "@/types/site";
 import { socialGroups } from "@/data/social";
 import { gsap, registerGsapPlugins } from "@/lib/gsap";
 import { cn } from "@/lib/cn";
@@ -24,9 +24,13 @@ const PHOTOS_PER_PAGE = 24;
 
 interface PhotographyPageContentProps {
   creativeCategories: CreativeCategory[];
+  siteConfig: SiteConfig;
 }
 
-export function PhotographyPageContent({ creativeCategories }: PhotographyPageContentProps) {
+export function PhotographyPageContent({
+  creativeCategories,
+  siteConfig,
+}: PhotographyPageContentProps) {
   const heroRef = useRef<HTMLDivElement>(null);
   const gallerySectionRef = useRef<HTMLElement>(null);
 

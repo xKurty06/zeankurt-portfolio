@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { useGSAP } from "@gsap/react";
-import { siteConfig } from "@/data/site";
+import type { SiteConfig } from "@/types/site";
 import type { CreativeCategory } from "@/types";
 import { RevealOnScroll } from "@/components/animation/RevealOnScroll";
 import { Button } from "@/components/ui/Button";
@@ -16,9 +16,13 @@ import { useLowMotionDevice } from "@/hooks/useLowMotionDevice";
 
 interface PhotographyTeaserProps {
   creativeCategories?: CreativeCategory[];
+  siteConfig: SiteConfig;
 }
 
-export function PhotographyTeaser({ creativeCategories = [] }: PhotographyTeaserProps) {
+export function PhotographyTeaser({
+  creativeCategories = [],
+  siteConfig,
+}: PhotographyTeaserProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const marqueeViewportRef = useRef<HTMLDivElement>(null);
   const lowMotion = useLowMotionDevice();
@@ -317,69 +321,69 @@ export function PhotographyTeaser({ creativeCategories = [] }: PhotographyTeaser
                 : "grid min-w-0 gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4"
             }
           >
-          {renderedCards.map((card, index) => (
-            <Link
-              key={`${card.id}-${index}`}
-              href={card.href}
-              data-photo-card
-              data-interactive
-              draggable={false}
-              className={shouldMarquee
-                ? "photo-card group relative block w-[78vw] max-w-[22rem] shrink-0 select-none overflow-hidden rounded-2xl border border-[var(--border)] bg-black sm:w-72 lg:w-80"
-                : "photo-card group relative block min-w-0 select-none overflow-hidden rounded-2xl border border-[var(--border)] bg-black"}
-            >
-              <div className="relative aspect-[4/5] overflow-hidden bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))]">
-                {card.image ? (
-                  <div
-                    className="absolute inset-0 select-none"
-                  >
-                    <img
-                      data-photo-img
-                      src={card.image}
-                      alt={`${card.title} category showcase`}
-                      draggable={false}
-                      className="h-full w-full scale-[1.08] select-none object-cover object-center"
-                      loading="lazy"
+            {renderedCards.map((card, index) => (
+              <Link
+                key={`${card.id}-${index}`}
+                href={card.href}
+                data-photo-card
+                data-interactive
+                draggable={false}
+                className={shouldMarquee
+                  ? "photo-card group relative block w-[78vw] max-w-[22rem] shrink-0 select-none overflow-hidden rounded-2xl border border-[var(--border)] bg-black sm:w-72 lg:w-80"
+                  : "photo-card group relative block min-w-0 select-none overflow-hidden rounded-2xl border border-[var(--border)] bg-black"}
+              >
+                <div className="relative aspect-[4/5] overflow-hidden bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))]">
+                  {card.image ? (
+                    <div
+                      className="absolute inset-0 select-none"
+                    >
+                      <img
+                        data-photo-img
+                        src={card.image}
+                        alt={`${card.title} category showcase`}
+                        draggable={false}
+                        className="h-full w-full scale-[1.08] select-none object-cover object-center"
+                        loading="lazy"
+                      />
+                    </div>
+                  ) : (
+                    <div
+                      className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,14,28,0.9),rgba(4,8,18,0.96))]"
                     />
-                  </div>
-                ) : (
+                  )}
+                  {/* Gradient overlay */}
                   <div
-                    className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,14,28,0.9),rgba(4,8,18,0.96))]"
+                    data-photo-overlay
+                    className="absolute inset-0 opacity-80"
+                    style={{
+                      background: "linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.1) 50%, transparent 100%)",
+                    }}
                   />
-                )}
-                {/* Gradient overlay */}
-                <div
-                  data-photo-overlay
-                  className="absolute inset-0 opacity-80"
-                  style={{
-                    background: "linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.1) 50%, transparent 100%)",
-                  }}
-                />
-                {/* Hover glow rim */}
-                <div
-                  aria-hidden
-                  className="pointer-events-none absolute inset-0 opacity-0 transition duration-500 group-hover:opacity-100"
-                  style={{
-                    boxShadow: "inset 0 0 30px rgba(0,180,216,0.2)",
-                  }}
-                />
-                {/* Caption */}
-                <div
-                  data-photo-caption
-                  className="absolute inset-x-0 bottom-0 p-4"
-                  style={{ opacity: 0.85, transform: "translateY(6px)" }}
-                >
-                  <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--blue-300)]">
-                    {card.meta}
-                  </p>
-                  <p className="mt-1 text-lg font-semibold text-white">{card.title}</p>
-                  {card.description ? (
-                    <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-white/65">{card.description}</p>
-                  ) : null}
+                  {/* Hover glow rim */}
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute inset-0 opacity-0 transition duration-500 group-hover:opacity-100"
+                    style={{
+                      boxShadow: "inset 0 0 30px rgba(0,180,216,0.2)",
+                    }}
+                  />
+                  {/* Caption */}
+                  <div
+                    data-photo-caption
+                    className="absolute inset-x-0 bottom-0 p-4"
+                    style={{ opacity: 0.85, transform: "translateY(6px)" }}
+                  >
+                    <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--blue-300)]">
+                      {card.meta}
+                    </p>
+                    <p className="mt-1 text-lg font-semibold text-white">{card.title}</p>
+                    {card.description ? (
+                      <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-white/65">{card.description}</p>
+                    ) : null}
+                  </div>
                 </div>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            ))}
           </div>
         </div>
 

@@ -1373,55 +1373,28 @@ export async function deleteCreativePhotosByIds(ids: string[]) {
 
 export async function saveSiteContent(formData: FormData) {
   const admin = await requireAdmin();
+
   const key = requiredText(formData, "key", "Key");
   const rawValue = requiredText(formData, "value", "Value");
-  const value = JSON.parse(rawValue);
 
-  const { error } = await admin.from("site_content").upsert({ key, value }, { onConflict: "key" });
-  if (error) throw error;
+  let value: unknown;
 
-  revalidateTag("portfolio-content", "max");
-  redirectAfterAction(formData, "/admin");
-}
-
-export async function updateSortOrder({
-  ids,
-  table,
-}: {
-  ids: string[];
-  table: SortableCmsTable;
-}) {
-  const admin = await requireAdmin();
-  const key = SORTABLE_KEYS[table];
-
-  if (!key) throw new Error("Unsupported sortable table.");
-  if (!Array.isArray(ids) || ids.some((id) => typeof id !== "string" || !id.trim())) {
-    throw new Error("Invalid sort order payload.");
+  try {
+    value = JSON.parse(rawValue);
+  } catch {
+    throw new Error("Invalid JSON. Please check your site content value.");
   }
 
-  const updates = ids.map((id, index) =>
-    admin
-      .from(table)
-      .update({ sort_order: index })
-      .eq(key, id),
-  );
+  const { error } = await admin
+    .from("site_content")
+    .upsert({ key, value }, { onConflict: "key" });
 
-  const results = await Promise.all(updates);
-  const error = results.find((result) => result.error)?.error;
   if (error) throw error;
 
   revalidateTag("portfolio-content", "max");
-}
+  revalidatePath("/");
+  revalidatePath("/photography");
+  revalidatePath("/admin");
 
-export async function deleteRecord(formData: FormData) {
-  const table = text(formData, "table") as CmsTable;
-  const id = text(formData, "id");
-  const key = text(formData, "key") || (table === "projects" || table === "experience_items" || table === "events" ? "slug" : "id");
-
-  const admin = await requireAdmin();
-  const { error } = await admin.from(table).delete().eq(key, id);
-  if (error) throw error;
-
-  revalidateTag("portfolio-content", "max");
-  redirect("/admin");
+  redirectAfterAction(formData, "/admin#site-content");
 }

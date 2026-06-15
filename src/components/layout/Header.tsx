@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import { useGSAP } from "@gsap/react";
 import { mainNav, photographyNav } from "@/data/navigation";
-import { siteConfig } from "@/data/site";
+import type { SiteConfig } from "@/types/site";
 import { gsap, registerGsapPlugins } from "@/lib/gsap";
 import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui/Button";
@@ -35,6 +35,7 @@ import type { NavItem } from "@/types";
 
 interface HeaderProps {
   variant?: "default" | "photography";
+  siteConfig: SiteConfig;
 }
 
 function getHeaderOffset() {
@@ -108,7 +109,7 @@ function handleInternalAnchorClick(
   onNavigate?.();
 }
 
-export function Header({ variant }: HeaderProps) {
+export function Header({ variant = "default", siteConfig }: HeaderProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);

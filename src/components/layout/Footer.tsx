@@ -5,18 +5,22 @@ import dynamic from "next/dynamic";
 import { useRef } from "react";
 import { useGSAP } from "@gsap/react";
 import { footerNav } from "@/data/navigation";
-import { siteConfig } from "@/data/site";
 import { socialGroups } from "@/data/social";
 import { gsap, registerGsapPlugins } from "@/lib/gsap";
 import { SocialLinks } from "@/components/ui/SocialLinks";
 import { useLowMotionDevice } from "@/hooks/useLowMotionDevice";
+import type { SiteConfig } from "@/types/site";
 
 const ShaderBackground = dynamic(
   () => import("@/components/ui/ShaderBackground"),
   { ssr: false },
 );
 
-export function Footer() {
+interface FooterProps {
+  siteConfig: SiteConfig;
+}
+
+export function Footer({ siteConfig }: FooterProps) {
   const footerRef = useRef<HTMLElement>(null);
   const lowMotion = useLowMotionDevice();
 

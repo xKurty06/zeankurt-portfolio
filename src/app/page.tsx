@@ -14,6 +14,7 @@ export default async function HomePage() {
   return (
     <>
       <HeroSection siteConfig={content.siteConfig} />
+
       <AboutSection
         aboutContent={content.aboutContent}
         certifications={content.certifications}
@@ -21,14 +22,22 @@ export default async function HomePage() {
         skillCategories={content.skillCategories}
         creativePhotoCount={getCreativePhotoCount(content.creativeCategories)}
       />
+
       <ProjectsSection projects={content.projects} />
+
       <ExperienceSection
         certifications={content.certifications}
         eventHighlights={content.eventHighlights}
         experience={content.experience}
       />
+
       <SkillsSection skillCategories={content.skillCategories} />
-      <PhotographyTeaser creativeCategories={content.creativeCategories} />
+
+      <PhotographyTeaser
+        creativeCategories={content.creativeCategories}
+        siteConfig={content.siteConfig}
+      />
+
       <ContactSection siteConfig={content.siteConfig} />
     </>
   );
