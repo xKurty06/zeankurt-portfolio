@@ -1,5 +1,15 @@
 "use client";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
+import { createPortal } from "react-dom";
 import {
   ArrowLeft,
   ArrowRight,
@@ -19,12 +29,268 @@ import { ZoomableImage } from "@/components/ui/ZoomableImage";
 import { gsap, registerGsapPlugins } from "@/lib/gsap";
 import { cn } from "@/lib/cn";
 import { useLowMotionDevice } from "@/hooks/useLowMotionDevice";
+
 const INITIAL_SHOW = 6;
+const ALL_FILTER = "All";
+const MAX_PRIMARY_FILTERS = 7;
+
 const STATUS_STYLES = {
   live: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
   wip: "bg-amber-500/15 text-amber-400 border-amber-500/30",
   archived: "bg-zinc-500/15 text-zinc-400 border-zinc-500/30",
 } as const;
+
+function getStatusClass(status: Project["status"]) {
+  if (!status) return "";
+
+  return (
+    STATUS_STYLES[status as keyof typeof STATUS_STYLES] ??
+    "border-[var(--border)] bg-white/[0.04] text-[var(--foreground-muted)]"
+  );
+}
+
+function getPrimaryFilterTags(tags: string[], projects: Project[]) {
+  const tagCounts = new Map<string, number>();
+
+  projects.forEach((project) => {
+    project.tags.forEach((tag) => {
+      tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1);
+    });
+  });
+
+  return [...tags]
+    .sort((a, b) => {
+      const countDiff = (tagCounts.get(b) ?? 0) - (tagCounts.get(a) ?? 0);
+
+      if (countDiff !== 0) return countDiff;
+
+      return a.localeCompare(b);
+    })
+    .slice(0, MAX_PRIMARY_FILTERS - 1);
+}
+
+function ProjectFilter({
+  tags,
+  projects,
+  activeTag,
+  onChange,
+}: {
+  tags: string[];
+  projects: Project[];
+  activeTag: string;
+  onChange: (tag: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [dropdownStyle, setDropdownStyle] = useState<CSSProperties>({});
+
+  const rootRef = useRef<HTMLDivElement>(null);
+  const moreButtonRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const primaryTags = useMemo(
+    () => getPrimaryFilterTags(tags, projects),
+    [projects, tags],
+  );
+
+  const moreTags = useMemo(
+    () => tags.filter((tag) => !primaryTags.includes(tag)),
+    [primaryTags, tags],
+  );
+
+  const activeIsMore =
+    activeTag !== ALL_FILTER &&
+    !primaryTags.includes(activeTag) &&
+    tags.includes(activeTag);
+
+  const visibleTags = activeIsMore
+    ? [ALL_FILTER, ...primaryTags, activeTag]
+    : [ALL_FILTER, ...primaryTags];
+
+  const updateDropdownPosition = useCallback(() => {
+    const button = moreButtonRef.current;
+    if (!button) return;
+
+    const rect = button.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const isMobile = viewportWidth < 640;
+
+    const width = isMobile ? viewportWidth - 24 : 384;
+    const left = isMobile
+      ? 12
+      : Math.min(Math.max(16, rect.right - width), viewportWidth - width - 16);
+
+    const dropdownMaxHeight = isMobile ? 260 : 300;
+    const preferredTop = rect.bottom + 8;
+    const top = Math.min(preferredTop, viewportHeight - dropdownMaxHeight - 16);
+
+    setDropdownStyle({
+      position: "fixed",
+      top: Math.max(12, top),
+      left,
+      width,
+      zIndex: 9999,
+    });
+  }, []);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+
+    updateDropdownPosition();
+
+    window.addEventListener("resize", updateDropdownPosition);
+    window.addEventListener("scroll", updateDropdownPosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updateDropdownPosition);
+      window.removeEventListener("scroll", updateDropdownPosition, true);
+    };
+  }, [open, updateDropdownPosition]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as Node;
+
+      if (
+        rootRef.current?.contains(target) ||
+        dropdownRef.current?.contains(target)
+      ) {
+        return;
+      }
+
+      setOpen(false);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    };
+
+    window.addEventListener("pointerdown", handlePointerDown);
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("pointerdown", handlePointerDown);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
+
+  const handleSelect = (tag: string) => {
+    const nextTag = activeTag === tag ? ALL_FILTER : tag;
+
+    onChange(nextTag);
+    setOpen(false);
+  };
+
+  return (
+    <>
+      <div ref={rootRef} className="relative w-full min-w-0 sm:w-auto">
+        <div className="flex max-w-full gap-2 overflow-x-auto pb-1 pl-0 pr-0 [-ms-overflow-style:none] [scrollbar-width:none] sm:max-w-[46rem] [&::-webkit-scrollbar]:hidden">
+          {visibleTags.map((tag) => (
+            <button
+              key={tag}
+              type="button"
+              data-interactive
+              onClick={() => handleSelect(tag)}
+              className={cn(
+                "min-h-10 shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200 sm:min-h-0 sm:py-1",
+                activeTag === tag
+                  ? "border-[var(--blue-500)] bg-[var(--accent-soft)] text-white shadow-[0_0_12px_var(--accent-glow)]"
+                  : "border-[var(--border)] text-[var(--foreground-muted)] hover:border-[var(--border-strong)] hover:text-white",
+              )}
+            >
+              {tag}
+            </button>
+          ))}
+
+          {moreTags.length > 0 ? (
+            <button
+              ref={moreButtonRef}
+              type="button"
+              data-interactive
+              onClick={() => {
+                updateDropdownPosition();
+                setOpen((current) => !current);
+              }}
+              aria-expanded={open}
+              className={cn(
+                "inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200 sm:min-h-0 sm:py-1",
+                activeIsMore || open
+                  ? "border-[var(--blue-500)] bg-[var(--accent-soft)] text-white shadow-[0_0_12px_var(--accent-glow)]"
+                  : "border-[var(--border)] text-[var(--foreground-muted)] hover:border-[var(--border-strong)] hover:text-white",
+              )}
+            >
+              More filters
+              <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[10px]">
+                {moreTags.length}
+              </span>
+              <ChevronDown
+                className={cn("h-3.5 w-3.5 transition", open && "rotate-180")}
+              />
+            </button>
+          ) : null}
+        </div>
+      </div>
+
+      {mounted && open && moreTags.length > 0
+        ? createPortal(
+          <div
+            ref={dropdownRef}
+            style={dropdownStyle}
+            className="rounded-2xl border border-[var(--border-strong)] bg-[var(--background-elevated)] p-3 shadow-[0_24px_80px_rgba(0,0,0,0.55)] backdrop-blur-xl"
+          >
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--blue-300)]">
+                More filters
+              </p>
+
+              {activeTag !== ALL_FILTER ? (
+                <button
+                  type="button"
+                  onClick={() => handleSelect(ALL_FILTER)}
+                  className="text-xs font-medium text-[var(--foreground-muted)] transition hover:text-white"
+                >
+                  Clear
+                </button>
+              ) : null}
+            </div>
+
+            <div className="max-h-60 overflow-y-auto pr-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <div className="flex flex-wrap gap-2">
+                {moreTags.map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    data-interactive
+                    onClick={() => handleSelect(tag)}
+                    className={cn(
+                      "rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200",
+                      activeTag === tag
+                        ? "border-[var(--blue-500)] bg-[var(--accent-soft)] text-white shadow-[0_0_12px_var(--accent-glow)]"
+                        : "border-[var(--border)] text-[var(--foreground-muted)] hover:border-[var(--border-strong)] hover:text-white",
+                    )}
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )
+        : null}
+    </>
+  );
+}
+
 function MobileProjectCarousel({
   projects,
   emptyMessage = "No projects available.",
@@ -38,93 +304,115 @@ function MobileProjectCarousel({
   const [currentSlide, setCurrentSlide] = useState(0);
   const [canScrollPrev, setCanScrollPrev] = useState(false);
   const [canScrollNext, setCanScrollNext] = useState(projects.length > 1);
+
   const updateState = useCallback(() => {
     const scroller = scrollerRef.current;
     if (!scroller) return;
+
     const items = Array.from(
       scroller.querySelectorAll<HTMLElement>("[data-carousel-card]"),
     );
+
     if (items.length === 0) {
       setCurrentSlide(0);
       setCanScrollPrev(false);
       setCanScrollNext(false);
       return;
     }
+
     const scrollerCenter = scroller.scrollLeft + scroller.clientWidth / 2;
     let closestIndex = 0;
     let closestDistance = Number.POSITIVE_INFINITY;
+
     items.forEach((item, index) => {
       const itemCenter = item.offsetLeft + item.offsetWidth / 2;
       const distance = Math.abs(scrollerCenter - itemCenter);
+
       if (distance < closestDistance) {
         closestDistance = distance;
         closestIndex = index;
       }
     });
+
     setCurrentSlide(closestIndex);
     setCanScrollPrev(scroller.scrollLeft > 8);
     setCanScrollNext(
       scroller.scrollLeft + scroller.clientWidth < scroller.scrollWidth - 8,
     );
   }, []);
+
   const scrollToIndex = useCallback((index: number) => {
     const scroller = scrollerRef.current;
     if (!scroller) return;
+
     const items = Array.from(
       scroller.querySelectorAll<HTMLElement>("[data-carousel-card]"),
     );
+
     const target = items[index];
     if (!target) return;
+
     const left =
       target.offsetLeft - (scroller.clientWidth - target.offsetWidth) / 2;
+
     scroller.scrollTo({ left, behavior: "smooth" });
   }, []);
+
   const scrollPrev = () => {
     scrollToIndex(Math.max(0, currentSlide - 1));
   };
+
   const scrollNext = () => {
     scrollToIndex(Math.min(projects.length - 1, currentSlide + 1));
   };
+
   useEffect(() => {
     const scroller = scrollerRef.current;
+
     setCurrentSlide(0);
     setCanScrollPrev(false);
     setCanScrollNext(projects.length > 1);
+
     if (scroller) {
       scroller.scrollTo({ left: 0, behavior: "auto" });
     }
+
     window.requestAnimationFrame(updateState);
   }, [projects, updateState]);
+
   useEffect(() => {
     updateState();
+
     const scroller = scrollerRef.current;
     if (!scroller) return;
+
     const handleScroll = () => {
       window.requestAnimationFrame(updateState);
     };
+
     scroller.addEventListener("scroll", handleScroll, { passive: true });
     window.addEventListener("resize", updateState);
+
     return () => {
       scroller.removeEventListener("scroll", handleScroll);
       window.removeEventListener("resize", updateState);
     };
   }, [projects, updateState]);
+
   if (projects.length === 0) {
     return (
       <p className="py-8 text-center text-sm text-[var(--foreground-subtle)]">
-        {" "}
-        {emptyMessage}{" "}
+        {emptyMessage}
       </p>
     );
   }
+
   return (
     <div className="relative md:hidden">
-      {" "}
       <div
         ref={scrollerRef}
         className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-4 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
-        {" "}
         {projects.map((project) => (
           <div
             key={project.slug}
@@ -134,14 +422,13 @@ function MobileProjectCarousel({
               showImage ? "w-[82vw] max-w-[21rem]" : "w-[80vw] max-w-[20rem]",
             )}
           >
-            {" "}
-            <MobileProjectCard project={project} showImage={showImage} />{" "}
+            <MobileProjectCard project={project} showImage={showImage} />
           </div>
-        ))}{" "}
-      </div>{" "}
+        ))}
+      </div>
+
       {projects.length > 1 ? (
         <>
-          {" "}
           <button
             type="button"
             aria-label="Previous project"
@@ -152,9 +439,9 @@ function MobileProjectCarousel({
               showImage ? "top-[42%]" : "top-1/2",
             )}
           >
-            {" "}
-            <ArrowLeft className="h-4 w-4" />{" "}
-          </button>{" "}
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+
           <button
             type="button"
             aria-label="Next project"
@@ -165,11 +452,10 @@ function MobileProjectCarousel({
               showImage ? "top-[42%]" : "top-1/2",
             )}
           >
-            {" "}
-            <ArrowRight className="h-4 w-4" />{" "}
-          </button>{" "}
+            <ArrowRight className="h-4 w-4" />
+          </button>
+
           <div className="mt-5 flex justify-center gap-2">
-            {" "}
             {projects.map((project, index) => (
               <button
                 key={project.slug}
@@ -183,13 +469,14 @@ function MobileProjectCarousel({
                     : "w-2 bg-white/20 hover:bg-white/40",
                 )}
               />
-            ))}{" "}
-          </div>{" "}
+            ))}
+          </div>
         </>
-      ) : null}{" "}
+      ) : null}
     </div>
   );
 }
+
 function MobileProjectCard({
   project,
   showImage = true,
@@ -204,10 +491,8 @@ function MobileProjectCard({
         !showImage && "p-4 text-left",
       )}
     >
-      {" "}
       {showImage ? (
         <div className="relative aspect-[16/10] overflow-hidden rounded-2xl bg-[linear-gradient(145deg,rgba(10,15,26,0.96),rgba(2,62,138,0.22))]">
-          {" "}
           {project.image ? (
             <img
               src={project.image}
@@ -217,63 +502,60 @@ function MobileProjectCard({
             />
           ) : (
             <div className="flex h-full items-center justify-center rounded-2xl bg-[radial-gradient(circle_at_24%_24%,rgba(72,202,228,0.16),transparent_28%),radial-gradient(circle_at_78%_76%,rgba(0,119,182,0.2),transparent_32%)] px-6 text-center">
-              {" "}
               <p className="font-[family-name:var(--font-syne)] text-xl font-semibold text-white">
-                {" "}
-                {project.title}{" "}
-              </p>{" "}
+                {project.title}
+              </p>
             </div>
-          )}{" "}
-          <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-[#030712]/85 via-transparent to-transparent" />{" "}
+          )}
+
+          <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-[#030712]/85 via-transparent to-transparent" />
+
           {project.status ? (
             <span
               className={cn(
                 "absolute right-3 top-3 rounded-full border px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-widest",
-                STATUS_STYLES[project.status],
+                getStatusClass(project.status),
               )}
             >
-              {" "}
-              {project.status}{" "}
+              {project.status}
             </span>
-          ) : null}{" "}
+          ) : null}
         </div>
-      ) : null}{" "}
+      ) : null}
+
       <div className={cn("space-y-3 text-left", showImage ? "p-4" : "")}>
-        {" "}
         <div className="flex items-start justify-between gap-3">
-          {" "}
           <p className="min-w-0 break-words font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--blue-400)]">
-            {" "}
-            {project.year} · {project.role}{" "}
-          </p>{" "}
+            {project.year} · {project.role}
+          </p>
+
           {!showImage && project.status ? (
             <span
               className={cn(
                 "shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-medium uppercase tracking-widest",
-                STATUS_STYLES[project.status],
+                getStatusClass(project.status),
               )}
             >
-              {" "}
-              {project.status}{" "}
+              {project.status}
             </span>
-          ) : null}{" "}
-        </div>{" "}
+          ) : null}
+        </div>
+
         <h3 className="font-[family-name:var(--font-syne)] text-lg font-semibold leading-tight text-white">
-          {" "}
-          {project.title}{" "}
-        </h3>{" "}
+          {project.title}
+        </h3>
+
         <p className="line-clamp-4 text-sm leading-7 text-[var(--foreground-muted)]">
-          {" "}
-          {project.description}{" "}
-        </p>{" "}
+          {project.description}
+        </p>
+
         <div className="flex flex-wrap gap-1.5">
-          {" "}
           {project.tags.slice(0, showImage ? 4 : 5).map((tag) => (
             <Badge key={tag}>{tag}</Badge>
-          ))}{" "}
-        </div>{" "}
+          ))}
+        </div>
+
         <div className="flex flex-wrap items-center gap-2 pt-1">
-          {" "}
           {project.liveUrl ? (
             <a
               href={project.liveUrl}
@@ -281,10 +563,10 @@ function MobileProjectCard({
               rel="noopener noreferrer"
               className="inline-flex min-h-9 items-center gap-1 rounded-full border border-[var(--border)] px-3 py-1.5 text-xs font-medium text-[var(--blue-300)] transition hover:border-[var(--border-strong)] hover:text-white"
             >
-              {" "}
-              View live <ArrowUpRight className="h-3.5 w-3.5" />{" "}
+              View live <ArrowUpRight className="h-3.5 w-3.5" />
             </a>
-          ) : null}{" "}
+          ) : null}
+
           {project.githubUrl ? (
             <a
               href={project.githubUrl}
@@ -293,15 +575,15 @@ function MobileProjectCard({
               aria-label={`GitHub — ${project.title}`}
               className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border)] text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white"
             >
-              {" "}
-              <SocialIcon platform="github" className="h-3.5 w-3.5" />{" "}
+              <SocialIcon platform="github" className="h-3.5 w-3.5" />
             </a>
-          ) : null}{" "}
-        </div>{" "}
-      </div>{" "}
+          ) : null}
+        </div>
+      </div>
     </article>
   );
 }
+
 function FeaturedCard({
   project,
   index,
@@ -312,9 +594,11 @@ function FeaturedCard({
   lowMotion: boolean;
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
+
   useGSAP(
     () => {
       registerGsapPlugins();
+
       if (lowMotion) {
         gsap.set(cardRef.current, {
           autoAlpha: 1,
@@ -325,6 +609,7 @@ function FeaturedCard({
         });
         return;
       }
+
       gsap.fromTo(
         cardRef.current,
         { autoAlpha: 0, y: 18, scale: 0.98 },
@@ -345,15 +630,14 @@ function FeaturedCard({
     },
     { dependencies: [lowMotion], scope: cardRef },
   );
+
   return (
     <GlowCard
       ref={cardRef}
       intensity={lowMotion ? 0.18 : 0.35}
       className="project-feature-card group min-w-0 rounded-2xl border border-[var(--border)] bg-[var(--background-elevated)] transition-shadow duration-300 hover:border-[var(--border-strong)] hover:shadow-[0_0_28px_rgba(0,180,216,0.08)]"
     >
-      {" "}
       <div className="relative aspect-[16/10] overflow-hidden rounded-2xl bg-[linear-gradient(145deg,rgba(10,15,26,0.96),rgba(2,62,138,0.22))] sm:aspect-[16/9]">
-        {" "}
         {project.image ? (
           <ZoomableImage
             src={project.image}
@@ -365,45 +649,45 @@ function FeaturedCard({
           />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-[radial-gradient(circle_at_24%_24%,rgba(72,202,228,0.16),transparent_28%),radial-gradient(circle_at_78%_76%,rgba(0,119,182,0.2),transparent_32%)] px-6 text-center">
-            {" "}
             <p className="max-w-[80%] font-[family-name:var(--font-syne)] text-2xl font-semibold leading-tight text-white sm:text-3xl">
-              {" "}
-              {project.title}{" "}
-            </p>{" "}
+              {project.title}
+            </p>
           </div>
-        )}{" "}
-        <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-[#030712] via-transparent to-transparent" />{" "}
+        )}
+
+        <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-[#030712] via-transparent to-transparent" />
+
         {project.status ? (
           <span
             className={cn(
               "absolute right-3 top-3 rounded-full border px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-widest",
-              STATUS_STYLES[project.status],
+              getStatusClass(project.status),
             )}
           >
-            {" "}
-            {project.status}{" "}
+            {project.status}
           </span>
-        ) : null}{" "}
-      </div>{" "}
+        ) : null}
+      </div>
+
       <div className="space-y-3 p-4 sm:p-5 md:p-6 xl:p-5">
-        {" "}
         <div aria-hidden className="project-module-rail">
-          {" "}
-          <span /> <span /> <span /> <span />{" "}
-        </div>{" "}
+          <span />
+          <span />
+          <span />
+          <span />
+        </div>
+
         <div className="flex items-start justify-between gap-4">
-          {" "}
           <div className="min-w-0 flex-1">
-            {" "}
             <p className="break-words font-mono text-[10px] uppercase tracking-[0.16em] text-[var(--blue-400)]">
-              {" "}
-              {project.year} · {project.role}{" "}
-            </p>{" "}
+              {project.year} · {project.role}
+            </p>
+
             <h3 className="mt-1.5 break-words font-[family-name:var(--font-syne)] text-lg font-semibold leading-tight text-white sm:text-xl xl:text-lg">
-              {" "}
-              {project.title}{" "}
-            </h3>{" "}
-          </div>{" "}
+              {project.title}
+            </h3>
+          </div>
+
           {project.githubUrl ? (
             <a
               href={project.githubUrl}
@@ -413,21 +697,21 @@ function FeaturedCard({
               data-interactive
               className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[var(--border)] text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white hover:shadow-[0_0_14px_var(--accent-glow)] sm:h-11 sm:w-11"
             >
-              {" "}
-              <SocialIcon platform="github" className="h-4 w-4" />{" "}
+              <SocialIcon platform="github" className="h-4 w-4" />
             </a>
-          ) : null}{" "}
-        </div>{" "}
+          ) : null}
+        </div>
+
         <p className="text-sm leading-7 text-[var(--foreground-muted)]">
-          {" "}
-          {project.description}{" "}
-        </p>{" "}
+          {project.description}
+        </p>
+
         <div className="flex flex-wrap gap-1.5">
-          {" "}
           {project.tags.map((tag) => (
             <Badge key={tag}>{tag}</Badge>
-          ))}{" "}
-        </div>{" "}
+          ))}
+        </div>
+
         {project.liveUrl ? (
           <a
             href={project.liveUrl}
@@ -436,50 +720,47 @@ function FeaturedCard({
             data-interactive
             className="inline-flex min-h-9 items-center gap-1 text-sm font-medium text-[var(--blue-300)] transition hover:text-white"
           >
-            {" "}
-            View live <ArrowUpRight className="h-3.5 w-3.5" />{" "}
+            View live <ArrowUpRight className="h-3.5 w-3.5" />
           </a>
-        ) : null}{" "}
-      </div>{" "}
+        ) : null}
+      </div>
     </GlowCard>
   );
 }
+
 function CompactCard({ project }: { project: Project }) {
   return (
     <GlowCard
       intensity={0.22}
       className="project-compact-card group flex h-full min-w-0 flex-col rounded-2xl border border-[var(--border)] bg-[var(--background-elevated)] p-4 transition duration-300 hover:border-[var(--border-strong)] hover:shadow-[0_0_22px_rgba(0,180,216,0.08)] sm:p-5"
     >
-      {" "}
-      <span aria-hidden className="project-corner project-corner-tl" />{" "}
-      <span aria-hidden className="project-corner project-corner-br" />{" "}
-      <span aria-hidden className="project-module-dot" />{" "}
+      <span aria-hidden className="project-corner project-corner-tl" />
+      <span aria-hidden className="project-corner project-corner-br" />
+      <span aria-hidden className="project-module-dot" />
+
       <div className="flex items-start justify-between gap-3">
-        {" "}
         <div className="min-w-0 flex-1">
-          {" "}
           <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--blue-400)]">
-            {" "}
-            {project.year}{" "}
-          </p>{" "}
+            {project.year}
+          </p>
+
           <h3 className="mt-1 break-words font-[family-name:var(--font-syne)] text-base font-semibold leading-snug text-white">
-            {" "}
-            {project.title}{" "}
-          </h3>{" "}
-        </div>{" "}
+            {project.title}
+          </h3>
+        </div>
+
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5 pt-0.5">
-          {" "}
           {project.status ? (
             <span
               className={cn(
                 "rounded-full border px-2 py-0.5 text-[9px] font-medium uppercase tracking-widest",
-                STATUS_STYLES[project.status],
+                getStatusClass(project.status),
               )}
             >
-              {" "}
-              {project.status}{" "}
+              {project.status}
             </span>
-          ) : null}{" "}
+          ) : null}
+
           {project.githubUrl ? (
             <a
               href={project.githubUrl}
@@ -489,10 +770,10 @@ function CompactCard({ project }: { project: Project }) {
               data-interactive
               className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border)] text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white sm:h-8 sm:w-8"
             >
-              {" "}
-              <SocialIcon platform="github" className="h-3.5 w-3.5" />{" "}
+              <SocialIcon platform="github" className="h-3.5 w-3.5" />
             </a>
-          ) : null}{" "}
+          ) : null}
+
           {project.liveUrl ? (
             <a
               href={project.liveUrl}
@@ -502,92 +783,114 @@ function CompactCard({ project }: { project: Project }) {
               data-interactive
               className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border)] text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white sm:h-8 sm:w-8"
             >
-              {" "}
-              <ArrowUpRight className="h-3.5 w-3.5" />{" "}
+              <ArrowUpRight className="h-3.5 w-3.5" />
             </a>
-          ) : null}{" "}
-        </div>{" "}
-      </div>{" "}
+          ) : null}
+        </div>
+      </div>
+
       <p className="mt-2.5 flex-1 text-sm leading-7 text-[var(--foreground-muted)] sm:text-xs sm:leading-relaxed">
-        {" "}
-        {project.description}{" "}
-      </p>{" "}
+        {project.description}
+      </p>
+
       <div className="mt-3 flex flex-wrap gap-1.5">
-        {" "}
         {project.tags.map((tag) => (
           <span
             key={tag}
             className="rounded-full border border-[var(--border)] bg-white/[0.02] px-2 py-0.5 text-[10px] font-medium text-[var(--blue-200)]"
           >
-            {" "}
-            {tag}{" "}
+            {tag}
           </span>
-        ))}{" "}
-      </div>{" "}
+        ))}
+      </div>
     </GlowCard>
   );
 }
+
 interface ProjectsSectionProps {
   projects: Project[];
 }
+
 export function ProjectsSection({ projects }: ProjectsSectionProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const allProjectsGridRef = useRef<HTMLDivElement>(null);
   const lowMotion = useLowMotionDevice();
-  const [activeTag, setActiveTag] = useState("All");
+  const [activeTag, setActiveTag] = useState(ALL_FILTER);
   const [expanded, setExpanded] = useState(false);
+
   const featuredProjects = useMemo(
     () => projects.filter((project) => project.featured),
     [projects],
   );
+
   const nonFeatured = useMemo(
     () => projects.filter((project) => !project.featured),
     [projects],
   );
+
   const nonFeaturedProjectTags = useMemo(
     () =>
-      Array.from(
-        new Set(nonFeatured.flatMap((project) => project.tags)),
-      ).sort(),
+      Array.from(new Set(nonFeatured.flatMap((project) => project.tags)))
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b)),
     [nonFeatured],
   );
+
   const filtered = useMemo(() => {
-    if (activeTag === "All") return nonFeatured;
+    if (activeTag === ALL_FILTER) return nonFeatured;
+
     return nonFeatured.filter((project) => project.tags.includes(activeTag));
   }, [activeTag, nonFeatured]);
+
   const visible = expanded ? filtered : filtered.slice(0, INITIAL_SHOW);
   const hasMore = filtered.length > INITIAL_SHOW;
+
+  const handleFilterChange = (tag: string) => {
+    setActiveTag(tag);
+    setExpanded(false);
+  };
+
   useGSAP(
     () => {
       if (lowMotion) return;
+
       const section = sectionRef.current;
       if (!section) return;
+
       const onMove = (event: MouseEvent) => {
         const rect = section.getBoundingClientRect();
+
         section.style.setProperty(
           "--projects-x",
           `${event.clientX - rect.left}px`,
         );
+
         section.style.setProperty(
           "--projects-y",
           `${event.clientY - rect.top}px`,
         );
       };
+
       section.addEventListener("mousemove", onMove);
+
       return () => {
         section.removeEventListener("mousemove", onMove);
       };
     },
     { dependencies: [lowMotion], revertOnUpdate: true, scope: sectionRef },
   );
+
   useGSAP(
     () => {
       registerGsapPlugins();
+
       const items = gsap.utils.toArray<HTMLElement>(
         "[data-all-project-frame]",
         allProjectsGridRef.current,
       );
+
       if (items.length === 0) return;
+
       if (lowMotion) {
         gsap.set(items, {
           autoAlpha: 1,
@@ -597,6 +900,7 @@ export function ProjectsSection({ projects }: ProjectsSectionProps) {
         });
         return;
       }
+
       gsap.fromTo(
         items,
         { autoAlpha: 0, y: 8, scale: 0.99 },
@@ -617,38 +921,35 @@ export function ProjectsSection({ projects }: ProjectsSectionProps) {
       scope: allProjectsGridRef,
     },
   );
+
   return (
     <Section id="projects" ref={sectionRef}>
-      {" "}
       {!lowMotion ? (
         <div aria-hidden className="projects-interactive-bg hidden sm:block">
-          {" "}
-          <span className="projects-bg-band projects-bg-band-a" />{" "}
-          <span className="projects-bg-band projects-bg-band-b" />{" "}
-          <span className="projects-bg-pulse projects-bg-pulse-a" />{" "}
-          <span className="projects-bg-pulse projects-bg-pulse-b" />{" "}
+          <span className="projects-bg-band projects-bg-band-a" />
+          <span className="projects-bg-band projects-bg-band-b" />
+          <span className="projects-bg-pulse projects-bg-pulse-a" />
+          <span className="projects-bg-pulse projects-bg-pulse-b" />
         </div>
-      ) : null}{" "}
-      <Container className="relative z-10 min-w-0">
-        {" "}
+      ) : null}
+
+      <Container className="relative z-10 min-w-0 overflow-visible">
         <RevealOnScroll>
-          {" "}
           <SectionHeading
             eyebrow="Projects"
             title="Selected software work."
-            description="Building modern web systems, blockchain-driven products, and creative visuals for communities, startups, and real-world digital experiences.
-"
-          />{" "}
-        </RevealOnScroll>{" "}
+            description="Building modern web systems, blockchain-driven products, and creative visuals for communities, startups, and real-world digital experiences."
+          />
+        </RevealOnScroll>
+
         <div className="mt-7 md:hidden">
-          {" "}
-          <MobileProjectCarousel projects={featuredProjects} />{" "}
-        </div>{" "}
+          <MobileProjectCarousel projects={featuredProjects} />
+        </div>
+
         <div
           className="mt-7 hidden min-w-0 gap-4 sm:mt-10 sm:gap-5 md:grid md:grid-cols-2 xl:grid-cols-3"
           style={{ perspective: lowMotion ? undefined : 1200 }}
         >
-          {" "}
           {featuredProjects.map((project, index) => (
             <FeaturedCard
               key={project.slug}
@@ -656,105 +957,90 @@ export function ProjectsSection({ projects }: ProjectsSectionProps) {
               index={index}
               lowMotion={lowMotion}
             />
-          ))}{" "}
-        </div>{" "}
+          ))}
+        </div>
+
         {nonFeatured.length > 0 ? (
-          <div className="mt-10 sm:mt-14">
-            {" "}
+          <div className="relative z-20 mt-10 overflow-visible sm:mt-14">
             <RevealOnScroll>
-              {" "}
-              <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-center sm:justify-between sm:text-left">
-                {" "}
-                <h3 className="font-[family-name:var(--font-syne)] text-lg font-semibold text-white">
-                  {" "}
-                  All projects{" "}
-                  <span className="ml-2 font-mono text-sm font-normal text-[var(--foreground-subtle)]">
-                    {" "}
-                    {filtered.length}{" "}
-                  </span>{" "}
-                </h3>{" "}
-                <div className="flex max-w-full gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-wrap sm:justify-end sm:overflow-visible [&::-webkit-scrollbar]:hidden">
-                  {" "}
-                  {["All", ...nonFeaturedProjectTags].map((tag) => (
-                    <button
-                      key={tag}
-                      type="button"
-                      data-interactive
-                      onClick={() => {
-                        setActiveTag(tag);
-                        setExpanded(false);
-                      }}
-                      className={cn(
-                        "min-h-10 shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200 sm:min-h-0 sm:py-1",
-                        activeTag === tag
-                          ? "border-[var(--blue-500)] bg-[var(--accent-soft)] text-white shadow-[0_0_12px_var(--accent-glow)]"
-                          : "border-[var(--border)] text-[var(--foreground-muted)] hover:border-[var(--border-strong)] hover:text-white",
-                      )}
-                    >
-                      {" "}
-                      {tag}{" "}
-                    </button>
-                  ))}{" "}
-                </div>{" "}
-              </div>{" "}
-            </RevealOnScroll>{" "}
-            <div className="mt-5 md:hidden">
-              {" "}
+              <div className="relative z-[80] flex flex-col items-center gap-4 overflow-visible text-center lg:flex-row lg:items-start lg:justify-between lg:text-left">
+                <div className="shrink-0">
+                  <h3 className="font-[family-name:var(--font-syne)] text-lg font-semibold text-white">
+                    All projects
+                    <span className="ml-2 font-mono text-sm font-normal text-[var(--foreground-subtle)]">
+                      {filtered.length}
+                    </span>
+                  </h3>
+
+                  {activeTag !== ALL_FILTER ? (
+                    <p className="mt-1 text-xs text-[var(--foreground-muted)]">
+                      Filtered by{" "}
+                      <span className="text-[var(--blue-300)]">{activeTag}</span>
+                    </p>
+                  ) : null}
+                </div>
+
+                <ProjectFilter
+                  tags={nonFeaturedProjectTags}
+                  projects={nonFeatured}
+                  activeTag={activeTag}
+                  onChange={handleFilterChange}
+                />
+              </div>
+            </RevealOnScroll>
+
+            <div className="relative z-0 mt-5 md:hidden">
               <MobileProjectCarousel
                 projects={visible}
                 emptyMessage="No projects match that filter."
                 showImage={false}
-              />{" "}
-            </div>{" "}
+              />
+            </div>
+
             <div
               ref={allProjectsGridRef}
-              className="mt-5 hidden min-w-0 grid-cols-1 gap-3 sm:mt-6 sm:grid-cols-2 sm:gap-4 md:grid xl:grid-cols-3"
+              className="relative z-0 mt-5 hidden min-w-0 grid-cols-1 gap-3 sm:mt-6 sm:grid-cols-2 sm:gap-4 md:grid xl:grid-cols-3"
             >
-              {" "}
               {visible.map((project) => (
                 <div key={project.slug} data-all-project-frame>
-                  {" "}
-                  <CompactCard project={project} />{" "}
+                  <CompactCard project={project} />
                 </div>
-              ))}{" "}
+              ))}
+
               {filtered.length === 0 ? (
                 <p className="col-span-full py-8 text-center text-sm text-[var(--foreground-subtle)]">
-                  {" "}
-                  No projects match that filter.{" "}
+                  No projects match that filter.
                 </p>
-              ) : null}{" "}
-            </div>{" "}
+              ) : null}
+            </div>
+
             {hasMore ? (
               <RevealOnScroll>
-                {" "}
                 <div className="mt-6 flex justify-center">
-                  {" "}
                   <button
                     type="button"
                     data-interactive
                     onClick={() => setExpanded((value) => !value)}
                     className="inline-flex min-h-10 items-center gap-2 rounded-full border border-[var(--border)] px-5 py-2 text-sm text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white"
                   >
-                    {" "}
                     {expanded ? (
                       <>
-                        {" "}
-                        <ChevronUp className="h-4 w-4" /> Show less{" "}
+                        <ChevronUp className="h-4 w-4" />
+                        Show less
                       </>
                     ) : (
                       <>
-                        {" "}
-                        <ChevronDown className="h-4 w-4" /> Show{" "}
-                        {filtered.length - INITIAL_SHOW} more{" "}
+                        <ChevronDown className="h-4 w-4" />
+                        Show {filtered.length - INITIAL_SHOW} more
                       </>
-                    )}{" "}
-                  </button>{" "}
-                </div>{" "}
+                    )}
+                  </button>
+                </div>
               </RevealOnScroll>
-            ) : null}{" "}
+            ) : null}
           </div>
-        ) : null}{" "}
-      </Container>{" "}
+        ) : null}
+      </Container>
     </Section>
   );
 }
