@@ -7,8 +7,7 @@ import {
   hasSupabasePublicEnv,
 } from "@/lib/supabase/config";
 import {
-  PORTFOLIO_CACHE_TAG,
-  PORTFOLIO_REVALIDATE_SECONDS,
+  PORTFOLIO_CACHE_TAG
 } from "@/lib/cache";
 import {
   mapCertification,
@@ -198,7 +197,7 @@ export const getPortfolioContent = unstable_cache(
   fetchPortfolioContent,
   [PORTFOLIO_CACHE_TAG],
   {
-    revalidate: PORTFOLIO_REVALIDATE_SECONDS,
+    revalidate: 60,
     tags: [PORTFOLIO_CACHE_TAG],
   },
 );

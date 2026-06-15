@@ -1,14 +1,13 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { AlbumPageContent } from "@/components/photography/AlbumPageContent";
-import { PORTFOLIO_REVALIDATE_SECONDS } from "@/lib/cache";
 import { getPortfolioContent } from "@/lib/cms/queries";
 import {
   buildPhotographyAlbums,
   getCreativeCategoryBySlug,
 } from "@/lib/photography";
 
-export const revalidate = PORTFOLIO_REVALIDATE_SECONDS;
+export const revalidate = 60;
 export const dynamic = "force-static";
 
 interface AlbumPageProps {
