@@ -1,20 +1,24 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { PhotoItem } from "@/types";
+import { useGSAP } from "@gsap/react";
 import { cn } from "@/lib/cn";
+import { gsap, registerGsapPlugins } from "@/lib/gsap";
+import { useLowMotionDevice } from "@/hooks/useLowMotionDevice";
+import type { PhotoItem } from "@/types";
+
+interface GalleryGridProps {
+  photos: PhotoItem[];
+  onPhotoClick: (photo: PhotoItem, index: number) => void;
+  className?: string;
+}
 
 const GRID_AUTO_ROW_HEIGHT = 4;
 const FALLBACK_COLUMN_WIDTH = 280;
 
-type GridMetrics = {
+interface GridMetrics {
   columnWidth: number;
   rowGap: number;
-};
-
-interface GalleryGridProps {
-  photos: PhotoItem[];
-  onPhotoClick?: (photo: PhotoItem, index: number) => void;
 }
 
 function getFallbackRatio(aspectRatio: PhotoItem["aspectRatio"]) {
@@ -26,93 +30,115 @@ function getFallbackRatio(aspectRatio: PhotoItem["aspectRatio"]) {
 
 function readGridMetrics(element: HTMLElement): GridMetrics {
   const styles = window.getComputedStyle(element);
+  const columns = styles.gridTemplateColumns.split(" ").filter(Boolean).length;
 
-  const columns = styles.gridTemplateColumns
-    .split(" ")
-    .map((value) => Number.parseFloat(value))
-    .filter(Number.isFinite);
-
+  const columnCount = Math.max(1, columns);
   const columnGap = Number.parseFloat(styles.columnGap) || 0;
-  const rowGap = Number.parseFloat(styles.rowGap) || 16;
+  const rowGap = Number.parseFloat(styles.rowGap) || 0;
 
-  if (columns.length > 0) {
-    return {
-      columnWidth: columns[0],
-      rowGap,
-    };
-  }
-
-  const fallbackColumnCount = Math.max(
-    1,
-    Math.round(element.clientWidth / FALLBACK_COLUMN_WIDTH),
-  );
-
-  const totalGap = columnGap * Math.max(0, fallbackColumnCount - 1);
-  const columnWidth = (element.clientWidth - totalGap) / fallbackColumnCount;
+  const columnWidth = (element.clientWidth - columnGap * (columnCount - 1)) / columnCount;
 
   return {
-    columnWidth: Number.isFinite(columnWidth)
-      ? columnWidth
-      : FALLBACK_COLUMN_WIDTH,
+    columnWidth:
+      Number.isFinite(columnWidth) && columnWidth > 0 ? columnWidth : FALLBACK_COLUMN_WIDTH,
     rowGap,
   };
 }
 
 function getGridRowSpan(height: number, rowGap: number) {
   return Math.max(
-    8,
+    4,
     Math.ceil((height + rowGap) / (GRID_AUTO_ROW_HEIGHT + rowGap)),
   );
 }
 
-export function GalleryGrid({ photos, onPhotoClick }: GalleryGridProps) {
+export function GalleryGrid({ photos, onPhotoClick, className }: GalleryGridProps) {
   const gridRef = useRef<HTMLDivElement>(null);
+  const lowMotion = useLowMotionDevice();
 
-  const [loadedIds, setLoadedIds] = useState<Set<string>>(() => new Set());
+  const [loadedIds, setLoadedIds] = useState<Set<string>>(new Set());
   const [imageRatios, setImageRatios] = useState<Record<string, number>>({});
   const [gridMetrics, setGridMetrics] = useState<GridMetrics>({
     columnWidth: FALLBACK_COLUMN_WIDTH,
     rowGap: 16,
   });
 
-  const registerImageRatio = useCallback(
-    (id: string, width: number, height: number) => {
-      if (!width || !height) return;
+  const markLoaded = useCallback((id: string) => {
+    setLoadedIds((prev) => {
+      if (prev.has(id)) return prev;
 
-      setImageRatios((current) => {
-        const ratio = width / height;
+      const next = new Set(prev);
+      next.add(id);
 
-        if (current[id] === ratio) return current;
+      return next;
+    });
+  }, []);
 
-        return {
-          ...current,
-          [id]: ratio,
-        };
-      });
+  const registerImageRatio = useCallback((id: string, width: number, height: number) => {
+    if (width <= 0 || height <= 0) return;
+
+    const ratio = width / height;
+
+    setImageRatios((current) => {
+      if (Math.abs((current[id] ?? 0) - ratio) < 0.001) {
+        return current;
+      }
+
+      return {
+        ...current,
+        [id]: ratio,
+      };
+    });
+  }, []);
+
+  const imgRef = useCallback(
+    (id: string) => (el: HTMLImageElement | null) => {
+      if (!el) return;
+
+      if (el.complete) {
+        markLoaded(id);
+        registerImageRatio(id, el.naturalWidth, el.naturalHeight);
+      }
     },
-    [],
+    [markLoaded, registerImageRatio],
   );
 
   useEffect(() => {
-    const grid = gridRef.current;
-    if (!grid) return;
+    const element = gridRef.current;
 
-    const updateMetrics = () => {
-      setGridMetrics(readGridMetrics(grid));
+    if (!element) return;
+
+    const updateGridMetrics = () => {
+      const nextMetrics = readGridMetrics(element);
+
+      setGridMetrics((current) => {
+        const sameColumnWidth = Math.abs(current.columnWidth - nextMetrics.columnWidth) < 0.5;
+        const sameRowGap = Math.abs(current.rowGap - nextMetrics.rowGap) < 0.5;
+
+        if (sameColumnWidth && sameRowGap) {
+          return current;
+        }
+
+        return nextMetrics;
+      });
     };
 
-    updateMetrics();
+    updateGridMetrics();
 
-    const resizeObserver = new ResizeObserver(updateMetrics);
-    resizeObserver.observe(grid);
+    const observer = new ResizeObserver(updateGridMetrics);
+    observer.observe(element);
+
+    window.addEventListener("resize", updateGridMetrics);
 
     return () => {
-      resizeObserver.disconnect();
+      observer.disconnect();
+      window.removeEventListener("resize", updateGridMetrics);
     };
   }, []);
 
   const getRowSpan = (photo: PhotoItem) => {
     const ratio = imageRatios[photo.id] ?? getFallbackRatio(photo.aspectRatio);
+
     let targetHeight = gridMetrics.columnWidth / ratio;
 
     const isMobile = gridMetrics.columnWidth < 220;
@@ -130,78 +156,101 @@ export function GalleryGrid({ photos, onPhotoClick }: GalleryGridProps) {
     return getGridRowSpan(targetHeight, gridMetrics.rowGap);
   };
 
-  if (photos.length === 0) {
-    return null;
-  }
+  useGSAP(
+    () => {
+      registerGsapPlugins();
+
+      const frames = gsap.utils.toArray<HTMLElement>("[data-gallery-frame]", gridRef.current);
+
+      if (frames.length === 0) return;
+
+      if (lowMotion) {
+        gsap.set(frames, {
+          autoAlpha: 1,
+          y: 0,
+          scale: 1,
+          clearProps: "filter,transform,opacity,visibility",
+        });
+
+        return;
+      }
+
+      gsap.fromTo(
+        frames,
+        {
+          autoAlpha: 0,
+          y: 10,
+          scale: 0.99,
+        },
+        {
+          autoAlpha: 1,
+          y: 0,
+          scale: 1,
+          duration: 0.3,
+          stagger: 0.018,
+          ease: "power2.out",
+          clearProps: "filter",
+        },
+      );
+    },
+    { dependencies: [photos, lowMotion], revertOnUpdate: true, scope: gridRef },
+  );
 
   return (
     <div
       ref={gridRef}
-      className="grid max-w-full grid-cols-2 auto-rows-[4px] gap-2 [grid-auto-flow:dense] sm:gap-4 xl:grid-cols-3 2xl:grid-cols-4"
+      className={cn(
+        "grid max-w-full grid-cols-2 auto-rows-[4px] gap-2 [grid-auto-flow:dense] sm:gap-4 xl:grid-cols-3 2xl:grid-cols-4",
+        className,
+      )}
     >
-      {photos.map((photo, index) => {
-        const isLoaded = loadedIds.has(photo.id);
-
-        return (
-          <button
-            key={photo.id}
-            type="button"
-            onClick={() => onPhotoClick?.(photo, index)}
-            className="group relative block min-w-0 overflow-hidden rounded-2xl bg-white/[0.03] text-left shadow-[0_16px_44px_rgba(0,0,0,0.18)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--blue-300)]"
-            style={{
-              gridRowEnd: `span ${getRowSpan(photo)}`,
-            }}
-          >
+      {photos.map((photo, index) => (
+        <button
+          key={photo.id}
+          type="button"
+          data-gallery-frame
+          onClick={() => onPhotoClick(photo, index)}
+          className="group relative min-h-11 overflow-hidden rounded-xl bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+          style={{ gridRowEnd: `span ${getRowSpan(photo)}` }}
+        >
+          {photo.image ? (
             <img
+              ref={imgRef(photo.id)}
               src={photo.image}
               alt={photo.title}
               loading="lazy"
-              ref={(element) => {
-                if (element?.complete) {
-                  registerImageRatio(
-                    photo.id,
-                    element.naturalWidth,
-                    element.naturalHeight,
-                  );
-                }
-              }}
               onLoad={(event) => {
+                markLoaded(photo.id);
+
                 const { naturalWidth, naturalHeight } = event.currentTarget;
-
                 registerImageRatio(photo.id, naturalWidth, naturalHeight);
-
-                setLoadedIds((current) => {
-                  const next = new Set(current);
-                  next.add(photo.id);
-                  return next;
-                });
               }}
+              onError={() => markLoaded(photo.id)}
               className={cn(
-                "absolute inset-0 h-full w-full rounded-2xl object-cover transition duration-700 group-hover:scale-[1.03]",
-                isLoaded ? "opacity-100" : "opacity-0",
+                "absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]",
+                !loadedIds.has(photo.id) && "opacity-0",
               )}
             />
+          ) : (
+            <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))]" />
+          )}
 
-            <div
-              aria-hidden
-              className={cn(
-                "absolute inset-0 rounded-2xl bg-[linear-gradient(180deg,rgba(8,14,28,0.18),rgba(3,7,18,0.54))] transition duration-300",
-                "opacity-0 group-hover:opacity-100",
-              )}
-            />
+          <div className="absolute inset-0 bg-black/0 transition duration-300 group-hover:bg-black/20" />
 
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 translate-y-2 rounded-b-2xl p-3 opacity-0 transition duration-300 group-hover:translate-y-0 group-hover:opacity-100 sm:p-4">
-              <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/70">
-                {photo.category}
+          <div className="absolute inset-x-0 bottom-0 translate-y-2 p-4 opacity-0 transition duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+            <p className="text-xs uppercase tracking-[0.18em] text-white/80">
+              {photo.category}
+            </p>
+            <p className="mt-1 text-sm font-medium text-white">{photo.title}</p>
+
+            {!photo.image ? (
+              <p className="mt-2 text-[11px] uppercase tracking-[0.18em] text-white/45">
+                No image uploaded
               </p>
-
-              <p className="mt-1 line-clamp-2 text-sm font-medium leading-snug text-white">
-                {photo.title}
-              </p>
-            </div>
-          </button>
-        );
-      })}
+            ) : null}
+          </div>
+        </button>
+      ))}
     </div>
   );
 }
