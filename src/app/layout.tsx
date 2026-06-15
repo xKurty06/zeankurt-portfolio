@@ -12,6 +12,7 @@ import { ScrollToTopButton } from "@/components/ui/ScrollToTopButton";
 import { Analytics } from "@vercel/analytics/next";
 import { getPortfolioContent } from "@/lib/cms/queries";
 import { SpeedInsights } from "@vercel/speed-insights/next"
+import { GlobalScrollManager } from "@/components/layout/GlobalScrollManager";
 import "./globals.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -58,6 +59,7 @@ export default async function RootLayout({
       >
         <ThemeProvider>
           <SavingProvider>
+            <GlobalScrollManager />
             <GsapInit />
             <LoaderWrapper />
             <ScrollProgressBar />

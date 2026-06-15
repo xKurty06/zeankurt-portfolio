@@ -32,6 +32,7 @@ import SaveButton from "@/components/ui/SaveButton";
 import UploadWithValidation from "@/components/admin/UploadWithValidationClient";
 import UploadField from "@/components/admin/UploadFieldClient";
 import { AdminActionForm } from "@/app/admin/AdminActionForm";
+import { AdminScrollReset } from "@/app/admin/AdminScrollReset";
 
 type Row = Record<string, unknown>;
 
@@ -478,6 +479,7 @@ export default async function AdminPage() {
 
   return (
     <div className="min-h-dvh bg-[var(--background)] text-white">
+      <AdminScrollReset />
       <header className="sticky top-0 z-30 border-b border-[var(--border)] bg-[var(--background)]/90 backdrop-blur-sm">
         <div className="mx-auto flex min-h-14 max-w-screen-xl flex-wrap items-center justify-between gap-3 px-4 py-2 sm:flex-nowrap sm:px-5">
           <div className="flex items-center gap-3">
@@ -645,8 +647,10 @@ export default async function AdminPage() {
                   title: value(project, "title"),
                   subtitle: value(project, "year"),
                   meta: value(project, "role"),
+                  status: value(project, "status"),
                   featured: project.featured === true,
                   sortOrder: Number(value(project, "sort_order")) || 0,
+
                   sortValues: {
                     name: value(project, "title"),
                     year: value(project, "year"),

@@ -2,7 +2,15 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowDownAZ, ArrowDownZA, Check, ChevronDown, GripVertical, Save, Star } from "lucide-react";
+import {
+  ArrowDownAZ,
+  ArrowDownZA,
+  Check,
+  ChevronDown,
+  GripVertical,
+  Save,
+  Star,
+} from "lucide-react";
 import { updateSortOrder } from "@/app/admin/actions";
 import { cn } from "@/lib/cn";
 
@@ -16,7 +24,14 @@ type SortableTable =
   | "creative_photos";
 
 type SortDirection = "asc" | "desc";
-type SortField = "custom" | "name" | "date" | "year" | "issuer" | "venue" | "featured";
+type SortField =
+  | "custom"
+  | "name"
+  | "date"
+  | "year"
+  | "issuer"
+  | "venue"
+  | "featured";
 type DropPosition = "before" | "after";
 
 interface SortOption {
@@ -30,6 +45,7 @@ interface SortableItem {
   title: string;
   subtitle?: string;
   meta?: string;
+  status?: string;
   actions: React.ReactNode;
   featured?: boolean;
   sortOrder: number;
@@ -95,6 +111,43 @@ function compareValues(
   return String(aValue ?? "").localeCompare(String(bValue ?? "")) * modifier;
 }
 
+function getProjectStatusMeta(status?: string) {
+  const normalized = status?.trim().toLowerCase();
+
+  if (normalized === "live") {
+    return {
+      label: "Live",
+      className:
+        "border-emerald-400/30 bg-emerald-400/10 text-emerald-200",
+    };
+  }
+
+  if (normalized === "wip") {
+    return {
+      label: "WIP",
+      className: "border-amber-400/30 bg-amber-400/10 text-amber-200",
+    };
+  }
+
+  if (normalized === "archived") {
+    return {
+      label: "Archived",
+      className:
+        "border-white/10 bg-white/[0.05] text-[var(--foreground-muted)]",
+    };
+  }
+
+  if (normalized) {
+    return {
+      label: normalized,
+      className:
+        "border-[var(--blue-400)]/30 bg-[var(--accent-soft)] text-[var(--blue-200)]",
+    };
+  }
+
+  return null;
+}
+
 export function AdminSortableList({
   items,
   table,
@@ -105,7 +158,10 @@ export function AdminSortableList({
   const [sortField, setSortField] = useState<SortField>("custom");
   const [direction, setDirection] = useState<SortDirection>("asc");
   const [draggedId, setDraggedId] = useState<string | null>(null);
-  const [dropTarget, setDropTarget] = useState<{ id: string; position: DropPosition } | null>(null);
+  const [dropTarget, setDropTarget] = useState<{
+    id: string;
+    position: DropPosition;
+  } | null>(null);
   const [dirty, setDirty] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -125,7 +181,7 @@ export function AdminSortableList({
     setDropTarget(null);
     setDirty(false);
     setMenuOpen(false);
-  }, [items]);
+  }, [items, sortField, direction]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -144,6 +200,7 @@ export function AdminSortableList({
 
     window.addEventListener("pointerdown", onPointerDown);
     window.addEventListener("keydown", onKeyDown);
+
     return () => {
       window.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("keydown", onKeyDown);
@@ -153,22 +210,33 @@ export function AdminSortableList({
   const applySort = (field: SortField, nextDirection = direction) => {
     setSortField(field);
     setOrderedItems((current) => {
-      const nextItems = [...current].sort((a, b) => compareValues(a, b, field, nextDirection));
+      const nextItems = [...current].sort((a, b) =>
+        compareValues(a, b, field, nextDirection),
+      );
       setDirty(!hasSameOrder(nextItems, items));
       return nextItems;
     });
   };
 
-  const updateDropTarget = (event: React.DragEvent<HTMLDivElement>, targetId: string) => {
+  const updateDropTarget = (
+    event: React.DragEvent<HTMLDivElement>,
+    targetId: string,
+  ) => {
     event.preventDefault();
+
     if (!draggedId || draggedId === targetId) {
       setDropTarget(null);
       return;
     }
 
     const rect = event.currentTarget.getBoundingClientRect();
-    const position = event.clientY < rect.top + rect.height / 2 ? "before" : "after";
-    setDropTarget({ id: targetId, position });
+    const position =
+      event.clientY < rect.top + rect.height / 2 ? "before" : "after";
+
+    setDropTarget({
+      id: targetId,
+      position,
+    });
   };
 
   const moveItem = () => {
@@ -177,17 +245,21 @@ export function AdminSortableList({
     setOrderedItems((current) => {
       const next = [...current];
       const from = next.findIndex((item) => item.id === draggedId);
-      const targetIndex = next.findIndex((item) => item.id === dropTarget.id);
 
-      if (from < 0 || targetIndex < 0) return current;
+      if (from < 0) return current;
 
       const [moved] = next.splice(from, 1);
-      const targetIndexAfterRemoval = next.findIndex((item) => item.id === dropTarget.id);
-      const insertIndex = dropTarget.position === "after"
-        ? targetIndexAfterRemoval + 1
-        : targetIndexAfterRemoval;
+      const targetIndexAfterRemoval = next.findIndex(
+        (item) => item.id === dropTarget.id,
+      );
+      const insertIndex =
+        dropTarget.position === "after"
+          ? targetIndexAfterRemoval + 1
+          : targetIndexAfterRemoval;
+
       next.splice(insertIndex, 0, moved);
       setDirty(!hasSameOrder(next, items));
+
       return next;
     });
 
@@ -201,9 +273,14 @@ export function AdminSortableList({
         table,
         ids: orderedItems.map((item) => item.id),
       });
+
       setOrderedItems((current) =>
-        current.map((item, index) => ({ ...item, sortOrder: index })),
+        current.map((item, index) => ({
+          ...item,
+          sortOrder: index,
+        })),
       );
+
       setDirty(false);
       router.refresh();
     });
@@ -223,7 +300,12 @@ export function AdminSortableList({
               aria-label="Sort field"
             >
               <span>{activeSortLabel}</span>
-              <ChevronDown className={cn("h-4 w-4 text-[var(--blue-300)] transition", menuOpen && "rotate-180")} />
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 text-[var(--blue-300)] transition",
+                  menuOpen && "rotate-180",
+                )}
+              />
             </button>
 
             {menuOpen ? (
@@ -233,6 +315,7 @@ export function AdminSortableList({
               >
                 {sortOptions.map((option) => {
                   const selected = option.value === sortField;
+
                   return (
                     <button
                       key={option.value}
@@ -251,13 +334,16 @@ export function AdminSortableList({
                       )}
                     >
                       {option.label}
-                      {selected ? <Check className="h-3.5 w-3.5 text-[var(--blue-300)]" /> : null}
+                      {selected ? (
+                        <Check className="h-3.5 w-3.5 text-[var(--blue-300)]" />
+                      ) : null}
                     </button>
                   );
                 })}
               </div>
             ) : null}
           </div>
+
           <button
             type="button"
             onClick={() => {
@@ -269,9 +355,14 @@ export function AdminSortableList({
             aria-label={`Sort ${direction === "asc" ? "descending" : "ascending"}`}
             title={direction === "asc" ? "Ascending" : "Descending"}
           >
-            {direction === "asc" ? <ArrowDownAZ className="h-4 w-4" /> : <ArrowDownZA className="h-4 w-4" />}
+            {direction === "asc" ? (
+              <ArrowDownAZ className="h-4 w-4" />
+            ) : (
+              <ArrowDownZA className="h-4 w-4" />
+            )}
           </button>
         </div>
+
         <button
           type="button"
           onClick={saveOrder}
@@ -285,69 +376,98 @@ export function AdminSortableList({
 
       <div className="flex flex-col gap-3">
         {orderedItems.map((item) => {
-          const isDropBefore = dropTarget?.id === item.id && dropTarget.position === "before";
-          const isDropAfter = dropTarget?.id === item.id && dropTarget.position === "after";
+          const isDropBefore =
+            dropTarget?.id === item.id && dropTarget.position === "before";
+          const isDropAfter =
+            dropTarget?.id === item.id && dropTarget.position === "after";
+          const projectStatus = getProjectStatusMeta(item.status);
 
           return (
-          <div
-            key={item.id}
-            id={item.anchorId}
-            draggable
-            onDragStart={() => setDraggedId(item.id)}
-            onDragEnd={() => {
-              setDraggedId(null);
-              setDropTarget(null);
-            }}
-            onDragOver={(event) => updateDropTarget(event, item.id)}
-            onDragLeave={(event) => {
-              if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-                setDropTarget((current) => current?.id === item.id ? null : current);
-              }
-            }}
-            onDrop={(event) => {
-              event.preventDefault();
-              moveItem();
-            }}
-            className={cn(
-              "relative flex flex-col gap-3 rounded-2xl border border-[var(--border)] bg-white/[0.02] px-4 py-4 transition md:flex-row md:items-center md:justify-between",
-              draggedId === item.id && "border-[var(--border-strong)] bg-white/[0.04] opacity-70",
-            )}
-          >
-            {isDropBefore ? (
-              <span className="pointer-events-none absolute inset-x-3 -top-2 h-0.5 rounded-full bg-[var(--blue-300)] shadow-[0_0_16px_rgba(72,202,228,0.75)]" />
-            ) : null}
-            {isDropAfter ? (
-              <span className="pointer-events-none absolute inset-x-3 -bottom-2 h-0.5 rounded-full bg-[var(--blue-300)] shadow-[0_0_16px_rgba(72,202,228,0.75)]" />
-            ) : null}
-            <div className="flex min-w-0 items-start gap-3">
-              <button
-                type="button"
-                className="mt-0.5 inline-flex h-11 w-11 shrink-0 cursor-grab items-center justify-center rounded-full border border-[var(--border)] text-[var(--foreground-muted)] active:cursor-grabbing sm:h-8 sm:w-8"
-                aria-label={`Drag ${item.title}`}
-                title="Drag to reorder"
-              >
-                <GripVertical className="h-4 w-4" />
-              </button>
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="truncate text-sm font-semibold text-white">{item.title}</p>
-                  {item.featured ? (
-                    <span className="inline-flex items-center gap-1 rounded-full border border-[var(--blue-400)]/30 bg-[var(--accent-soft)] px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-[var(--blue-200)]">
-                      <Star className="h-3 w-3 fill-current" />
-                      Featured
-                    </span>
-                  ) : null}
-                </div>
-                <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-[var(--foreground-muted)]">
-                  {item.subtitle ? <span>{item.subtitle}</span> : null}
-                  {item.meta ? <span>{item.meta}</span> : null}
+            <div
+              key={item.id}
+              id={item.anchorId}
+              draggable
+              onDragStart={() => setDraggedId(item.id)}
+              onDragEnd={() => {
+                setDraggedId(null);
+                setDropTarget(null);
+              }}
+              onDragOver={(event) => updateDropTarget(event, item.id)}
+              onDragLeave={(event) => {
+                if (
+                  !event.currentTarget.contains(
+                    event.relatedTarget as Node | null,
+                  )
+                ) {
+                  setDropTarget((current) =>
+                    current?.id === item.id ? null : current,
+                  );
+                }
+              }}
+              onDrop={(event) => {
+                event.preventDefault();
+                moveItem();
+              }}
+              className={cn(
+                "relative flex flex-col gap-3 rounded-2xl border border-[var(--border)] bg-white/[0.02] px-4 py-4 transition md:flex-row md:items-center md:justify-between",
+                draggedId === item.id &&
+                  "border-[var(--border-strong)] bg-white/[0.04] opacity-70",
+              )}
+            >
+              {isDropBefore ? (
+                <span className="pointer-events-none absolute inset-x-3 -top-2 h-0.5 rounded-full bg-[var(--blue-300)] shadow-[0_0_16px_rgba(72,202,228,0.75)]" />
+              ) : null}
+
+              {isDropAfter ? (
+                <span className="pointer-events-none absolute inset-x-3 -bottom-2 h-0.5 rounded-full bg-[var(--blue-300)] shadow-[0_0_16px_rgba(72,202,228,0.75)]" />
+              ) : null}
+
+              <div className="flex min-w-0 items-start gap-3">
+                <button
+                  type="button"
+                  className="mt-0.5 inline-flex h-11 w-11 shrink-0 cursor-grab items-center justify-center rounded-full border border-[var(--border)] text-[var(--foreground-muted)] active:cursor-grabbing sm:h-8 sm:w-8"
+                  aria-label={`Drag ${item.title}`}
+                  title="Drag to reorder"
+                >
+                  <GripVertical className="h-4 w-4" />
+                </button>
+
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="truncate text-sm font-semibold text-white">
+                      {item.title}
+                    </p>
+
+                    {projectStatus ? (
+                      <span
+                        className={cn(
+                          "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em]",
+                          projectStatus.className,
+                        )}
+                      >
+                        {projectStatus.label}
+                      </span>
+                    ) : null}
+
+                    {item.featured ? (
+                      <span className="inline-flex items-center gap-1 rounded-full border border-[var(--blue-400)]/30 bg-[var(--accent-soft)] px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-[var(--blue-200)]">
+                        <Star className="h-3 w-3 fill-current" />
+                        Featured
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-[var(--foreground-muted)]">
+                    {item.subtitle ? <span>{item.subtitle}</span> : null}
+                    {item.meta ? <span>{item.meta}</span> : null}
+                  </div>
                 </div>
               </div>
+
+              <div className="flex flex-wrap items-center gap-2 md:justify-end">
+                {item.actions}
+              </div>
             </div>
-            <div className="flex flex-wrap items-center gap-2 md:justify-end">
-              {item.actions}
-            </div>
-          </div>
           );
         })}
       </div>
