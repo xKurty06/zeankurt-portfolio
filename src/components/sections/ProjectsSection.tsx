@@ -32,7 +32,7 @@ import { useLowMotionDevice } from "@/hooks/useLowMotionDevice";
 
 const INITIAL_SHOW = 6;
 const ALL_FILTER = "All";
-const MAX_PRIMARY_FILTERS = 7;
+const PRIMARY_ROLE_FILTER_LIMIT = 4;
 
 const STATUS_STYLES = {
   live: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
@@ -49,79 +49,82 @@ function getStatusClass(status: Project["status"]) {
   );
 }
 
-function getPrimaryFilterTags(tags: string[], projects: Project[]) {
-  const tagCounts = new Map<string, number>();
+function getPrimaryFilterRoles(roles: string[], projects: Project[]) {
+  const roleCounts = new Map<string, number>();
 
   projects.forEach((project) => {
-    project.tags.forEach((tag) => {
-      tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1);
-    });
+    if (!project.role) return;
+
+    roleCounts.set(project.role, (roleCounts.get(project.role) ?? 0) + 1);
   });
 
-  return [...tags]
+  return [...roles]
     .sort((a, b) => {
-      const countDiff = (tagCounts.get(b) ?? 0) - (tagCounts.get(a) ?? 0);
+      const countDiff = (roleCounts.get(b) ?? 0) - (roleCounts.get(a) ?? 0);
 
       if (countDiff !== 0) return countDiff;
 
       return a.localeCompare(b);
     })
-    .slice(0, MAX_PRIMARY_FILTERS - 1);
+    .slice(0, PRIMARY_ROLE_FILTER_LIMIT);
 }
 
 function ProjectFilter({
-  tags,
+  roles,
   projects,
-  activeTag,
+  activeRole,
   onChange,
 }: {
-  tags: string[];
+  roles: string[];
   projects: Project[];
-  activeTag: string;
-  onChange: (tag: string) => void;
+  activeRole: string;
+  onChange: (role: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [dropdownStyle, setDropdownStyle] = useState<CSSProperties>({});
+  const [dropdownMode, setDropdownMode] = useState<"all" | "more">("all");
 
   const rootRef = useRef<HTMLDivElement>(null);
+  const mobileFilterButtonRef = useRef<HTMLButtonElement>(null);
   const moreButtonRef = useRef<HTMLButtonElement>(null);
+  const dropdownAnchorRef = useRef<HTMLButtonElement | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const primaryTags = useMemo(
-    () => getPrimaryFilterTags(tags, projects),
-    [projects, tags],
+  const primaryRoles = useMemo(
+    () => getPrimaryFilterRoles(roles, projects),
+    [projects, roles],
   );
 
-  const moreTags = useMemo(
-    () => tags.filter((tag) => !primaryTags.includes(tag)),
-    [primaryTags, tags],
+  const moreRoles = useMemo(
+    () => roles.filter((role) => !primaryRoles.includes(role)),
+    [primaryRoles, roles],
   );
 
   const activeIsMore =
-    activeTag !== ALL_FILTER &&
-    !primaryTags.includes(activeTag) &&
-    tags.includes(activeTag);
+    activeRole !== ALL_FILTER &&
+    !primaryRoles.includes(activeRole) &&
+    roles.includes(activeRole);
 
-  const visibleTags = activeIsMore
-    ? [ALL_FILTER, ...primaryTags, activeTag]
-    : [ALL_FILTER, ...primaryTags];
+  const visibleRoles = [ALL_FILTER, ...primaryRoles];
+
+  const dropdownRoles = dropdownMode === "all" ? [ALL_FILTER, ...roles] : moreRoles;
 
   const updateDropdownPosition = useCallback(() => {
-    const button = moreButtonRef.current;
+    const button = dropdownAnchorRef.current;
     if (!button) return;
 
     const rect = button.getBoundingClientRect();
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
-    const isMobile = viewportWidth < 640;
+    const isMobile = viewportWidth < 1024;
 
     const width = isMobile ? viewportWidth - 24 : 384;
     const left = isMobile
       ? 12
       : Math.min(Math.max(16, rect.right - width), viewportWidth - width - 16);
 
-    const dropdownMaxHeight = isMobile ? 260 : 300;
+    const dropdownMaxHeight = isMobile ? 300 : 300;
     const preferredTop = rect.bottom + 8;
     const top = Math.min(preferredTop, viewportHeight - dropdownMaxHeight - 16);
 
@@ -183,64 +186,100 @@ function ProjectFilter({
     };
   }, [open]);
 
-  const handleSelect = (tag: string) => {
-    const nextTag = activeTag === tag ? ALL_FILTER : tag;
+  const openDropdown = (
+    mode: "all" | "more",
+    anchor: HTMLButtonElement | null,
+  ) => {
+    dropdownAnchorRef.current = anchor;
+    setDropdownMode(mode);
+    updateDropdownPosition();
+    setOpen((current) => (dropdownMode === mode ? !current : true));
+  };
 
-    onChange(nextTag);
+  const handleSelect = (role: string) => {
+    const nextRole = activeRole === role ? ALL_FILTER : role;
+
+    onChange(nextRole);
     setOpen(false);
   };
 
   return (
     <>
-      <div ref={rootRef} className="relative w-full min-w-0 sm:w-auto">
-        <div className="flex max-w-full gap-2 overflow-x-auto pb-1 pl-0 pr-0 [-ms-overflow-style:none] [scrollbar-width:none] sm:max-w-[46rem] [&::-webkit-scrollbar]:hidden">
-          {visibleTags.map((tag) => (
+      <div ref={rootRef} className="relative w-full min-w-0 lg:w-auto lg:max-w-[40rem]">
+        <div className="flex justify-end lg:hidden">
+          <button
+            ref={mobileFilterButtonRef}
+            type="button"
+            data-interactive
+            onClick={() => openDropdown("all", mobileFilterButtonRef.current)}
+            aria-expanded={open && dropdownMode === "all"}
+            className={cn(
+              "inline-flex min-h-10 max-w-full items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-all duration-200",
+              activeRole !== ALL_FILTER || (open && dropdownMode === "all")
+                ? "border-[var(--blue-500)] bg-[var(--accent-soft)] text-white shadow-[0_0_12px_var(--accent-glow)]"
+                : "border-[var(--border)] text-[var(--foreground-muted)] hover:border-[var(--border-strong)] hover:text-white",
+            )}
+          >
+            <span className="max-w-[13rem] truncate">
+              {activeRole === ALL_FILTER ? "All Filters" : activeRole}
+            </span>
+            <ChevronDown
+              className={cn(
+                "h-4 w-4 shrink-0 transition",
+                open && dropdownMode === "all" && "rotate-180",
+              )}
+            />
+          </button>
+        </div>
+
+        <div className="hidden max-w-full gap-2 pb-1 lg:flex lg:max-w-[40rem] lg:justify-end lg:overflow-visible">
+          {visibleRoles.map((role) => (
             <button
-              key={tag}
+              key={role}
               type="button"
               data-interactive
-              onClick={() => handleSelect(tag)}
+              onClick={() => handleSelect(role)}
               className={cn(
-                "min-h-10 shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200 sm:min-h-0 sm:py-1",
-                activeTag === tag
+                "inline-flex min-h-9 shrink-0 items-center rounded-full border px-3 py-1 text-xs font-medium transition-all duration-200",
+                activeRole === role
                   ? "border-[var(--blue-500)] bg-[var(--accent-soft)] text-white shadow-[0_0_12px_var(--accent-glow)]"
                   : "border-[var(--border)] text-[var(--foreground-muted)] hover:border-[var(--border-strong)] hover:text-white",
               )}
             >
-              {tag}
+              <span className="max-w-[8rem] truncate">{role}</span>
             </button>
           ))}
 
-          {moreTags.length > 0 ? (
+          {moreRoles.length > 0 ? (
             <button
               ref={moreButtonRef}
               type="button"
               data-interactive
-              onClick={() => {
-                updateDropdownPosition();
-                setOpen((current) => !current);
-              }}
-              aria-expanded={open}
+              onClick={() => openDropdown("more", moreButtonRef.current)}
+              aria-expanded={open && dropdownMode === "more"}
               className={cn(
-                "inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200 sm:min-h-0 sm:py-1",
-                activeIsMore || open
+                "inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-all duration-200",
+                activeIsMore || (open && dropdownMode === "more")
                   ? "border-[var(--blue-500)] bg-[var(--accent-soft)] text-white shadow-[0_0_12px_var(--accent-glow)]"
                   : "border-[var(--border)] text-[var(--foreground-muted)] hover:border-[var(--border-strong)] hover:text-white",
               )}
             >
-              More filters
+              More roles
               <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[10px]">
-                {moreTags.length}
+                {moreRoles.length}
               </span>
               <ChevronDown
-                className={cn("h-3.5 w-3.5 transition", open && "rotate-180")}
+                className={cn(
+                  "h-3.5 w-3.5 transition",
+                  open && dropdownMode === "more" && "rotate-180",
+                )}
               />
             </button>
           ) : null}
         </div>
       </div>
 
-      {mounted && open && moreTags.length > 0
+      {mounted && open && dropdownRoles.length > 0
         ? createPortal(
           <div
             ref={dropdownRef}
@@ -249,10 +288,10 @@ function ProjectFilter({
           >
             <div className="mb-2 flex items-center justify-between gap-3">
               <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--blue-300)]">
-                More filters
+                {dropdownMode === "all" ? "Filter by role" : "More roles"}
               </p>
 
-              {activeTag !== ALL_FILTER ? (
+              {activeRole !== ALL_FILTER ? (
                 <button
                   type="button"
                   onClick={() => handleSelect(ALL_FILTER)}
@@ -263,22 +302,24 @@ function ProjectFilter({
               ) : null}
             </div>
 
-            <div className="max-h-60 overflow-y-auto pr-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div className="max-h-64 overflow-y-auto pr-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <div className="flex flex-wrap gap-2">
-                {moreTags.map((tag) => (
+                {dropdownRoles.map((role) => (
                   <button
-                    key={tag}
+                    key={role}
                     type="button"
                     data-interactive
-                    onClick={() => handleSelect(tag)}
+                    onClick={() => handleSelect(role)}
                     className={cn(
-                      "rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200",
-                      activeTag === tag
+                      "inline-flex max-w-full items-center rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200",
+                      activeRole === role
                         ? "border-[var(--blue-500)] bg-[var(--accent-soft)] text-white shadow-[0_0_12px_var(--accent-glow)]"
                         : "border-[var(--border)] text-[var(--foreground-muted)] hover:border-[var(--border-strong)] hover:text-white",
                     )}
                   >
-                    {tag}
+                    <span className="max-w-[13rem] truncate sm:max-w-none">
+                      {role}
+                    </span>
                   </button>
                 ))}
               </div>
@@ -290,6 +331,7 @@ function ProjectFilter({
     </>
   );
 }
+
 
 function MobileProjectCarousel({
   projects,
@@ -741,7 +783,7 @@ function CompactCard({ project }: { project: Project }) {
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-[var(--blue-400)]">
-            {project.year}
+            {project.year} · {project.role}
           </p>
 
           <h3 className="mt-1 break-words font-[family-name:var(--font-syne)] text-base font-semibold leading-snug text-white">
@@ -815,7 +857,7 @@ export function ProjectsSection({ projects }: ProjectsSectionProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const allProjectsGridRef = useRef<HTMLDivElement>(null);
   const lowMotion = useLowMotionDevice();
-  const [activeTag, setActiveTag] = useState(ALL_FILTER);
+  const [activeRole, setActiveRole] = useState(ALL_FILTER);
   const [expanded, setExpanded] = useState(false);
 
   const featuredProjects = useMemo(
@@ -828,25 +870,25 @@ export function ProjectsSection({ projects }: ProjectsSectionProps) {
     [projects],
   );
 
-  const nonFeaturedProjectTags = useMemo(
+  const nonFeaturedProjectRoles = useMemo(
     () =>
-      Array.from(new Set(nonFeatured.flatMap((project) => project.tags)))
+      Array.from(new Set(nonFeatured.map((project) => project.role)))
         .filter(Boolean)
         .sort((a, b) => a.localeCompare(b)),
     [nonFeatured],
   );
 
   const filtered = useMemo(() => {
-    if (activeTag === ALL_FILTER) return nonFeatured;
+    if (activeRole === ALL_FILTER) return nonFeatured;
 
-    return nonFeatured.filter((project) => project.tags.includes(activeTag));
-  }, [activeTag, nonFeatured]);
+    return nonFeatured.filter((project) => project.role === activeRole);
+  }, [activeRole, nonFeatured]);
 
   const visible = expanded ? filtered : filtered.slice(0, INITIAL_SHOW);
   const hasMore = filtered.length > INITIAL_SHOW;
 
-  const handleFilterChange = (tag: string) => {
-    setActiveTag(tag);
+  const handleFilterChange = (role: string) => {
+    setActiveRole(role);
     setExpanded(false);
   };
 
@@ -964,37 +1006,49 @@ export function ProjectsSection({ projects }: ProjectsSectionProps) {
           <div className="relative z-20 mt-10 overflow-visible sm:mt-14">
             <RevealOnScroll>
               <div className="relative z-[80] flex flex-col items-center gap-4 overflow-visible text-center lg:flex-row lg:items-start lg:justify-between lg:text-left">
-                <div className="shrink-0">
-                  <h3 className="font-[family-name:var(--font-syne)] text-lg font-semibold text-white">
-                    All projects
-                    <span className="ml-2 font-mono text-sm font-normal text-[var(--foreground-subtle)]">
-                      {filtered.length}
-                    </span>
+                {/* 1. Added w-full here to let the container expand */}
+                <div className="shrink-0 w-full">
+                  {/* 2. Added w-full block here so the heading takes up the whole line */}
+                  <h3 className="font-[family-name:var(--font-syne)] text-lg font-semibold text-white w-full block">
+                    {/* 3. Added w-full here to push the children to the edges */}
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex justify-start ">
+                        All projects
+                        <span className="ml-2 font-mono text-sm font-normal text-[var(--foreground-subtle)]">
+                          {filtered.length}
+                        </span>
+                      </div>
+                      <div className="flex items-end gap-2">
+                        <ProjectFilter
+                          roles={nonFeaturedProjectRoles}
+                          projects={nonFeatured}
+                          activeRole={activeRole}
+                          onChange={handleFilterChange}
+                        />
+                      </div>
+                    </div>
                   </h3>
-
-                  {activeTag !== ALL_FILTER ? (
-                    <p className="mt-1 text-xs text-[var(--foreground-muted)]">
-                      Filtered by{" "}
-                      <span className="text-[var(--blue-300)]">{activeTag}</span>
-                    </p>
-                  ) : null}
                 </div>
 
-                <ProjectFilter
-                  tags={nonFeaturedProjectTags}
-                  projects={nonFeatured}
-                  activeTag={activeTag}
-                  onChange={handleFilterChange}
-                />
+
+
               </div>
             </RevealOnScroll>
 
-            <div className="relative z-0 mt-5 md:hidden">
-              <MobileProjectCarousel
-                projects={visible}
-                emptyMessage="No projects match that filter."
-                showImage={false}
-              />
+            <div className="relative z-0 mt-5 grid min-w-0 grid-cols-1 gap-4 md:hidden">
+              {visible.length > 0 ? (
+                visible.map((project) => (
+                  <MobileProjectCard
+                    key={project.slug}
+                    project={project}
+                    showImage={false}
+                  />
+                ))
+              ) : (
+                <p className="py-8 text-center text-sm text-[var(--foreground-subtle)]">
+                  No projects match that role.
+                </p>
+              )}
             </div>
 
             <div
@@ -1009,7 +1063,7 @@ export function ProjectsSection({ projects }: ProjectsSectionProps) {
 
               {filtered.length === 0 ? (
                 <p className="col-span-full py-8 text-center text-sm text-[var(--foreground-subtle)]">
-                  No projects match that filter.
+                  No projects match that role.
                 </p>
               ) : null}
             </div>
