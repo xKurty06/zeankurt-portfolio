@@ -71,35 +71,6 @@ export function ContactSection({ siteConfig }: ContactSectionProps) {
         delay: 1,
       });
 
-      const glow = card.querySelector<HTMLElement>("[data-contact-glow]");
-      let onMouseMove: ((event: MouseEvent) => void) | null = null;
-      let onMouseLeave: (() => void) | null = null;
-
-      if (glow) {
-        onMouseMove = (event: MouseEvent) => {
-          const rect = card.getBoundingClientRect();
-
-          glow.style.left = `${event.clientX - rect.left}px`;
-          glow.style.top = `${event.clientY - rect.top}px`;
-
-          gsap.to(glow, {
-            opacity: 1,
-            duration: 0.3,
-            ease: "power2.out",
-          });
-        };
-
-        onMouseLeave = () => {
-          gsap.to(glow, {
-            opacity: 0,
-            duration: 0.5,
-          });
-        };
-
-        card.addEventListener("mousemove", onMouseMove);
-        card.addEventListener("mouseleave", onMouseLeave);
-      }
-
       const signalItems = gsap.utils.toArray<HTMLElement>("[data-contact-signal]");
 
       gsap.to(signalItems, {
@@ -113,13 +84,7 @@ export function ContactSection({ siteConfig }: ContactSectionProps) {
       });
 
       return () => {
-        if (onMouseMove) {
-          card.removeEventListener("mousemove", onMouseMove);
-        }
-
-        if (onMouseLeave) {
-          card.removeEventListener("mouseleave", onMouseLeave);
-        }
+        gsap.killTweensOf(signalItems);
       };
     },
     { dependencies: [lowMotion], revertOnUpdate: true, scope: sectionRef },
@@ -136,18 +101,6 @@ export function ContactSection({ siteConfig }: ContactSectionProps) {
               "linear-gradient(135deg, rgba(2,62,138,0.22), rgba(3,7,18,0.94))",
           }}
         >
-          <div
-            data-contact-glow
-            aria-hidden
-            className="pointer-events-none absolute z-0 hidden h-56 w-56 rounded-full opacity-0 lg:block"
-            style={{
-              marginLeft: -112,
-              marginTop: -112,
-              background: "radial-gradient(circle, rgba(0,180,216,0.15) 0%, transparent 70%)",
-              filter: "blur(20px)",
-            }}
-          />
-
           <div
             aria-hidden
             className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(0,180,216,0.12),transparent_65%)] blur-3xl sm:-right-28 sm:-top-28 sm:h-72 sm:w-72"
@@ -177,9 +130,12 @@ export function ContactSection({ siteConfig }: ContactSectionProps) {
           <div className="relative z-10">
             <RevealOnScroll>
               <div className="mx-auto max-w-[22rem] text-center sm:max-w-2xl lg:mx-0 lg:max-w-3xl lg:text-left">
-                <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.3em] text-[var(--blue-400)] sm:text-xs">
-                  Contact
-                </p>
+                <div className="inline-flex items-center gap-3 text-[var(--blue-200)]">
+                  <span className="h-px w-10 bg-gradient-to-r from-[rgba(72,202,228,0.8)] to-transparent" />
+                  <p className="font-[family-name:var(--font-syne)] text-[0.78rem] font-medium tracking-[0.18em] sm:text-[0.82rem]">
+                    Contact
+                  </p>
+                </div>
 
                 <h2 className="mt-3 font-[family-name:var(--font-syne)] text-[clamp(1.9rem,8vw,2.55rem)] font-semibold leading-[1.08] tracking-[-0.04em] text-white sm:text-5xl lg:text-6xl">
                   Open to collaborations, web builds, and photo/video work.

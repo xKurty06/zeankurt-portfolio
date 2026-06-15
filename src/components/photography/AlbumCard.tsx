@@ -9,7 +9,7 @@ export function AlbumCard({ album }: AlbumCardProps) {
   return (
     <Link
       href={`/photography/${album.slug}`}
-      className="group relative block min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] shadow-[0_16px_44px_rgba(0,0,0,0.18)] transition duration-300 hover:border-white/20 hover:bg-white/[0.05]"
+      className="group relative block min-w-0 cursor-pointer overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] shadow-[0_16px_44px_rgba(0,0,0,0.18)] transition duration-300 hover:border-white/20 hover:bg-white/[0.05]"
     >
       <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-white/[0.03]">
         {album.coverImage ? (

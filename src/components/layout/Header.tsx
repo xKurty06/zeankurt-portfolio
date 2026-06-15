@@ -181,7 +181,7 @@ export function Header({ variant = "default", siteConfig }: HeaderProps) {
       <div className="container-shell flex h-16 items-center justify-between md:h-[var(--header-height)]">
         <Link
           href="/"
-          className="pointer-events-auto group flex min-w-0 items-center gap-2 truncate font-[family-name:var(--font-syne)] text-base font-semibold tracking-tight text-white sm:text-lg"
+          className="pointer-events-auto group flex min-w-0 cursor-pointer items-center gap-2 truncate font-[family-name:var(--font-syne)] text-base font-semibold tracking-tight text-white sm:text-lg"
         >
           {siteConfig.name}
         </Link>
@@ -270,7 +270,7 @@ function MobileFluidNav({
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
         className={cn(
-          "relative z-[90] flex h-12 w-12 items-center justify-center rounded-full border text-white shadow-[0_12px_40px_rgba(0,0,0,0.28)] transition duration-300",
+          "relative z-[90] flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border text-white shadow-[0_12px_40px_rgba(0,0,0,0.28)] transition duration-300",
           open
             ? "border-[rgba(72,202,228,0.3)] bg-[rgba(20,31,50,0.98)]"
             : "border-[var(--border)] bg-[rgba(8,14,28,0.72)] backdrop-blur-xl hover:border-[var(--border-strong)] hover:shadow-[0_0_16px_var(--accent-glow)]",
@@ -462,6 +462,7 @@ function NavLink({
 
   const className = cn(
     "rounded-full px-4 py-2 text-sm transition-all duration-200",
+    "cursor-pointer",
     mobile && "flex min-h-10 w-full items-center px-3 text-left",
     isActive
       ? "text-[var(--foreground-muted)] hover:bg-white/[0.05] hover:text-white hover:shadow-[0_0_8px_rgba(0,180,216,0.15)]"

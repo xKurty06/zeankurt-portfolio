@@ -428,7 +428,7 @@ export function PhotographyTeaser({
               target="_blank"
               rel="noopener noreferrer"
               data-interactive
-              className="text-[var(--blue-300)] hover:text-white transition"
+              className="cursor-pointer text-[var(--blue-300)] transition hover:text-white"
             >
               @{siteConfig.photographyBrand}
             </a>{" "}
@@ -438,7 +438,7 @@ export function PhotographyTeaser({
               target="_blank"
               rel="noopener noreferrer"
               data-interactive
-              className="text-[var(--blue-300)] hover:text-white transition"
+              className="cursor-pointer text-[var(--blue-300)] transition hover:text-white"
             >
               @{siteConfig.studioNomadsBrand}
             </a>{" "}

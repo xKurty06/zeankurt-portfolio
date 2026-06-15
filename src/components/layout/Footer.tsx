@@ -119,7 +119,7 @@ export function Footer({ siteConfig }: FooterProps) {
           <div className="mx-auto max-w-md lg:mx-0">
             <Link
               href="/"
-              className="inline-flex items-center justify-center gap-2 font-[family-name:var(--font-syne)] text-xl font-semibold text-white transition hover:text-[var(--blue-200)] sm:text-2xl lg:justify-start"
+              className="inline-flex cursor-pointer items-center justify-center gap-2 font-[family-name:var(--font-syne)] text-xl font-semibold text-white transition hover:text-[var(--blue-200)] sm:text-2xl lg:justify-start"
             >
               {siteConfig.name}
             </Link>
@@ -151,21 +151,21 @@ export function Footer({ siteConfig }: FooterProps) {
                       href={item.href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex min-h-9 items-center justify-center text-sm text-[var(--foreground-muted)] transition duration-200 hover:text-white lg:justify-start lg:hover:translate-x-1"
+                      className="inline-flex min-h-9 cursor-pointer items-center justify-center text-sm text-[var(--foreground-muted)] transition duration-200 hover:text-white lg:justify-start lg:hover:translate-x-1"
                     >
                       {item.label}
                     </a>
                   ) : item.href.startsWith("/") ? (
                     <Link
                       href={item.href}
-                      className="inline-flex min-h-9 items-center justify-center text-sm text-[var(--foreground-muted)] transition duration-200 hover:text-white lg:justify-start lg:hover:translate-x-1"
+                      className="inline-flex min-h-9 cursor-pointer items-center justify-center text-sm text-[var(--foreground-muted)] transition duration-200 hover:text-white lg:justify-start lg:hover:translate-x-1"
                     >
                       {item.label}
                     </Link>
                   ) : (
                     <a
                       href={item.href}
-                      className="inline-flex min-h-9 items-center justify-center text-sm text-[var(--foreground-muted)] transition duration-200 hover:text-white lg:justify-start lg:hover:translate-x-1"
+                      className="inline-flex min-h-9 cursor-pointer items-center justify-center text-sm text-[var(--foreground-muted)] transition duration-200 hover:text-white lg:justify-start lg:hover:translate-x-1"
                     >
                       {item.label}
                     </a>
@@ -187,7 +187,7 @@ export function Footer({ siteConfig }: FooterProps) {
               href="https://www.instagram.com/shot.by.zk/"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[var(--blue-300)] transition hover:text-white"
+              className="cursor-pointer text-[var(--blue-300)] transition hover:text-white"
             >
               {siteConfig.photographyBrand}
             </a>
@@ -196,7 +196,7 @@ export function Footer({ siteConfig }: FooterProps) {
               href="https://www.instagram.com/officialstudio.nomads/"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[var(--blue-300)] transition hover:text-white"
+              className="cursor-pointer text-[var(--blue-300)] transition hover:text-white"
             >
               Studio Nomads
             </a>

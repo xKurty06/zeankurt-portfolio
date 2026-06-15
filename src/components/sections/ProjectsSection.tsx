@@ -214,7 +214,7 @@ function ProjectFilter({
             onClick={() => openDropdown("all", mobileFilterButtonRef.current)}
             aria-expanded={open && dropdownMode === "all"}
             className={cn(
-              "inline-flex min-h-10 max-w-full items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-all duration-200",
+              "inline-flex min-h-10 max-w-full cursor-pointer items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-all duration-200",
               activeRole !== ALL_FILTER || (open && dropdownMode === "all")
                 ? "border-[var(--blue-500)] bg-[var(--accent-soft)] text-white shadow-[0_0_12px_var(--accent-glow)]"
                 : "border-[var(--border)] text-[var(--foreground-muted)] hover:border-[var(--border-strong)] hover:text-white",
@@ -240,7 +240,7 @@ function ProjectFilter({
               data-interactive
               onClick={() => handleSelect(role)}
               className={cn(
-                "inline-flex min-h-9 shrink-0 items-center rounded-full border px-3 py-1 text-xs font-medium transition-all duration-200",
+                "inline-flex min-h-9 shrink-0 cursor-pointer items-center rounded-full border px-3 py-1 text-xs font-medium transition-all duration-200",
                 activeRole === role
                   ? "border-[var(--blue-500)] bg-[var(--accent-soft)] text-white shadow-[0_0_12px_var(--accent-glow)]"
                   : "border-[var(--border)] text-[var(--foreground-muted)] hover:border-[var(--border-strong)] hover:text-white",
@@ -258,7 +258,7 @@ function ProjectFilter({
               onClick={() => openDropdown("more", moreButtonRef.current)}
               aria-expanded={open && dropdownMode === "more"}
               className={cn(
-                "inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-all duration-200",
+                "inline-flex min-h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-all duration-200",
                 activeIsMore || (open && dropdownMode === "more")
                   ? "border-[var(--blue-500)] bg-[var(--accent-soft)] text-white shadow-[0_0_12px_var(--accent-glow)]"
                   : "border-[var(--border)] text-[var(--foreground-muted)] hover:border-[var(--border-strong)] hover:text-white",
@@ -295,7 +295,7 @@ function ProjectFilter({
                 <button
                   type="button"
                   onClick={() => handleSelect(ALL_FILTER)}
-                  className="text-xs font-medium text-[var(--foreground-muted)] transition hover:text-white"
+                  className="cursor-pointer text-xs font-medium text-[var(--foreground-muted)] transition hover:text-white"
                 >
                   Clear
                 </button>
@@ -311,7 +311,7 @@ function ProjectFilter({
                     data-interactive
                     onClick={() => handleSelect(role)}
                     className={cn(
-                      "inline-flex max-w-full items-center rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200",
+                      "inline-flex max-w-full cursor-pointer items-center rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200",
                       activeRole === role
                         ? "border-[var(--blue-500)] bg-[var(--accent-soft)] text-white shadow-[0_0_12px_var(--accent-glow)]"
                         : "border-[var(--border)] text-[var(--foreground-muted)] hover:border-[var(--border-strong)] hover:text-white",
@@ -477,7 +477,7 @@ function MobileProjectCarousel({
             onClick={scrollPrev}
             disabled={!canScrollPrev}
             className={cn(
-              "absolute left-0 z-10 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--border)] bg-[rgba(8,14,28,0.82)] text-white shadow-[0_12px_30px_rgba(0,0,0,0.32)] backdrop-blur-xl transition hover:border-[var(--border-strong)] disabled:cursor-not-allowed disabled:opacity-35",
+              "absolute left-0 z-10 inline-flex h-9 w-9 cursor-pointer -translate-y-1/2 items-center justify-center rounded-full border border-[var(--border)] bg-[rgba(8,14,28,0.82)] text-white shadow-[0_12px_30px_rgba(0,0,0,0.32)] backdrop-blur-xl transition enabled:hover:border-[var(--border-strong)] disabled:cursor-not-allowed disabled:opacity-35",
               showImage ? "top-[42%]" : "top-1/2",
             )}
           >
@@ -490,7 +490,7 @@ function MobileProjectCarousel({
             onClick={scrollNext}
             disabled={!canScrollNext}
             className={cn(
-              "absolute right-0 z-10 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--border)] bg-[rgba(8,14,28,0.82)] text-white shadow-[0_12px_30px_rgba(0,0,0,0.32)] backdrop-blur-xl transition hover:border-[var(--border-strong)] disabled:cursor-not-allowed disabled:opacity-35",
+              "absolute right-0 z-10 inline-flex h-9 w-9 cursor-pointer -translate-y-1/2 items-center justify-center rounded-full border border-[var(--border)] bg-[rgba(8,14,28,0.82)] text-white shadow-[0_12px_30px_rgba(0,0,0,0.32)] backdrop-blur-xl transition enabled:hover:border-[var(--border-strong)] disabled:cursor-not-allowed disabled:opacity-35",
               showImage ? "top-[42%]" : "top-1/2",
             )}
           >
@@ -505,7 +505,7 @@ function MobileProjectCarousel({
                 aria-label={`Go to project ${index + 1}`}
                 onClick={() => scrollToIndex(index)}
                 className={cn(
-                  "h-2 rounded-full transition-all duration-300",
+                  "h-2 cursor-pointer rounded-full transition-all duration-300",
                   currentSlide === index
                     ? "w-6 bg-[var(--blue-300)] shadow-[0_0_12px_rgba(72,202,228,0.45)]"
                     : "w-2 bg-white/20 hover:bg-white/40",
@@ -896,28 +896,7 @@ export function ProjectsSection({ projects }: ProjectsSectionProps) {
     () => {
       if (lowMotion) return;
 
-      const section = sectionRef.current;
-      if (!section) return;
-
-      const onMove = (event: MouseEvent) => {
-        const rect = section.getBoundingClientRect();
-
-        section.style.setProperty(
-          "--projects-x",
-          `${event.clientX - rect.left}px`,
-        );
-
-        section.style.setProperty(
-          "--projects-y",
-          `${event.clientY - rect.top}px`,
-        );
-      };
-
-      section.addEventListener("mousemove", onMove);
-
-      return () => {
-        section.removeEventListener("mousemove", onMove);
-      };
+      return;
     },
     { dependencies: [lowMotion], revertOnUpdate: true, scope: sectionRef },
   );
@@ -1075,7 +1054,7 @@ export function ProjectsSection({ projects }: ProjectsSectionProps) {
                     type="button"
                     data-interactive
                     onClick={() => setExpanded((value) => !value)}
-                    className="inline-flex min-h-10 items-center gap-2 rounded-full border border-[var(--border)] px-5 py-2 text-sm text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white"
+                    className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-full border border-[var(--border)] px-5 py-2 text-sm text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white"
                   >
                     {expanded ? (
                       <>

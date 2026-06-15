@@ -96,21 +96,6 @@ export function SkillsSection({ skillCategories }: SkillsSectionProps) {
           );
         }
       });
-
-      if (section) {
-        const onMove = (event: MouseEvent) => {
-          const sectionRect = section.getBoundingClientRect();
-
-          section.style.setProperty("--skills-bg-x", `${event.clientX - sectionRect.left}px`);
-          section.style.setProperty("--skills-bg-y", `${event.clientY - sectionRect.top}px`);
-        };
-
-        section.addEventListener("mousemove", onMove);
-
-        return () => {
-          section.removeEventListener("mousemove", onMove);
-        };
-      }
     },
     { dependencies: [lowMotion], revertOnUpdate: true, scope: sectionRef },
   );
@@ -162,8 +147,7 @@ export function SkillsSection({ skillCategories }: SkillsSectionProps) {
                   <span
                     key={skill}
                     data-badge-item
-                    data-interactive
-                    className="inline-block max-w-full cursor-default break-words"
+                    className="inline-block max-w-full break-words"
                   >
                     <Badge>{skill}</Badge>
                   </span>

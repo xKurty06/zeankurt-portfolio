@@ -147,9 +147,12 @@ export function AboutSection({
                 className="pointer-events-none absolute inset-y-0 w-14 bg-gradient-to-r from-transparent via-[rgba(0,180,216,0.1)] to-transparent blur-sm sm:w-20"
               />
 
-              <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.32em] text-[var(--blue-400)] sm:text-xs">
-                About
-              </p>
+              <div className="inline-flex items-center gap-3 text-[var(--blue-200)]">
+                <span className="h-px w-10 bg-gradient-to-r from-[rgba(72,202,228,0.8)] to-transparent" />
+                <p className="font-[family-name:var(--font-syne)] text-[0.78rem] font-medium tracking-[0.18em] sm:text-[0.82rem]">
+                  About
+                </p>
+              </div>
 
               <h2 className="mx-auto mt-4 max-w-3xl font-[family-name:var(--font-syne)] text-[clamp(2rem,8vw,3.15rem)] font-semibold leading-[1.12] tracking-[-0.04em] text-white sm:text-5xl lg:mx-0 lg:text-6xl">
                 Developer, builder, and visual storyteller.
@@ -184,9 +187,8 @@ export function AboutSection({
                   return (
                     <GlowCard
                       key={item.label}
-                      className="min-w-0 cursor-default rounded-2xl border border-[var(--border)] bg-white/[0.02] p-3 text-center sm:p-5 lg:text-left"
+                      className="min-w-0 rounded-2xl border border-[var(--border)] bg-white/[0.02] p-3 text-center sm:p-5 lg:text-left"
                       intensity={lowMotion ? 0.16 : 0.28}
-                      data-interactive
                     >
                       <dt className="font-mono text-[9px] font-semibold uppercase tracking-[0.18em] text-[var(--blue-400)] sm:text-[10px]">
                         {item.label}

@@ -373,7 +373,7 @@ export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
         <Container className="relative z-10 pb-16 pt-20 md:pt-20">
           <Link
             href="/photography"
-            className="inline-flex min-h-11 items-center gap-2 text-sm text-white/60 transition hover:text-white"
+            className="inline-flex min-h-11 cursor-pointer items-center gap-2 text-sm text-white/60 transition hover:text-white"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to photography
@@ -406,7 +406,7 @@ export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
               <button
                 type="button"
                 onClick={() => openPhotoInLightbox(displayedFeaturedPhoto)}
-                className="group relative col-span-2 min-h-11 overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))] text-left transition hover:border-white/30 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 lg:col-start-3 lg:row-start-1"
+                className="group relative col-span-2 min-h-11 cursor-zoom-in overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))] text-left transition hover:border-white/30 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70 lg:col-start-3 lg:row-start-1"
                 style={{
                   gridRowEnd: `span ${getFeaturedRowSpan()}`,
                 }}
@@ -456,7 +456,7 @@ export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
                 key={photo.id}
                 type="button"
                 onClick={() => openPhotoInLightbox(photo)}
-                className="group relative min-h-11 overflow-hidden rounded-2xl bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))] text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+                className="group relative min-h-11 cursor-zoom-in overflow-hidden rounded-2xl bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))] text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
                 style={{
                   gridRowEnd: `span ${getGalleryRowSpan(photo)}`,
                 }}

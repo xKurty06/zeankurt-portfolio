@@ -78,7 +78,7 @@ export function ZoomableImage({
           data-interactive
           onClick={() => setOpen(true)}
           className={cn(
-            "absolute right-3 top-3 z-20 inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/16 bg-[rgba(3,7,18,0.7)] text-white/80 backdrop-blur-sm transition hover:border-white/30 hover:text-white sm:h-9 sm:w-9",
+            "absolute right-3 top-3 z-20 inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border border-white/16 bg-[rgba(3,7,18,0.7)] text-white/80 backdrop-blur-sm transition hover:border-white/30 hover:text-white sm:h-9 sm:w-9",
             buttonClassName,
           )}
         >
@@ -119,7 +119,7 @@ export function ZoomableImage({
           <button
             type="button"
             onClick={() => setOpen(false)}
-            className="absolute right-3 top-3 z-20 inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/35 text-white transition hover:bg-white/10 sm:right-4 sm:top-4"
+            className="absolute right-3 top-3 z-20 inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border border-white/20 bg-black/35 text-white transition hover:bg-white/10 sm:right-4 sm:top-4"
             aria-label="Close image preview"
           >
             <X className="h-5 w-5" />

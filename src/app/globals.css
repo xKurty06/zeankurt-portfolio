@@ -103,11 +103,6 @@ body {
   );
 }
 
-[data-cursor-glow] {
-  will-change: transform;
-  transform: translate3d(-50%, -50%, 0);
-}
-
 [data-parallax] {
   will-change: transform;
 }
@@ -704,18 +699,13 @@ body {
   transform: scale(1);
 }
 
-#projects {
-  --projects-x: 50%;
-  --projects-y: 50%;
-}
-
 .projects-interactive-bg {
   position: absolute;
   inset: 0;
   overflow: hidden;
   pointer-events: none;
   background:
-    radial-gradient(circle at var(--projects-x) var(--projects-y), rgba(72, 202, 228, 0.13), transparent 22rem),
+    radial-gradient(circle at 18% 22%, rgba(72, 202, 228, 0.11), transparent 20rem),
     radial-gradient(circle at 12% 20%, rgba(0, 119, 182, 0.12), transparent 24rem),
     radial-gradient(circle at 88% 72%, rgba(144, 224, 239, 0.07), transparent 26rem);
 }
@@ -776,18 +766,13 @@ body {
   50% { transform: translate3d(1.4rem, -1.8rem, 0) scale(1.18); opacity: 0.85; }
 }
 
-#skills {
-  --skills-bg-x: 50%;
-  --skills-bg-y: 50%;
-}
-
 .skills-ambient-bg {
   position: absolute;
   inset: 0;
   overflow: hidden;
   pointer-events: none;
   background:
-    radial-gradient(circle at var(--skills-bg-x) var(--skills-bg-y), rgba(72, 202, 228, 0.13), transparent 24rem),
+    radial-gradient(circle at 24% 18%, rgba(72, 202, 228, 0.1), transparent 22rem),
     radial-gradient(circle at 18% 18%, rgba(0, 119, 182, 0.11), transparent 26rem),
     radial-gradient(circle at 86% 62%, rgba(144, 224, 239, 0.075), transparent 28rem),
     linear-gradient(180deg, rgba(0, 180, 216, 0.035), transparent 42%, rgba(0, 119, 182, 0.045));

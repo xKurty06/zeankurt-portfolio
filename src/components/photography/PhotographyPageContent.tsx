@@ -275,7 +275,7 @@ function GalleryFilter({
           data-interactive
           onClick={() => onChange(category)}
           className={cn(
-            "min-h-10 shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200 sm:min-h-0 sm:py-1",
+            "min-h-10 shrink-0 cursor-pointer rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200 sm:min-h-0 sm:py-1",
             active === category
               ? "border-[var(--blue-500)] bg-[var(--accent-soft)] text-white shadow-[0_0_12px_var(--accent-glow)]"
               : "border-[var(--border)] text-[var(--foreground-muted)] hover:border-[var(--border-strong)] hover:text-white",
@@ -317,7 +317,7 @@ function PaginationControls({
           type="button"
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage <= 1}
-          className="inline-flex min-h-10 items-center gap-2 rounded-full border border-[var(--border)] px-3 py-2 text-xs font-medium text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white disabled:pointer-events-none disabled:opacity-40"
+          className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-full border border-[var(--border)] px-3 py-2 text-xs font-medium text-[var(--foreground-muted)] transition enabled:hover:border-[var(--border-strong)] enabled:hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           Previous
@@ -331,7 +331,7 @@ function PaginationControls({
           type="button"
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage >= totalPages}
-          className="inline-flex min-h-10 items-center gap-2 rounded-full border border-[var(--border)] px-3 py-2 text-xs font-medium text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white disabled:pointer-events-none disabled:opacity-40"
+          className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-full border border-[var(--border)] px-3 py-2 text-xs font-medium text-[var(--foreground-muted)] transition enabled:hover:border-[var(--border-strong)] enabled:hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
         >
           Next
           <ArrowRight className="h-3.5 w-3.5" />

@@ -134,7 +134,7 @@ function SocialLinkButton({
       aria-label={link.label}
       title={link.description ?? link.label}
       className={cn(
-        "group inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-white/[0.02] text-[var(--foreground-muted)] transition-all duration-300 hover:border-[var(--border-strong)] hover:bg-[var(--accent-soft)] hover:text-white",
+        "group inline-flex cursor-pointer items-center gap-2 rounded-full border border-[var(--border)] bg-white/[0.02] text-[var(--foreground-muted)] transition-all duration-300 hover:border-[var(--border-strong)] hover:bg-[var(--accent-soft)] hover:text-white",
         showLabels
           ? "min-h-10 px-3 py-2 text-sm sm:min-h-11 sm:px-4 sm:py-2.5"
           : buttonSize,

@@ -53,7 +53,7 @@ export function Lightbox({
       <button
         type="button"
         onClick={onClose}
-        className="absolute right-3 top-3 z-20 inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/35 text-white transition hover:bg-white/10 sm:right-4 sm:top-4"
+        className="absolute right-3 top-3 z-20 inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border border-white/20 bg-black/35 text-white transition hover:bg-white/10 sm:right-4 sm:top-4"
         aria-label="Close lightbox"
       >
         <X className="h-5 w-5" />
@@ -63,7 +63,7 @@ export function Lightbox({
         <button
           type="button"
           onClick={() => onNavigate(activeIndex - 1)}
-          className="absolute bottom-4 left-4 z-20 inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/35 text-white transition hover:bg-white/10 sm:top-1/2 sm:bottom-auto sm:-translate-y-1/2"
+          className="absolute bottom-4 left-4 z-20 inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border border-white/20 bg-black/35 text-white transition hover:bg-white/10 sm:top-1/2 sm:bottom-auto sm:-translate-y-1/2"
           aria-label="Previous photo"
         >
           <ChevronLeft className="h-5 w-5" />
@@ -74,7 +74,7 @@ export function Lightbox({
         <button
           type="button"
           onClick={() => onNavigate(activeIndex + 1)}
-          className="absolute bottom-4 right-4 z-20 inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/35 text-white transition hover:bg-white/10 sm:top-1/2 sm:bottom-auto sm:-translate-y-1/2 md:right-16"
+          className="absolute bottom-4 right-4 z-20 inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border border-white/20 bg-black/35 text-white transition hover:bg-white/10 sm:top-1/2 sm:bottom-auto sm:-translate-y-1/2 md:right-16"
           aria-label="Next photo"
         >
           <ChevronRight className="h-5 w-5" />

@@ -210,7 +210,7 @@ export function GalleryGrid({ photos, onPhotoClick, className }: GalleryGridProp
           type="button"
           data-gallery-frame
           onClick={() => onPhotoClick(photo, index)}
-          className="group relative min-h-11 overflow-hidden rounded-xl bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+          className="group relative min-h-11 cursor-zoom-in overflow-hidden rounded-xl bg-[linear-gradient(180deg,rgba(8,14,28,0.92),rgba(4,8,18,0.98))] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
           style={{ gridRowEnd: `span ${getRowSpan(photo)}` }}
         >
           {photo.image ? (

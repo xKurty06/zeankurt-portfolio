@@ -9,7 +9,6 @@ import { useLowMotionDevice } from "@/hooks/useLowMotionDevice";
 function ParticleCanvas({ lowMotion }: { lowMotion: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number>(0);
-  const mouseRef = useRef({ x: -9999, y: -9999 });
 
   useEffect(() => {
     if (lowMotion) return;
@@ -35,8 +34,6 @@ function ParticleCanvas({ lowMotion }: { lowMotion: boolean }) {
 
     const COUNT = prefersReduced ? 0 : Math.min(96, Math.floor((W * H) / 14500));
     const CONNECT = 190;
-    const MOUSE_R = 260;
-
     interface Particle {
       x: number;
       y: number;
@@ -63,32 +60,8 @@ function ParticleCanvas({ lowMotion }: { lowMotion: boolean }) {
 
       ctx.clearRect(0, 0, W, H);
 
-      const mx = mouseRef.current.x;
-      const my = mouseRef.current.y;
-
-      if (mx > -9000 && my > -9000) {
-        const glow = ctx.createRadialGradient(mx, my, 0, mx, my, MOUSE_R * 0.9);
-        glow.addColorStop(0, "rgba(72,202,228,0.22)");
-        glow.addColorStop(0.4, "rgba(0,180,216,0.08)");
-        glow.addColorStop(1, "rgba(0,180,216,0)");
-        ctx.fillStyle = glow;
-        ctx.beginPath();
-        ctx.arc(mx, my, MOUSE_R * 0.9, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
       for (let i = 0; i < particles.length; i++) {
         const p = particles[i];
-
-        const dx = p.x - mx;
-        const dy = p.y - my;
-        const d = Math.sqrt(dx * dx + dy * dy);
-
-        if (d < MOUSE_R && d > 0) {
-          const force = (1 - d / MOUSE_R) * 0.045;
-          p.vx += (dx / d) * force;
-          p.vy += (dy / d) * force;
-        }
 
         p.vx *= 0.993;
         p.vy *= 0.993;
@@ -105,14 +78,6 @@ function ParticleCanvas({ lowMotion }: { lowMotion: boolean }) {
         ctx.fillStyle = `rgba(72,202,228,${p.alpha})`;
         ctx.fill();
 
-        if (d < MOUSE_R) {
-          const glowAlpha = (1 - d / MOUSE_R) * 0.42;
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, p.r * 4.5, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(0,180,216,${glowAlpha})`;
-          ctx.fill();
-        }
-
         for (let j = i + 1; j < particles.length; j++) {
           const q = particles[j];
           const cdx = p.x - q.x;
@@ -120,15 +85,13 @@ function ParticleCanvas({ lowMotion }: { lowMotion: boolean }) {
           const cd = Math.sqrt(cdx * cdx + cdy * cdy);
 
           if (cd < CONNECT) {
-            const qMouseDistance = Math.sqrt((q.x - mx) ** 2 + (q.y - my) ** 2);
-            const nearMouseBoost = d < MOUSE_R || qMouseDistance < MOUSE_R ? 1.8 : 1;
-            const lineAlpha = (1 - cd / CONNECT) * 0.14 * p.alpha * nearMouseBoost;
+            const lineAlpha = (1 - cd / CONNECT) * 0.14 * p.alpha;
 
             ctx.beginPath();
             ctx.moveTo(p.x, p.y);
             ctx.lineTo(q.x, q.y);
             ctx.strokeStyle = `rgba(0,180,216,${lineAlpha})`;
-            ctx.lineWidth = nearMouseBoost > 1 ? 0.9 : 0.6;
+            ctx.lineWidth = 0.6;
             ctx.stroke();
           }
         }
@@ -160,30 +123,14 @@ function ParticleCanvas({ lowMotion }: { lowMotion: boolean }) {
       H = canvas.height;
     };
 
-    // Use the cached bounds updated on resize instead of remeasuring every mousemove.
-    const onMouse = (event: MouseEvent) => {
-      mouseRef.current = {
-        x: event.clientX - bounds.left,
-        y: event.clientY - bounds.top,
-      };
-    };
-
-    const onMouseLeave = () => {
-      mouseRef.current = { x: -9999, y: -9999 };
-    };
-
     window.addEventListener("resize", onResize);
     window.addEventListener("scroll", syncBounds, { passive: true });
-    window.addEventListener("mousemove", onMouse, { passive: true });
-    window.addEventListener("mouseout", onMouseLeave);
 
     return () => {
       stopMonitoring();
       cancelAnimationFrame(rafRef.current);
       window.removeEventListener("resize", onResize);
       window.removeEventListener("scroll", syncBounds);
-      window.removeEventListener("mousemove", onMouse);
-      window.removeEventListener("mouseout", onMouseLeave);
     };
   }, [lowMotion]);
 
@@ -271,14 +218,7 @@ export function AnimatedBackground() {
       if (!root) return;
       const orbs = gsap.utils.toArray<HTMLElement>("[data-orb]");
       const parallaxLayers = gsap.utils.toArray<HTMLElement>("[data-parallax]");
-      const cursorGlowPrimary = root.querySelector<HTMLElement>("[data-cursor-glow='primary']");
-      const cursorGlowSecondary = root.querySelector<HTMLElement>("[data-cursor-glow='secondary']");
       let isActive = true;
-      let bounds = root.getBoundingClientRect();
-
-      const syncBounds = () => {
-        bounds = root.getBoundingClientRect();
-      };
 
       orbs.forEach((orb, i) => {
         gsap.to(orb, {
@@ -292,19 +232,6 @@ export function AnimatedBackground() {
         });
       });
 
-      const glowPrimaryX = cursorGlowPrimary
-        ? gsap.quickTo(cursorGlowPrimary, "x", { duration: 0.16, ease: "power2.out" })
-        : null;
-      const glowPrimaryY = cursorGlowPrimary
-        ? gsap.quickTo(cursorGlowPrimary, "y", { duration: 0.16, ease: "power2.out" })
-        : null;
-      const glowSecondaryX = cursorGlowSecondary
-        ? gsap.quickTo(cursorGlowSecondary, "x", { duration: 0.28, ease: "power2.out" })
-        : null;
-      const glowSecondaryY = cursorGlowSecondary
-        ? gsap.quickTo(cursorGlowSecondary, "y", { duration: 0.28, ease: "power2.out" })
-        : null;
-
       // Pre-create quickTo setters for parallax layers to avoid creating new
       // tweens on every mouse move.
       const parallaxSetters = parallaxLayers.map((layer) => {
@@ -314,62 +241,19 @@ export function AnimatedBackground() {
         return { x, y, depth };
       });
 
-      const onPointerMove = (event: PointerEvent) => {
-        if (!isActive) return;
+      const stopMonitoring = monitorElementActivity(root, (nextActive) => {
+        isActive = nextActive;
+        if (!isActive) {
+          gsap.killTweensOf(parallaxLayers);
+        }
+      }, { threshold: 0.05 });
 
-        const px = event.clientX - bounds.left;
-        const py = event.clientY - bounds.top;
-        const nx = px / bounds.width - 0.5;
-        const ny = py / bounds.height - 0.5;
-
-        glowPrimaryX?.(px);
-        glowPrimaryY?.(py);
-        glowSecondaryX?.(px);
-        glowSecondaryY?.(py);
-
-        parallaxSetters.forEach((s) => {
-          s.x(nx * s.depth);
-          s.y(ny * s.depth);
-        });
-      };
-
-      const onPointerLeave = () => {
-        const offscreenX = bounds.width * 0.5;
-        const offscreenY = bounds.height + 200;
-
-        glowPrimaryX?.(offscreenX);
-        glowPrimaryY?.(offscreenY);
-        glowSecondaryX?.(offscreenX);
-        glowSecondaryY?.(offscreenY);
-
+      return () => {
+        stopMonitoring();
         parallaxSetters.forEach((s) => {
           s.x(0);
           s.y(0);
         });
-      };
-
-      const stopMonitoring = monitorElementActivity(root, (nextActive) => {
-        isActive = nextActive;
-        if (!isActive) {
-          gsap.killTweensOf([
-            cursorGlowPrimary,
-            cursorGlowSecondary,
-            ...parallaxLayers,
-          ]);
-        }
-      }, { threshold: 0.05 });
-
-      window.addEventListener("resize", syncBounds, { passive: true });
-      window.addEventListener("scroll", syncBounds, { passive: true });
-      root.addEventListener("pointermove", onPointerMove, { passive: true });
-      root.addEventListener("pointerleave", onPointerLeave);
-
-      return () => {
-        stopMonitoring();
-        window.removeEventListener("resize", syncBounds);
-        window.removeEventListener("scroll", syncBounds);
-        root.removeEventListener("pointermove", onPointerMove);
-        root.removeEventListener("pointerleave", onPointerLeave);
       };
     },
     { dependencies: [lowMotion], revertOnUpdate: true, scope: rootRef },
@@ -377,19 +261,6 @@ export function AnimatedBackground() {
 
   return (
     <div ref={rootRef} aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-      {!lowMotion ? (
-        <>
-          <div
-            data-cursor-glow="secondary"
-            className="absolute left-0 top-0 h-[28rem] w-[28rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(72,202,228,0.18),rgba(0,180,216,0.08)_32%,transparent_72%)] opacity-70 blur-3xl"
-          />
-          <div
-            data-cursor-glow="primary"
-            className="absolute left-0 top-0 h-[18rem] w-[18rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(202,240,248,0.22),rgba(72,202,228,0.14)_30%,transparent_70%)] opacity-90 blur-2xl"
-          />
-        </>
-      ) : null}
-
       <div
         data-orb
         data-parallax="28"
