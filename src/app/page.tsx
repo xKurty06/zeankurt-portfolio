@@ -5,8 +5,12 @@ import { HeroSection } from "@/components/sections/HeroSection";
 import { PhotographyTeaser } from "@/components/sections/PhotographyTeaser";
 import { ProjectsSection } from "@/components/sections/ProjectsSection";
 import { SkillsSection } from "@/components/sections/SkillsSection";
+import { PORTFOLIO_REVALIDATE_SECONDS } from "@/lib/cache";
 import { getPortfolioContent } from "@/lib/cms/queries";
 import { getCreativePhotoCount } from "@/lib/photography";
+
+export const revalidate = PORTFOLIO_REVALIDATE_SECONDS;
+export const dynamic = "force-static";
 
 export default async function HomePage() {
   const content = await getPortfolioContent();

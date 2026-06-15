@@ -11,6 +11,7 @@ import { ThemeProvider } from "@/components/providers/theme-provider";
 import { ScrollToTopButton } from "@/components/ui/ScrollToTopButton";
 import { Analytics } from "@vercel/analytics/next";
 import { getPortfolioContent } from "@/lib/cms/queries";
+import { SpeedInsights } from "@vercel/speed-insights/next"
 import "./globals.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -69,7 +70,7 @@ export default async function RootLayout({
             <SavingIndicator />
           </SavingProvider>
         </ThemeProvider>
-
+        <SpeedInsights />
         <Analytics />
       </body>
     </html>

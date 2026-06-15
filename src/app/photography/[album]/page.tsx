@@ -1,8 +1,15 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { AlbumPageContent } from "@/components/photography/AlbumPageContent";
+import { PORTFOLIO_REVALIDATE_SECONDS } from "@/lib/cache";
 import { getPortfolioContent } from "@/lib/cms/queries";
-import { buildPhotographyAlbums, getCreativeCategoryBySlug } from "@/lib/photography";
+import {
+  buildPhotographyAlbums,
+  getCreativeCategoryBySlug,
+} from "@/lib/photography";
+
+export const revalidate = PORTFOLIO_REVALIDATE_SECONDS;
+export const dynamic = "force-static";
 
 interface AlbumPageProps {
   params: Promise<{ album: string }>;
@@ -10,7 +17,10 @@ interface AlbumPageProps {
 
 export async function generateStaticParams() {
   const content = await getPortfolioContent();
-  return content.creativeCategories.map((category) => ({ album: category.slug }));
+
+  return content.creativeCategories.map((category) => ({
+    album: category.slug,
+  }));
 }
 
 export async function generateMetadata({
@@ -18,10 +28,15 @@ export async function generateMetadata({
 }: AlbumPageProps): Promise<Metadata> {
   const { album: albumSlug } = await params;
   const content = await getPortfolioContent();
-  const creativeCategory = getCreativeCategoryBySlug(content.creativeCategories, albumSlug);
+  const creativeCategory = getCreativeCategoryBySlug(
+    content.creativeCategories,
+    albumSlug,
+  );
 
   if (!creativeCategory) {
-    return { title: "Album not found" };
+    return {
+      title: "Album not found",
+    };
   }
 
   return {
@@ -33,7 +48,12 @@ export async function generateMetadata({
 export default async function AlbumPage({ params }: AlbumPageProps) {
   const { album: albumSlug } = await params;
   const content = await getPortfolioContent();
-  const creativeCategory = getCreativeCategoryBySlug(content.creativeCategories, albumSlug);
+
+  const creativeCategory = getCreativeCategoryBySlug(
+    content.creativeCategories,
+    albumSlug,
+  );
+
   const album = creativeCategory
     ? buildPhotographyAlbums([creativeCategory])[0]
     : null;
@@ -42,10 +62,5 @@ export default async function AlbumPage({ params }: AlbumPageProps) {
     notFound();
   }
 
-  return (
-    <AlbumPageContent
-      album={album}
-      photos={creativeCategory.photos}
-    />
-  );
+  return <AlbumPageContent album={album} photos={creativeCategory.photos} />;
 }

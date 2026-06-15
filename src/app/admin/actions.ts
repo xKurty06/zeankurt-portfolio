@@ -10,6 +10,7 @@ import {
   createSupabaseServerClient,
 } from "@/lib/supabase/server";
 import { isAllowedAdminEmail, PHOTOGRAPHY_BUCKET, SUPABASE_BUCKET } from "@/lib/supabase/config";
+import { PORTFOLIO_CACHE_TAG } from "@/lib/cache";
 
 type CmsTable =
   | "projects"
@@ -137,6 +138,13 @@ function mutationOptionsForForm(formData: FormData) {
   return {
     redirect: shouldRedirectAfterAction(formData),
   };
+}
+
+function revalidatePortfolioContent() {
+  revalidateTag(PORTFOLIO_CACHE_TAG, "max");
+  revalidatePath("/");
+  revalidatePath("/photography");
+  revalidatePath("/admin");
 }
 
 function parseBoolean(value: string, fallback = false) {
@@ -335,15 +343,16 @@ async function mutateAndRefresh<T extends Record<string, unknown>>(
   options?: { redirect?: boolean },
 ) {
   const admin = await requireAdmin();
+
   const query = conflictTarget
     ? admin.from(table).upsert(payload, { onConflict: conflictTarget })
     : admin.from(table).upsert(payload);
 
   const { error } = await query;
+
   if (error) throw error;
 
-  revalidateTag("portfolio-content", "max");
-  revalidatePath("/admin");
+  revalidatePortfolioContent();
 
   if (options?.redirect !== false) {
     redirect("/admin");
@@ -638,7 +647,7 @@ export async function importProjectsCsv(formData: FormData) {
   const { error } = await admin.from("projects").upsert(payload, { onConflict: "slug" });
   if (error) throw error;
 
-  revalidateTag("portfolio-content", "max");
+  revalidatePortfolioContent();
   redirectAfterAction(formData, "/admin#projects");
 }
 
@@ -717,7 +726,7 @@ export async function importExperienceCsv(formData: FormData) {
   const { error } = await admin.from("experience_items").upsert(payload, { onConflict: "slug" });
   if (error) throw error;
 
-  revalidateTag("portfolio-content", "max");
+  revalidatePortfolioContent();
   redirectAfterAction(formData, "/admin#experience");
 }
 
@@ -798,7 +807,7 @@ export async function importCertificationsCsv(formData: FormData) {
   const { error } = await admin.from("certifications").upsert(payload);
   if (error) throw error;
 
-  revalidateTag("portfolio-content", "max");
+  revalidatePortfolioContent();
   redirectAfterAction(formData, "/admin#certifications");
 }
 
@@ -884,7 +893,7 @@ export async function importEventsCsv(formData: FormData) {
   const { error } = await admin.from("events").upsert(payload, { onConflict: "slug" });
   if (error) throw error;
 
-  revalidateTag("portfolio-content", "max");
+  revalidatePortfolioContent();
   redirectAfterAction(formData, "/admin#events");
 }
 
@@ -1001,7 +1010,7 @@ export async function importSkillsCsv(formData: FormData) {
     if (error) throw error;
   }
 
-  revalidateTag("portfolio-content", "max");
+  revalidatePortfolioContent();
   redirectAfterAction(formData, "/admin#skills");
 }
 
@@ -1218,7 +1227,7 @@ export async function seedDefaultCreativeCategories() {
 
   if (error) throw error;
 
-  revalidateTag("portfolio-content", "max");
+  revalidatePortfolioContent();
   redirect("/admin#creative-portfolio");
 }
 

@@ -7,6 +7,10 @@ import {
   hasSupabasePublicEnv,
 } from "@/lib/supabase/config";
 import {
+  PORTFOLIO_CACHE_TAG,
+  PORTFOLIO_REVALIDATE_SECONDS,
+} from "@/lib/cache";
+import {
   mapCertification,
   mapCreativeCategory,
   mapEvent,
@@ -24,10 +28,11 @@ import type {
   PortfolioContent,
 } from "@/lib/cms/types";
 
-const REVALIDATE_SECONDS = 300;
-
 function isMissingTableError(error: { code?: string; message?: string } | null) {
-  return error?.code === "PGRST205" || /Could not find the table/i.test(error?.message ?? "");
+  return (
+    error?.code === "PGRST205" ||
+    /Could not find the table/i.test(error?.message ?? "")
+  );
 }
 
 function uniqueBy<T>(items: T[], getKey: (item: T) => string) {
@@ -35,7 +40,9 @@ function uniqueBy<T>(items: T[], getKey: (item: T) => string) {
 
   return items.filter((item) => {
     const key = getKey(item);
+
     if (seen.has(key)) return false;
+
     seen.add(key);
     return true;
   });
@@ -55,120 +62,143 @@ async function fetchPortfolioContent(): Promise<PortfolioContent> {
       },
     });
 
-  try {
-    const [
-      projectsResult,
-      experienceResult,
-      certificationsResult,
-      eventsResult,
-      skillCategoriesResult,
-      creativeCategoriesResult,
-      siteContentResult,
-    ] = await Promise.all([
-      supabase
-        .from("projects")
-        .select("*")
-        .eq("published", true)
-        .order("featured", { ascending: false })
-        .order("sort_order", { ascending: true })
-        .order("year", { ascending: false }),
-      supabase
-        .from("experience_items")
-        .select("*")
-        .eq("published", true)
-        .order("sort_order", { ascending: true }),
-      supabase
-        .from("certifications")
-        .select("*")
-        .eq("published", true)
-        .order("sort_order", { ascending: true }),
-      supabase
-        .from("events")
-        .select("*")
-        .eq("published", true)
-        .order("sort_order", { ascending: true })
-        .order("event_date", { ascending: false }),
-      supabase
-        .from("skill_categories")
-        .select("*, skills(*)")
-        .eq("published", true)
-        .order("sort_order", { ascending: true }),
-      supabase
-        .from("creative_categories")
-        .select("*, creative_photos(*)")
-        .eq("published", true)
-        .order("sort_order", { ascending: true }),
-      supabase.from("site_content").select("key,value"),
-    ]);
+  const [
+    projectsResult,
+    experienceResult,
+    certificationsResult,
+    eventsResult,
+    skillCategoriesResult,
+    creativeCategoriesResult,
+    siteContentResult,
+  ] = await Promise.all([
+    supabase
+      .from("projects")
+      .select("*")
+      .eq("published", true)
+      .order("featured", { ascending: false })
+      .order("sort_order", { ascending: true })
+      .order("year", { ascending: false }),
 
-    if (projectsResult.error) throw projectsResult.error;
-    if (experienceResult.error) throw experienceResult.error;
-    if (certificationsResult.error) throw certificationsResult.error;
-    if (eventsResult.error) throw eventsResult.error;
-    if (skillCategoriesResult.error) throw skillCategoriesResult.error;
+    supabase
+      .from("experience_items")
+      .select("*")
+      .eq("published", true)
+      .order("sort_order", { ascending: true }),
 
-    const creativeCategoriesMissing = creativeCategoriesResult.error && isMissingTableError(creativeCategoriesResult.error);
+    supabase
+      .from("certifications")
+      .select("*")
+      .eq("published", true)
+      .order("sort_order", { ascending: true }),
 
-    if (creativeCategoriesResult.error && !creativeCategoriesMissing) {
-      throw creativeCategoriesResult.error;
-    }
-    if (siteContentResult.error) throw siteContentResult.error;
+    supabase
+      .from("events")
+      .select("*")
+      .eq("published", true)
+      .order("sort_order", { ascending: true })
+      .order("event_date", { ascending: false }),
 
-    const siteRows = (siteContentResult.data ?? []) as Array<{ key: string; value: unknown }>;
-    const siteConfig = siteRows.find((row) => row.key === "site_config")?.value as PortfolioContent["siteConfig"] | undefined;
-    const aboutContent = siteRows.find((row) => row.key === "about_content")?.value as PortfolioContent["aboutContent"] | undefined;
+    supabase
+      .from("skill_categories")
+      .select("*, skills(*)")
+      .eq("published", true)
+      .order("sort_order", { ascending: true }),
 
-    if (!siteConfig || !aboutContent) {
-      throw new Error("Required site content keys are missing from Supabase.");
-    }
+    supabase
+      .from("creative_categories")
+      .select("*, creative_photos(*)")
+      .eq("published", true)
+      .order("sort_order", { ascending: true }),
 
-    const projects = uniqueBy(
-      ((projectsResult.data ?? []) as CmsProjectRow[]).map(mapProject),
-      (project) => project.slug,
-    );
-    const experience = uniqueBy(
-      ((experienceResult.data ?? []) as CmsExperienceRow[]).map(mapExperience),
-      (item) => item.id,
-    );
-    const certifications = uniqueBy(
-      ((certificationsResult.data ?? []) as CmsCertificationRow[]).map(mapCertification),
-      (cert) => cert.image ?? `${cert.issuer}-${cert.name}-${cert.issued ?? ""}`,
-    );
-    const eventHighlights = uniqueBy(
-      ((eventsResult.data ?? []) as CmsEventRow[]).map(mapEvent),
-      (event) => event.id,
-    );
-    const skillCategories = uniqueBy(
-      ((skillCategoriesResult.data ?? []) as CmsSkillCategoryRow[]).map(mapSkillCategory),
-      (category) => category.name,
-    );
-    const creativeCategories = creativeCategoriesResult.error
-      ? []
-      : uniqueBy(
-        ((creativeCategoriesResult.data ?? []) as CmsCreativeCategoryRow[]).map(mapCreativeCategory),
+    supabase.from("site_content").select("key,value"),
+  ]);
+
+  if (projectsResult.error) throw projectsResult.error;
+  if (experienceResult.error) throw experienceResult.error;
+  if (certificationsResult.error) throw certificationsResult.error;
+  if (eventsResult.error) throw eventsResult.error;
+  if (skillCategoriesResult.error) throw skillCategoriesResult.error;
+
+  const creativeCategoriesMissing =
+    creativeCategoriesResult.error &&
+    isMissingTableError(creativeCategoriesResult.error);
+
+  if (creativeCategoriesResult.error && !creativeCategoriesMissing) {
+    throw creativeCategoriesResult.error;
+  }
+
+  if (siteContentResult.error) throw siteContentResult.error;
+
+  const siteRows = (siteContentResult.data ?? []) as Array<{
+    key: string;
+    value: unknown;
+  }>;
+
+  const siteConfig = siteRows.find((row) => row.key === "site_config")
+    ?.value as PortfolioContent["siteConfig"] | undefined;
+
+  const aboutContent = siteRows.find((row) => row.key === "about_content")
+    ?.value as PortfolioContent["aboutContent"] | undefined;
+
+  if (!siteConfig || !aboutContent) {
+    throw new Error("Required site content keys are missing from Supabase.");
+  }
+
+  const projects = uniqueBy(
+    ((projectsResult.data ?? []) as CmsProjectRow[]).map(mapProject),
+    (project) => project.slug,
+  );
+
+  const experience = uniqueBy(
+    ((experienceResult.data ?? []) as CmsExperienceRow[]).map(mapExperience),
+    (item) => item.id,
+  );
+
+  const certifications = uniqueBy(
+    ((certificationsResult.data ?? []) as CmsCertificationRow[]).map(
+      mapCertification,
+    ),
+    (cert) => cert.image ?? `${cert.issuer}-${cert.name}-${cert.issued ?? ""}`,
+  );
+
+  const eventHighlights = uniqueBy(
+    ((eventsResult.data ?? []) as CmsEventRow[]).map(mapEvent),
+    (event) => event.id,
+  );
+
+  const skillCategories = uniqueBy(
+    ((skillCategoriesResult.data ?? []) as CmsSkillCategoryRow[]).map(
+      mapSkillCategory,
+    ),
+    (category) => category.name,
+  );
+
+  const creativeCategories = creativeCategoriesResult.error
+    ? []
+    : uniqueBy(
+        ((creativeCategoriesResult.data ?? []) as CmsCreativeCategoryRow[]).map(
+          mapCreativeCategory,
+        ),
         (category) => category.slug,
       );
 
-    return {
-      siteConfig,
-      aboutContent,
-      projects,
-      experience,
-      certifications,
-      eventHighlights,
-      skillCategories,
-      creativeCategories,
-    };
-  } catch (error) {
-    throw error;
-  }
+  return {
+    siteConfig,
+    aboutContent,
+    projects,
+    experience,
+    certifications,
+    eventHighlights,
+    skillCategories,
+    creativeCategories,
+  };
 }
 
 export const getPortfolioContent = unstable_cache(
   fetchPortfolioContent,
-  ["portfolio-content"],
+  [PORTFOLIO_CACHE_TAG],
   {
-    revalidate: REVALIDATE_SECONDS,
-    tags: ["portfolio-content"],
+    revalidate: PORTFOLIO_REVALIDATE_SECONDS,
+    tags: [PORTFOLIO_CACHE_TAG],
   },
 );
