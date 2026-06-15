@@ -156,8 +156,8 @@ export function AboutSection({
               </h2>
 
               <p className="mx-auto mt-5 max-w-2xl text-base leading-8 text-[var(--foreground-muted)] sm:text-lg sm:leading-8 lg:mx-0">
-                Computer Science at Cavite State University. Full-stack developer and
-                Co-founder at Studio Nomads. Based in Cavite, Philippines.
+                I build modern web systems, blockchain-driven products, and visual stories that connect technology, creativity, and real communities.
+
               </p>
             </div>
           </RevealOnScroll>

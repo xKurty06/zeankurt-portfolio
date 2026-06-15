@@ -636,7 +636,8 @@ export function ProjectsSection({ projects }: ProjectsSectionProps) {
           <SectionHeading
             eyebrow="Projects"
             title="Selected software work."
-            description="Open-source templates, campus platforms, Web3 products, and hackathon builds."
+            description="Building modern web systems, blockchain-driven products, and creative visuals for communities, startups, and real-world digital experiences.
+"
           />{" "}
         </RevealOnScroll>{" "}
         <div className="mt-7 md:hidden">

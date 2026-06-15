@@ -1398,3 +1398,99 @@ export async function saveSiteContent(formData: FormData) {
 
   redirectAfterAction(formData, "/admin#site-content");
 }
+
+const DELETE_KEYS: Record<CmsTable, "slug" | "id"> = {
+  projects: "slug",
+  experience_items: "slug",
+  certifications: "id",
+  events: "slug",
+  skill_categories: "id",
+  skills: "id",
+  creative_categories: "id",
+  creative_photos: "id",
+};
+
+function assertCmsTable(value: string): asserts value is CmsTable {
+  const allowedTables: CmsTable[] = [
+    "projects",
+    "experience_items",
+    "certifications",
+    "events",
+    "skill_categories",
+    "skills",
+    "creative_categories",
+    "creative_photos",
+  ];
+
+  if (!allowedTables.includes(value as CmsTable)) {
+    throw new Error("Invalid table.");
+  }
+}
+
+function assertSortableCmsTable(value: string): asserts value is SortableCmsTable {
+  const allowedTables: SortableCmsTable[] = [
+    "projects",
+    "experience_items",
+    "certifications",
+    "events",
+    "skill_categories",
+    "creative_categories",
+    "creative_photos",
+  ];
+
+  if (!allowedTables.includes(value as SortableCmsTable)) {
+    throw new Error("Invalid sortable table.");
+  }
+}
+
+export async function deleteRecord(formData: FormData) {
+  const admin = await requireAdmin();
+
+  const table = requiredText(formData, "table", "Table");
+  const id = requiredText(formData, "id", "Record ID");
+
+  assertCmsTable(table);
+
+  const key = DELETE_KEYS[table];
+
+  const { error } = await admin.from(table).delete().eq(key, id);
+
+  if (error) throw error;
+
+  revalidateTag("portfolio-content", "max");
+  revalidatePath("/");
+  revalidatePath("/photography");
+  revalidatePath("/admin");
+
+  redirectAfterAction(formData, "/admin");
+}
+
+export async function updateSortOrder({
+  table,
+  ids,
+}: {
+  table: SortableCmsTable;
+  ids: string[];
+}) {
+  const admin = await requireAdmin();
+
+  assertSortableCmsTable(table);
+
+  const key = SORTABLE_KEYS[table];
+
+  const updates = ids.map((id, index) =>
+    admin.from(table).update({ sort_order: index }).eq(key, id),
+  );
+
+  const results = await Promise.all(updates);
+  const failed = results.find((result) => result.error);
+
+  if (failed?.error) {
+    throw failed.error;
+  }
+
+  revalidateTag("portfolio-content", "max");
+  revalidatePath("/");
+  revalidatePath("/photography");
+  revalidatePath("/admin");
+}

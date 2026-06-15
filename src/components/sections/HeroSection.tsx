@@ -266,7 +266,7 @@ export function HeroSection({ siteConfig }: HeroSectionProps) {
             <MagneticButton>
               <RippleButton>
                 <Button href="/photography" variant="secondary">
-                  Photography
+                  Creatives
                 </Button>
               </RippleButton>
             </MagneticButton>
