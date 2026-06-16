@@ -213,4 +213,4 @@ export function AboutSection({
       </Container>
     </Section>
   );
-}
+} 
