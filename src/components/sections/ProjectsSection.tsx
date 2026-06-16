@@ -1017,8 +1017,23 @@ export function ProjectsSection({ projects }: ProjectsSectionProps) {
         <RevealOnScroll>
           <SectionHeading
             eyebrow="Projects"
-            title="Software built for real use."
-            description="A selection of web systems, product builds, and blockchain work shaped by client needs, community projects, and practical delivery."
+            titleClassName="lg:max-w-none lg:whitespace-nowrap"
+            title={
+              <>
+                Software built for{" "}
+                <span className="emphasis-glow-blue">real use</span>.
+              </>
+            }
+            description={
+              <>
+                A selection of{" "}
+                <span className="emphasis-glow-blue font-medium">web systems</span>
+                , product builds, and{" "}
+                <span className="emphasis-glow-gold font-medium">blockchain work</span>{" "}
+                shaped by client needs, community projects, and{" "}
+                <span className="emphasis-glow-white font-medium">practical delivery</span>.
+              </>
+            }
           />
         </RevealOnScroll>
 

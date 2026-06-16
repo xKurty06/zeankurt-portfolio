@@ -107,4 +107,5 @@ export interface CmsCreativePhotoRow {
   featured: boolean;
   sort_order: number | null;
   published: boolean;
+  created_at: string;
 }

@@ -124,7 +124,8 @@ create index if not exists events_public_idx on public.events (published, event_
 create index if not exists skill_categories_public_idx on public.skill_categories (published, sort_order);
 create index if not exists skills_category_sort_idx on public.skills (category_id, sort_order);
 create index if not exists creative_categories_public_idx on public.creative_categories (published, sort_order);
-create index if not exists creative_photos_category_sort_idx on public.creative_photos (category_id, published, sort_order);
+create index if not exists creative_photos_category_sort_idx on public.creative_photos (category_id, published, sort_order, created_at desc, id);
+create index if not exists creative_photos_public_sort_idx on public.creative_photos (published, sort_order, created_at desc, id);
 
 create or replace function public.set_updated_at()
 returns trigger

@@ -116,8 +116,23 @@ export function SkillsSection({ skillCategories }: SkillsSectionProps) {
         <RevealOnScroll>
           <SectionHeading
             eyebrow="Skills"
-            title="Tools for product, web, and creative work."
-            description="Full-stack development for websites and software products, paired with media production shaped by hackathons, client work, and hands-on builds."
+            titleClassName="lg:max-w-none lg:whitespace-nowrap"
+            title={
+              <>
+                Tools for{" "}
+                <span className="emphasis-glow-blue">product</span>, web, and{" "}
+                <span className="emphasis-glow-rose">creative work</span>.
+              </>
+            }
+            description={
+              <>
+                <span className="emphasis-glow-blue font-medium">Full-stack development</span>{" "}
+                for websites and software products, paired with{" "}
+                <span className="emphasis-glow-rose font-medium">media production</span>{" "}
+                shaped by hackathons, client work, and{" "}
+                <span className="emphasis-glow-gold font-medium">hands-on builds</span>.
+              </>
+            }
           />
         </RevealOnScroll>
 

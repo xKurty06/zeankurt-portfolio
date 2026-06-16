@@ -80,6 +80,8 @@ export interface PhotoItem {
   image?: string;
   aspectRatio: "portrait" | "landscape" | "square";
   featured?: boolean;
+  sortOrder?: number;
+  createdAt?: string;
 }
 
 export interface PhotoAlbum {

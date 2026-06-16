@@ -5,7 +5,7 @@ export type UploadMetric = {
   originalBytes: number;
 };
 
-const MAX_IMAGE_DIMENSION = 2048;
+const MAX_IMAGE_DIMENSION = 1800;
 
 function roundDimension(value: number) {
   return Math.max(1, Math.round(value));
@@ -54,12 +54,12 @@ async function estimateOptimizedImageBytes(file: File) {
 
     const bytesPerPixel =
       mime === "image/avif"
-        ? 0.09
+        ? 0.07
         : mime === "image/webp"
-          ? 0.12
+          ? 0.1
           : mime === "image/png"
-            ? 0.62
-            : 0.2;
+            ? 0.48
+            : 0.16;
 
     const estimated = Math.round(pixels * bytesPerPixel);
     return Math.min(file.size, Math.max(16 * 1024, estimated));

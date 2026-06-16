@@ -22,17 +22,6 @@ import type { CreativeCategory } from "@/types";
 
 const PHOTOS_PER_PAGE = 24;
 
-function shufflePhotos<T>(items: T[]) {
-  const next = [...items];
-
-  for (let index = next.length - 1; index > 0; index -= 1) {
-    const swapIndex = Math.floor(Math.random() * (index + 1));
-    [next[index], next[swapIndex]] = [next[swapIndex], next[index]];
-  }
-
-  return next;
-}
-
 interface PhotographyPageContentProps {
   creativeCategories: CreativeCategory[];
   siteConfig: SiteConfig;
@@ -60,24 +49,15 @@ export function PhotographyPageContent({
     [creativeCategories],
   );
 
-  // Shuffle only on the client to avoid SSR / hydration mismatches
-  const [shuffledPhotos, setShuffledPhotos] = useState(() => photos);
-
-  useEffect(() => {
-    // Run shuffle after mount so server and initial client render stay consistent
-    setShuffledPhotos(shufflePhotos(photos));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [photos]);
-
   const [activeCategory, setActiveCategory] = useState<string>("All");
   const [currentPage, setCurrentPage] = useState(1);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   const filteredPhotos = useMemo(() => {
-    if (activeCategory === "All") return shuffledPhotos;
+    if (activeCategory === "All") return photos;
 
-    return shuffledPhotos.filter((photo) => photo.category === activeCategory);
-  }, [activeCategory, shuffledPhotos]);
+    return photos.filter((photo) => photo.category === activeCategory);
+  }, [activeCategory, photos]);
 
   const totalPages = Math.max(1, Math.ceil(filteredPhotos.length / PHOTOS_PER_PAGE));
   const safeCurrentPage = Math.min(currentPage, totalPages);
@@ -145,30 +125,37 @@ export function PhotographyPageContent({
           <div className="pointer-events-none absolute inset-0 z-[1] bg-slate-950/40 [mask-image:radial-gradient(transparent,white)]" />
         </div>
 
-        <Container className="pointer-events-none relative z-10">
+        <Container className="pointer-events-none relative z-10 text-center md:text-left">
           <p
             data-photo-hero="line"
-            className="font-[family-name:var(--font-syne)] text-[0.8rem] font-medium tracking-[0.18em] text-[var(--blue-200)]"
+            className="mx-auto inline-flex rounded-full py-1 font-[family-name:var(--font-syne)] text-[0.76rem] font-medium tracking-[0.14em] text-[var(--blue-200)] shadow-[0_0_18px_rgba(0,180,216,0.08)] md:mx-0"
           >
             {siteConfig.photographyBrand}
           </p>
 
           <h1
             data-photo-hero="line"
-            className="mt-4 max-w-3xl break-words font-[family-name:var(--font-syne)] text-[clamp(1.875rem,8vw,2.5rem)] font-semibold leading-tight text-white sm:text-5xl md:text-6xl"
+            className="mx-auto mt-3 max-w-[22rem] break-words font-[family-name:var(--font-syne)] text-[clamp(2.1rem,10vw,3rem)] font-semibold leading-[1.02] tracking-[-0.045em] text-white sm:max-w-3xl sm:text-5xl md:mx-0 md:max-w-5xl md:text-6xl lg:text-[4.35rem] lg:max-w-none"
           >
-            Photography & visual stories from events, portraits, and the streets.
+            Photography &{" "}
+            <span className="text-[var(--blue-200)] drop-shadow-[0_0_18px_rgba(72,202,228,0.22)]">
+              visual stories
+            </span>{" "}
+            from events, portraits, and the streets.
           </h1>
 
           <p
             data-photo-hero="line"
-            className="mt-5 max-w-2xl text-base leading-relaxed text-white/65 sm:text-lg"
+            className="mx-auto mt-4 max-w-[34rem] text-base leading-7 text-white/70 sm:text-lg sm:leading-8 md:mx-0 md:max-w-2xl"
           >
-            Work published under shot.by.zk and produced with Studio Nomads — covering Web3
+            Work published under{" "}
+            <span className="font-medium text-[var(--blue-200)]">shot.by.zk</span> and
+            produced with{" "}
+            <span className="font-medium text-white">Studio Nomads</span> — covering
             community events, campus activations, and editorial shoots.
           </p>
 
-          <div data-photo-hero="line" className="pointer-events-auto mt-8">
+          <div data-photo-hero="line" className="pointer-events-auto mt-7 flex justify-center md:justify-start">
             <SocialLinks links={socialGroups.photography} />
           </div>
         </Container>
@@ -185,16 +172,13 @@ export function PhotographyPageContent({
 
         <Container className="relative z-10 py-14 md:py-20">
           <section id="albums" className="scroll-mt-28 px-0 py-0">
-            <div className="mb-8 flex flex-col items-center gap-3 text-center md:flex-row md:items-end md:justify-between md:text-left">
-              <div>
-                <div className="inline-flex items-center gap-3 text-[var(--blue-200)]">
-                  <span className="hidden h-px w-10 bg-gradient-to-r from-[rgba(72,202,228,0.8)] to-transparent sm:block" />
-                  <p className="font-[family-name:var(--font-syne)] text-[0.78rem] font-medium tracking-[0.18em] sm:text-[0.82rem]">
-                    Albums
-                  </p>
-                </div>
+            <div className="mb-7 flex flex-col items-center gap-2 text-center md:flex-row md:items-end md:justify-between md:text-left">
+              <div className="min-w-0">
+                <p className="font-[family-name:var(--font-syne)] text-[0.74rem] font-medium tracking-[0.13em] text-[var(--blue-200)] sm:text-[0.8rem]">
+                  Albums
+                </p>
 
-                <h2 className="mt-4 font-[family-name:var(--font-syne)] text-3xl font-semibold tracking-[-0.02em] text-white">
+                <h2 className="mt-2 font-[family-name:var(--font-syne)] text-[2rem] font-semibold leading-tight tracking-[-0.035em] text-white sm:text-4xl">
                   Collections
                 </h2>
               </div>
@@ -213,18 +197,15 @@ export function PhotographyPageContent({
             )}
           </section>
 
-          <section ref={gallerySectionRef} className="mt-20 scroll-mt-28">
-            <div className="mb-8 flex flex-col items-center gap-4 text-center sm:flex-row sm:items-center sm:justify-between sm:text-left">
+          <section ref={gallerySectionRef} className="mt-16 scroll-mt-28 md:mt-20">
+            <div className="mb-7 flex flex-col items-center gap-4 text-center sm:flex-row sm:items-center sm:justify-between sm:text-left">
               <div className="min-w-0">
-                <div className="inline-flex items-center gap-3 text-[var(--blue-200)]">
-                  <span className="hidden h-px w-10 bg-gradient-to-r from-[rgba(72,202,228,0.8)] to-transparent sm:block" />
-                  <p className="font-[family-name:var(--font-syne)] text-[0.78rem] font-medium tracking-[0.18em] sm:text-[0.82rem]">
-                    Gallery
-                  </p>
-                </div>
+                <p className="font-[family-name:var(--font-syne)] text-[0.74rem] font-medium tracking-[0.13em] text-[var(--blue-200)] sm:text-[0.8rem]">
+                  Gallery
+                </p>
 
-                <div className="mt-4 flex flex-row items-center justify-center gap-2 sm:flex-row sm:items-center sm:justify-start">
-                  <h2 className="font-[family-name:var(--font-syne)] text-3xl font-semibold leading-tight tracking-[-0.02em] text-white">
+                <div className="mt-2 flex flex-row items-center justify-center gap-2 sm:items-center sm:justify-start">
+                  <h2 className="font-[family-name:var(--font-syne)] text-[2rem] font-semibold leading-tight tracking-[-0.035em] text-white sm:text-4xl">
                     All frames
                   </h2>
 
@@ -371,7 +352,7 @@ function GalleryFilter({
             <button
               type="button"
               onClick={() => onChange("All")}
-              className="inline-flex h-9 w-9 cursor-pointer items-center justify-center text-white/70 transition hover:border-white/20 hover:text-white mr-2"
+              className="mr-2 inline-flex h-9 w-9 cursor-pointer items-center justify-center text-white/70 transition hover:border-white/20 hover:text-white"
               aria-label="Clear filter"
             >
               <X className="h-4 w-4" />
@@ -383,7 +364,7 @@ function GalleryFilter({
           className={cn(
             "absolute left-0 right-0 top-full z-20 mt-2 rounded-2xl border border-[var(--border)] bg-[rgba(4,8,18,0.96)] p-2 shadow-[0_18px_48px_rgba(2,8,23,0.42)] backdrop-blur transition duration-200 ease-out",
             mobileOpen
-              ? "translate-y-0 opacity-100 pointer-events-auto"
+              ? "pointer-events-auto translate-y-0 opacity-100"
               : "pointer-events-none -translate-y-2 opacity-0",
           )}
           aria-hidden={!mobileOpen}
@@ -488,39 +469,39 @@ function PaginationControls({
 
   return (
     <div className="mt-10 flex flex-col gap-4 sm:rounded-2xl sm:border sm:border-[var(--border)] sm:bg-white/[0.02] sm:px-4 sm:py-4 sm:flex-row sm:items-center sm:justify-between">
-      <p className="text-center font-mono text-xs uppercase tracking-[0.18em] text-[var(--foreground-subtle)] sm:text-left">
+      <p className="text-center font-mono text-xs tracking-[0.14em] text-[var(--foreground-subtle)] sm:text-left">
         Showing {start}-{end} of {totalItems}
       </p>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-2">
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 sm:flex sm:items-center sm:gap-2">
-        <button
-          type="button"
-          onClick={() => onPageChange(currentPage - 1)}
-          disabled={currentPage <= 1}
-          className="inline-flex min-h-11 w-auto justify-self-start cursor-pointer items-center justify-start gap-2 rounded-full border border-[var(--border)] bg-white/[0.02] px-3 py-2 text-xs font-medium text-[var(--foreground-muted)] transition enabled:hover:border-[var(--border-strong)] enabled:hover:text-white disabled:cursor-not-allowed disabled:opacity-40 sm:min-h-10 sm:justify-center"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Previous
-        </button>
+          <button
+            type="button"
+            onClick={() => onPageChange(currentPage - 1)}
+            disabled={currentPage <= 1}
+            className="inline-flex min-h-11 w-auto cursor-pointer items-center justify-start gap-2 justify-self-start rounded-full border border-[var(--border)] bg-white/[0.02] px-3 py-2 text-xs font-medium text-[var(--foreground-muted)] transition enabled:hover:border-[var(--border-strong)] enabled:hover:text-white disabled:cursor-not-allowed disabled:opacity-40 sm:min-h-10 sm:justify-center"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Previous
+          </button>
 
-        <span className="inline-flex min-h-10 min-w-[3.75rem] items-center justify-center rounded-full border border-[rgba(72,202,228,0.18)] bg-[rgba(72,202,228,0.08)] px-2.5 py-2 font-mono text-xs text-[var(--blue-300)] sm:hidden">
-          {currentPage}/{totalPages}
-        </span>
+          <span className="inline-flex min-h-10 min-w-[3.75rem] items-center justify-center rounded-full border border-[rgba(72,202,228,0.18)] bg-[rgba(72,202,228,0.08)] px-2.5 py-2 font-mono text-xs text-[var(--blue-300)] sm:hidden">
+            {currentPage} / {totalPages}
+          </span>
 
-        <span className="hidden min-h-10 items-center rounded-full border border-[rgba(72,202,228,0.18)] bg-[rgba(72,202,228,0.08)] px-3 py-2 font-mono text-xs text-[var(--blue-300)] sm:inline-flex">
-          {currentPage} / {totalPages}
-        </span>
+          <span className="hidden min-h-10 items-center rounded-full border border-[rgba(72,202,228,0.18)] bg-[rgba(72,202,228,0.08)] px-3 py-2 font-mono text-xs text-[var(--blue-300)] sm:inline-flex">
+            {currentPage} / {totalPages}
+          </span>
 
-        <button
-          type="button"
-          onClick={() => onPageChange(currentPage + 1)}
-          disabled={currentPage >= totalPages}
-          className="inline-flex min-h-11 w-auto justify-self-end cursor-pointer items-center justify-end gap-2 rounded-full border border-[var(--border)] bg-white/[0.02] px-3 py-2 text-xs font-medium text-[var(--foreground-muted)] transition enabled:hover:border-[var(--border-strong)] enabled:hover:text-white disabled:cursor-not-allowed disabled:opacity-40 sm:min-h-10 sm:justify-center"
-        >
-          Next
-          <ArrowRight className="h-3.5 w-3.5" />
-        </button>
+          <button
+            type="button"
+            onClick={() => onPageChange(currentPage + 1)}
+            disabled={currentPage >= totalPages}
+            className="inline-flex min-h-11 w-auto cursor-pointer items-center justify-end gap-2 justify-self-end rounded-full border border-[var(--border)] bg-white/[0.02] px-3 py-2 text-xs font-medium text-[var(--foreground-muted)] transition enabled:hover:border-[var(--border-strong)] enabled:hover:text-white disabled:cursor-not-allowed disabled:opacity-40 sm:min-h-10 sm:justify-center"
+          >
+            Next
+            <ArrowRight className="h-3.5 w-3.5" />
+          </button>
         </div>
       </div>
     </div>

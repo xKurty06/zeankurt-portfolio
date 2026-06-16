@@ -5,6 +5,7 @@ import React, { createContext, useCallback, useContext, useMemo, useState } from
 type SavingMeta = {
   cancelAction?: (() => void) | null;
   completedCount?: number | null;
+  estimatedRemainingMs?: number | null;
   progressPercent?: number | null;
   totalCount?: number | null;
 };
@@ -12,6 +13,7 @@ type SavingMeta = {
 type SavingTask = {
   cancelAction: (() => void) | null;
   completedCount: number | null;
+  estimatedRemainingMs: number | null;
   id: string;
   progressPercent: number | null;
   savingLabel: string | null;
@@ -27,6 +29,7 @@ type ScopedSavingValue = {
   cancelSaving: (() => void) | null;
   canCancel: boolean;
   completedCount: number | null;
+  estimatedRemainingMs: number | null;
   isSaving: boolean;
   progressPercent: number | null;
   savingLabel: string | null;
@@ -54,6 +57,7 @@ export function SavingProvider({ children }: { children: React.ReactNode }) {
       const nextTask: SavingTask = {
         cancelAction: meta?.cancelAction ?? null,
         completedCount: meta?.completedCount ?? null,
+        estimatedRemainingMs: meta?.estimatedRemainingMs ?? null,
         id: taskId,
         progressPercent: meta?.progressPercent ?? null,
         savingLabel: label ?? null,
@@ -105,6 +109,7 @@ export function useSaving(scopeOverride?: string): ScopedSavingValue {
       cancelSaving: activeTask?.cancelAction ?? null,
       canCancel: Boolean(activeTask?.cancelAction),
       completedCount: activeTask?.completedCount ?? null,
+      estimatedRemainingMs: activeTask?.estimatedRemainingMs ?? null,
       isSaving: Boolean(activeTask),
       progressPercent: activeTask?.progressPercent ?? null,
       savingLabel: activeTask?.savingLabel ?? null,

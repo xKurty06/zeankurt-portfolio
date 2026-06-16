@@ -376,8 +376,20 @@ export function PhotographyTeaser({
           <RevealOnScroll>
             <SectionHeading
               eyebrow="Photography"
-              title="Visual work under shot.by.zk."
-              description="Event coverage, portraits, and editorial frames — produced solo and with Studio Nomads."
+              titleClassName="lg:max-w-none lg:whitespace-nowrap"
+              title={
+                <>
+                  Visual work under{" "}
+                  <span className="emphasis-glow-blue">shot.by.zk</span>.
+                </>
+              }
+              description={
+                <>
+                  <span className="emphasis-glow-blue font-medium">Event coverage</span>
+                  , portraits, and editorial frames — produced solo and with{" "}
+                  <span className="emphasis-glow-rose font-medium">Studio Nomads</span>.
+                </>
+              }
             />
           </RevealOnScroll>
 

@@ -6,7 +6,8 @@ import { createClient } from "@supabase/supabase-js";
 import sharp from "sharp";
 
 const root = process.cwd();
-const BUCKET = process.env.SUPABASE_BUCKET || "portfolio-assets";
+const DEFAULT_BUCKET = process.env.SUPABASE_BUCKET || "portfolio-assets";
+const PHOTOGRAPHY_BUCKET = process.env.PHOTOGRAPHY_BUCKET || "photography";
 
 function loadEnvFile(relativePath) {
     const absolutePath = path.join(root, relativePath);
@@ -39,13 +40,17 @@ function requiredEnv(name) {
     return value;
 }
 
-function publicStorageObjectPath(value) {
-    const marker = `/storage/v1/object/public/${BUCKET}/`;
+function publicStorageObjectPath(value, bucket) {
+    const marker = `/storage/v1/object/public/${bucket}/`;
     if (!value || typeof value !== "string") return null;
-    if (!value.includes(marker)) return null;
+    if (value.includes(marker)) {
+        const [, objectPath = ""] = value.split(marker);
+        return objectPath || null;
+    }
 
-    const [, objectPath = ""] = value.split(marker);
-    return objectPath || null;
+    if (/^https?:\/\//i.test(value)) return null;
+
+    return value.replace(/^\/+/, "") || null;
 }
 
 function bytesToKb(bytes) {
@@ -94,8 +99,8 @@ async function optimizeImageBuffer(input) {
     }
 
     const resizeOptions = {
-        width: 2048,
-        height: 2048,
+        width: 1800,
+        height: 1800,
         fit: "inside",
         withoutEnlargement: true,
     };
@@ -103,19 +108,19 @@ async function optimizeImageBuffer(input) {
     let buffer;
     switch (format) {
         case "jpeg":
-            buffer = await image.resize(resizeOptions).jpeg({ quality: 82, mozjpeg: true }).toBuffer();
+            buffer = await image.resize(resizeOptions).jpeg({ quality: 76, mozjpeg: true }).toBuffer();
             break;
         case "png":
             buffer = await image
                 .resize(resizeOptions)
-                .png({ compressionLevel: 8, adaptiveFiltering: true, effort: 6 })
+                .png({ compressionLevel: 9, adaptiveFiltering: true, effort: 9, palette: true, quality: 80 })
                 .toBuffer();
             break;
         case "webp":
-            buffer = await image.resize(resizeOptions).webp({ quality: 80 }).toBuffer();
+            buffer = await image.resize(resizeOptions).webp({ quality: 74 }).toBuffer();
             break;
         case "avif":
-            buffer = await image.resize(resizeOptions).avif({ quality: 60 }).toBuffer();
+            buffer = await image.resize(resizeOptions).avif({ quality: 50 }).toBuffer();
             break;
         default:
             return { buffer: input, contentType: null, optimized: false };
@@ -126,15 +131,15 @@ async function optimizeImageBuffer(input) {
 }
 
 const OBJECT_SOURCE_TABLES = [
-    { table: "projects", identifier: "slug", imageColumns: ["image_path"] },
-    { table: "certifications", identifier: "id", imageColumns: ["image_path"] },
-    { table: "events", identifier: "slug", imageColumns: ["image_path"] },
-    { table: "creative_categories", identifier: "id", imageColumns: ["showcase_image_path"] },
-    { table: "creative_photos", identifier: "id", imageColumns: ["image_path"] },
+    { table: "projects", identifier: "slug", imageColumns: ["image_path"], bucket: DEFAULT_BUCKET },
+    { table: "certifications", identifier: "id", imageColumns: ["image_path"], bucket: DEFAULT_BUCKET },
+    { table: "events", identifier: "slug", imageColumns: ["image_path"], bucket: DEFAULT_BUCKET },
+    { table: "creative_categories", identifier: "id", imageColumns: ["showcase_image_path"], bucket: DEFAULT_BUCKET },
+    { table: "creative_photos", identifier: "id", imageColumns: ["image_path"], bucket: PHOTOGRAPHY_BUCKET },
 ];
 
-async function optimizeObject(admin, objectPath) {
-    const { data, error } = await admin.storage.from(BUCKET).download(objectPath);
+async function optimizeObject(admin, bucket, objectPath) {
+    const { data, error } = await admin.storage.from(bucket).download(objectPath);
     if (error) {
         console.error(`Failed to download ${objectPath}:`, error.message || error);
         return false;
@@ -157,7 +162,7 @@ async function optimizeObject(admin, objectPath) {
         return false;
     }
 
-    const { error: uploadError } = await admin.storage.from(BUCKET).upload(objectPath, buffer, {
+    const { error: uploadError } = await admin.storage.from(bucket).upload(objectPath, buffer, {
         upsert: true,
         cacheControl: "31536000",
         contentType,
@@ -200,19 +205,20 @@ async function main() {
                 const source = row[imageColumn];
                 if (!source || typeof source !== "string") continue;
 
-                const objectPath = publicStorageObjectPath(source);
+                const objectPath = publicStorageObjectPath(source, tableConfig.bucket);
                 if (!objectPath) {
                     console.log(`Skipping ${tableConfig.table}.${imageColumn} ${row[tableConfig.identifier]} — not a public bucket URL.`);
                     skippedCount += 1;
                     continue;
                 }
 
-                if (processedPaths.has(objectPath)) {
+                const processedKey = `${tableConfig.bucket}:${objectPath}`;
+                if (processedPaths.has(processedKey)) {
                     continue;
                 }
 
-                processedPaths.add(objectPath);
-                const optimized = await optimizeObject(admin, objectPath);
+                processedPaths.add(processedKey);
+                const optimized = await optimizeObject(admin, tableConfig.bucket, objectPath);
                 if (optimized) optimizedCount += 1;
                 else skippedCount += 1;
             }

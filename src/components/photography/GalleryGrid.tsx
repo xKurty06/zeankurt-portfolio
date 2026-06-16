@@ -145,12 +145,14 @@ export function GalleryGrid({ photos, onPhotoClick, className }: GalleryGridProp
 
     if (isMobile) {
       if (ratio < 0.85) {
-        targetHeight *= 1.12;
+        targetHeight *= 1.01;
       } else if (ratio > 1.15) {
-        targetHeight *= 0.78;
+        targetHeight *= 0.9;
       } else {
         targetHeight *= 0.95;
       }
+    } else if (ratio < 0.85) {
+      targetHeight *= 1.06;
     }
 
     return getGridRowSpan(targetHeight, gridMetrics.rowGap);

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import type { PhotoItem } from "@/types";
 
@@ -17,10 +18,24 @@ export function Lightbox({
   onClose,
   onNavigate,
 }: LightboxProps) {
+  const [present, setPresent] = useState(activeIndex !== null);
   const photo = activeIndex !== null ? photos[activeIndex] : null;
 
   useEffect(() => {
-    if (activeIndex === null) return;
+    if (activeIndex !== null) {
+      setPresent(true);
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setPresent(false);
+    }, 220);
+
+    return () => window.clearTimeout(timeout);
+  }, [activeIndex]);
+
+  useEffect(() => {
+    if (!present || activeIndex === null) return;
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
@@ -32,24 +47,28 @@ export function Lightbox({
       }
     };
 
-    document.body.style.overflow = "hidden";
     window.addEventListener("keydown", onKeyDown);
     return () => {
-      document.body.style.overflow = "";
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [activeIndex, onClose, onNavigate, photos.length]);
+  }, [activeIndex, onClose, onNavigate, photos.length, present]);
 
-  if (!photo || activeIndex === null) return null;
+  if (!photo || activeIndex === null || !present) return null;
 
   return (
-    <div
-      data-preview-overlay="true"
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/92 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-sm sm:p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-label={photo.title}
-    >
+    <AnimatePresence>
+      <motion.div
+        key={photo.id}
+        data-preview-overlay="true"
+        initial={{ opacity: 0, backdropFilter: "blur(0px)" }}
+        animate={{ opacity: 1, backdropFilter: "blur(4px)" }}
+        exit={{ opacity: 0, backdropFilter: "blur(0px)" }}
+        transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/92 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))] sm:p-4"
+        role="dialog"
+        aria-modal="true"
+        aria-label={photo.title}
+      >
       <button
         type="button"
         onClick={onClose}
@@ -81,7 +100,13 @@ export function Lightbox({
         </button>
       ) : null}
 
-      <div className="max-h-[85dvh] w-full max-w-5xl px-0 sm:px-14 md:px-16">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.975, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.975, y: 20 }}
+        transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+        className="max-h-[85dvh] w-full max-w-5xl px-0 sm:px-14 md:px-16"
+      >
         <div className="flex w-full items-center justify-center overflow-hidden rounded-2xl">
           {photo.image ? (
             <img
@@ -108,7 +133,8 @@ export function Lightbox({
             {activeIndex + 1} / {photos.length}
           </p>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
+    </AnimatePresence>
   );
 }

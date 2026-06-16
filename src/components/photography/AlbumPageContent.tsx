@@ -14,17 +14,6 @@ const DEFAULT_GRID_GAP = 16;
 const PHOTOS_PER_PAGE = 24;
 const BASELINE_ROW_GAP = 16;
 
-function shufflePhotos<T>(items: T[]) {
-  const next = [...items];
-
-  for (let index = next.length - 1; index > 0; index -= 1) {
-    const swapIndex = Math.floor(Math.random() * (index + 1));
-    [next[index], next[swapIndex]] = [next[swapIndex], next[index]];
-  }
-
-  return next;
-}
-
 interface AlbumPageContentProps {
   album: Pick<
     PhotoAlbum,
@@ -37,46 +26,6 @@ interface AlbumGridMetrics {
   columnWidth: number;
   columnGap: number;
   rowGap: number;
-}
-
-function getPhotoOrderNumber(photo: PhotoItem) {
-  /*
-    Prefer the number from the image filename.
-
-    Example:
-    creative-shots-0001.webp -> 1
-    creative-shots-0012.jpg  -> 12
-
-    This keeps the visual order aligned with your uploaded file numbering,
-    even if the generated title says "Creative Shots 2".
-  */
-  const filename = (photo.image ?? "").split("?")[0].split("/").pop() ?? "";
-  const filenameMatch = filename.match(/(?:^|[-_])0*(\d+)(?=\.[a-z0-9]+$|$)/i);
-
-  if (filenameMatch) {
-    return Number(filenameMatch[1]);
-  }
-
-  const titleMatch = photo.title.match(/0*(\d+)\s*$/);
-
-  if (titleMatch) {
-    return Number(titleMatch[1]);
-  }
-
-  return Number.MAX_SAFE_INTEGER;
-}
-
-function sortPhotosByNaturalOrder(photos: PhotoItem[]) {
-  return [...photos].sort((a, b) => {
-    const orderA = getPhotoOrderNumber(a);
-    const orderB = getPhotoOrderNumber(b);
-
-    if (orderA !== orderB) {
-      return orderA - orderB;
-    }
-
-    return a.title.localeCompare(b.title);
-  });
 }
 
 function getFallbackRatio(aspectRatio: PhotoItem["aspectRatio"]) {
@@ -160,21 +109,7 @@ export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
   const desktopQuickAccessPagerRef = useRef<HTMLDivElement>(null);
   const mobileQuickAccessPagerRef = useRef<HTMLDivElement>(null);
 
-  const albumPhotos = useMemo(
-    () => sortPhotosByNaturalOrder(photos ?? []),
-    [photos],
-  );
-  // Initialize shuffled list from server-rendered `albumPhotos`, then
-  // shuffle on the client to avoid SSR/client hydration mismatches caused
-  // by `Math.random()` during render.
-  const [shuffledAlbumPhotos, setShuffledAlbumPhotos] = useState<PhotoItem[]>(
-    () => albumPhotos,
-  );
-
-  useEffect(() => {
-    // Shuffle after mount or when albumPhotos changes (client-only)
-    setShuffledAlbumPhotos(shufflePhotos(albumPhotos));
-  }, [albumPhotos]);
+  const albumPhotos = useMemo(() => photos ?? [], [photos]);
 
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -305,23 +240,21 @@ export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
   const isFeaturedImageFromAlbum = useMemo(() => {
     if (!displayedFeaturedPhoto) return false;
 
-    return shuffledAlbumPhotos.some(
+    return albumPhotos.some(
       (photo) =>
         photo.id === displayedFeaturedPhoto.id ||
         photo.image === displayedFeaturedPhoto.image,
     );
-  }, [displayedFeaturedPhoto, shuffledAlbumPhotos]);
+  }, [displayedFeaturedPhoto, albumPhotos]);
 
   const galleryPhotos = useMemo(() => {
     /*
-      Important:
-      Always show all database photos in the gallery.
-
-      This prevents creative-shots-0001.jpg from being removed just because
-      another separate showcase/cover image is displayed as the featured image.
+      Always keep the full album photo count in the paginated gallery.
+      The featured image can still be highlighted separately without changing
+      the gallery totals shown to the user.
     */
-    return shuffledAlbumPhotos;
-  }, [shuffledAlbumPhotos]);
+    return albumPhotos;
+  }, [albumPhotos]);
 
   const totalPages = Math.max(1, Math.ceil(galleryPhotos.length / PHOTOS_PER_PAGE));
   const safeCurrentPage = Math.min(currentPage, totalPages);
@@ -337,22 +270,22 @@ export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
   }, [galleryPhotos, safeCurrentPage]);
 
   const lightboxPhotos = useMemo(() => {
-    if (!displayedFeaturedPhoto) return shuffledAlbumPhotos;
+    if (!displayedFeaturedPhoto) return albumPhotos;
 
     /*
       If the featured image is already one of the album photos,
       do not duplicate it in the lightbox.
     */
     if (isFeaturedImageFromAlbum) {
-      return shuffledAlbumPhotos;
+      return albumPhotos;
     }
 
     /*
       If the featured image is a separate showcase/cover image,
       add it as a virtual first lightbox item.
     */
-    return [displayedFeaturedPhoto, ...shuffledAlbumPhotos];
-  }, [displayedFeaturedPhoto, isFeaturedImageFromAlbum, shuffledAlbumPhotos]);
+    return [displayedFeaturedPhoto, ...albumPhotos];
+  }, [displayedFeaturedPhoto, isFeaturedImageFromAlbum, albumPhotos]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -419,35 +352,25 @@ export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
       );
     }
 
-    if (photo.aspectRatio === "portrait") {
-      /*
-        Manual baseline: 20
-        Portrait should never become shorter than your manual size.
-        Extra-tall portrait images can become slightly taller.
-      */
-      return adjustRowSpanForGap(
-        Math.max(20, Math.min(28, Math.round(20 * (0.75 / ratio)))),
-        gridMetrics.rowGap,
-      );
-    }
+    const itemWidth = getGridItemWidth(gridMetrics, 1);
+    const targetHeight = itemWidth / ratio;
+    const breathingRoom =
+      ratio < 0.85 ? 1.01 : ratio > 1.15 ? 0.96 : 1.01;
 
-    if (photo.aspectRatio === "square") {
-      /*
-        Manual baseline: 12
-        Keep square stable.
-      */
-      return adjustRowSpanForGap(12, gridMetrics.rowGap);
-    }
-
-    /*
-      Manual baseline: 9
-      Landscape should not become taller than your manual size.
-      Wider landscape images can become slightly shorter.
-    */
-    return adjustRowSpanForGap(
-      Math.min(9, Math.max(7, Math.round(9 * (4 / 3 / ratio)))),
-      gridMetrics.rowGap,
+    const dynamicSpan = Math.ceil(
+      (targetHeight * breathingRoom + gridMetrics.rowGap) /
+      (GRID_AUTO_ROW_HEIGHT + gridMetrics.rowGap),
     );
+
+    if (ratio < 0.85) {
+      return Math.max(15, Math.min(27, dynamicSpan));
+    }
+
+    if (ratio > 1.15) {
+      return Math.max(7, Math.min(14, dynamicSpan));
+    }
+
+    return Math.max(11, Math.min(17, dynamicSpan));
   };
 
   const getFeaturedRowSpan = () => {
@@ -477,9 +400,16 @@ export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
     if (displayedFeaturedPhoto?.aspectRatio === "square") {
       return adjustRowSpanForGap(18, gridMetrics.rowGap);
     }
-    return adjustRowSpanForGap(
-      Math.max(16, Math.min(20, Math.round(24 * (4 / 3 / ratio)))),
-      gridMetrics.rowGap,
+    const itemWidth = getGridItemWidth(gridMetrics, 2);
+    const compactHeight = (itemWidth / ratio) * 0.76;
+    const dynamicSpan = Math.ceil(
+      (compactHeight + gridMetrics.rowGap) /
+      (GRID_AUTO_ROW_HEIGHT + gridMetrics.rowGap),
+    );
+
+    return Math.max(
+      ratio > 1.65 ? 18 : 20,
+      Math.min(ratio > 1.65 ? 26 : 30, dynamicSpan),
     );
   };
 
@@ -517,28 +447,25 @@ export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
                 style={{ gridRowEnd: `span ${headerRowSpan}` }}
               >
                 {showCategoryLabel ? (
-                  <div className="inline-flex items-center gap-3 text-[var(--blue-200)]">
-                    <span className="h-px w-10 bg-gradient-to-r from-[rgba(72,202,228,0.8)] to-transparent" />
-                    <p className="font-[family-name:var(--font-syne)] text-[0.78rem] font-medium tracking-[0.18em] sm:text-[0.82rem]">
-                      {album.category}
-                    </p>
-                  </div>
+                  <p className="font-[family-name:var(--font-syne)] text-[0.74rem] font-medium tracking-[0.13em] text-[var(--blue-200)] sm:text-[0.8rem]">
+                    {album.category}
+                  </p>
                 ) : null}
 
-                <h1 className="mt-0 break-words font-[family-name:var(--font-syne)] text-[clamp(1.875rem,8vw,2.5rem)] font-semibold tracking-[-0.03em] text-white sm:text-5xl">
+                <h1 className="mt-2 break-words font-[family-name:var(--font-syne)] text-[clamp(1.875rem,8vw,2.5rem)] font-semibold tracking-[-0.03em] text-white sm:text-5xl">
                   {album.title}
                 </h1>
 
-                <p className="mt-0 max-w-2xl text-base leading-relaxed text-white/65">
+                <p className="mt-2 max-w-2xl text-base leading-relaxed text-white/65">
                   {album.description}
                 </p>
                 {totalPages > 1 ? (
                   <div ref={desktopQuickAccessPagerRef} className="relative z-20 mt-6 hidden w-full max-w-2xl lg:flex lg:flex-col lg:gap-3">
-                    <p className="text-center font-mono text-xs uppercase tracking-[0.18em] text-[var(--foreground-subtle)]">
+                    <p className="text-center font-mono text-xs tracking-[0.14em] text-[var(--foreground-subtle)]">
                       Showing {headerStart}-{headerEnd} of {galleryPhotos.length}
                     </p>
 
-                    <div className="grid grid-cols-[1fr_auto_1fr] items-center">
+                    <div className="grid lg:grid-cols-[1fr_auto_1fr] lg:items-center">
                       <button
                         type="button"
                         onClick={() => goToPage(safeCurrentPage - 1)}
@@ -625,10 +552,10 @@ export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
                     className="col-span-2 flex flex-col gap-3 px-3 py-3 lg:hidden"
                     style={{
                       gridRowStart: isMobileGrid ? headerRowSpan + featuredRowSpan + 1 : undefined,
-                      gridRowEnd: "span 9",
+                      gridRowEnd: "span 8",
                     }}
                   >
-                    <p className="text-center font-mono text-xs uppercase tracking-[0.18em] text-[var(--foreground-subtle)]">
+                    <p className="text-center font-mono text-xs tracking-[0.14em] text-[var(--foreground-subtle)]">
                       Showing {headerStart}-{headerEnd} of {galleryPhotos.length}
                     </p>
 
@@ -746,7 +673,7 @@ function PaginationControls({
 
   return (
     <div className="mt-10 flex flex-col gap-4 sm:rounded-2xl sm:border sm:border-[var(--border)] sm:bg-white/[0.02] sm:px-4 sm:py-4 sm:flex-row sm:items-center sm:justify-between">
-      <p className="text-center font-mono text-xs uppercase tracking-[0.18em] text-[var(--foreground-subtle)] sm:text-left">
+      <p className="text-center font-mono text-xs tracking-[0.14em] text-[var(--foreground-subtle)] sm:text-left">
         Showing {start}-{end} of {totalItems}
       </p>
 

@@ -13,7 +13,21 @@ export function buildPhotographyAlbums(categories: CreativeCategory[]): PhotoAlb
 }
 
 export function buildPhotographyPhotos(categories: CreativeCategory[]): PhotoItem[] {
-  return categories.flatMap((category) => category.photos);
+  return categories
+    .flatMap((category) => category.photos)
+    .sort((a, b) => {
+      const sortOrderA = a.sortOrder ?? Number.MAX_SAFE_INTEGER;
+      const sortOrderB = b.sortOrder ?? Number.MAX_SAFE_INTEGER;
+
+      if (sortOrderA !== sortOrderB) return sortOrderA - sortOrderB;
+
+      const createdAtA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const createdAtB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+
+      if (createdAtA !== createdAtB) return createdAtB - createdAtA;
+
+      return a.id.localeCompare(b.id);
+    });
 }
 
 export function buildPhotoCategories(categories: CreativeCategory[]) {

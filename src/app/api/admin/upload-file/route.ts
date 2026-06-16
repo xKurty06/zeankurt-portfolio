@@ -26,6 +26,15 @@ function padSequence(value: number) {
   return String(value).padStart(4, "0");
 }
 
+function randomInt(maxExclusive: number) {
+  if (maxExclusive <= 0) return 0;
+
+  const values = new Uint32Array(1);
+  crypto.getRandomValues(values);
+
+  return values[0] % maxExclusive;
+}
+
 function isStorageConflict(error: unknown) {
   const message =
     typeof error === "object" && error && "message" in error ? String((error as { message?: unknown }).message ?? "") : String(error ?? "");
@@ -38,6 +47,37 @@ function isUniqueConstraintError(error: unknown) {
   const message =
     typeof error === "object" && error && "message" in error ? String((error as { message?: unknown }).message ?? "") : String(error ?? "");
   return code === "23505" || /duplicate key|unique constraint/i.test(message);
+}
+
+async function randomizeInsertedCreativePhotoOrder(
+  admin: NonNullable<ReturnType<typeof createSupabaseAdminClient>>,
+  insertedId: string,
+) {
+  const { data, error } = await admin
+    .from("creative_photos")
+    .select("id,sort_order,created_at")
+    .order("sort_order", { ascending: true, nullsFirst: false })
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: true });
+
+  if (error) throw error;
+
+  const orderedIds = (data ?? [])
+    .map((photo) => String(photo.id))
+    .filter((id) => id !== insertedId);
+
+  orderedIds.splice(randomInt(orderedIds.length + 1), 0, insertedId);
+
+  const results = await Promise.all(
+    orderedIds.map((id, index) =>
+      admin.from("creative_photos").update({ sort_order: index }).eq("id", id),
+    ),
+  );
+  const failed = results.find((result) => result.error);
+
+  if (failed?.error) {
+    throw failed.error;
+  }
 }
 
 export async function POST(req: Request) {
@@ -66,16 +106,26 @@ export async function POST(req: Request) {
     ? await optimizePhotographyImage(input, file.type)
     : { aspectRatio: "landscape" as const, bytes: input, contentType: file.type || "application/octet-stream" };
 
-  // determine sort_order
-  const { data: sortData, error: sortError } = await admin.from("creative_photos").select("sort_order").eq("category_id", String(categoryId)).order("sort_order", { ascending: false }).limit(1).maybeSingle();
+  // determine global sort_order
+  const { data: sortData, error: sortError } = await admin
+    .from("creative_photos")
+    .select("sort_order")
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
   if (sortError) return NextResponse.json({ error: sortError.message || sortError }, { status: 500 });
   const baseSortOrder = typeof sortData?.sort_order === "number" ? sortData.sort_order + 1 : 0;
+  const { count: categoryCount, error: categoryCountError } = await admin
+    .from("creative_photos")
+    .select("*", { count: "exact", head: true })
+    .eq("category_id", String(categoryId));
+  if (categoryCountError) return NextResponse.json({ error: categoryCountError.message || categoryCountError }, { status: 500 });
   const safeCategorySlug = safeFilename(String(categorySlug || "creative"));
   const extension = extensionFromFilename(file.name) || "";
 
   for (let attempt = 0; attempt < 25; attempt += 1) {
     const nextSortOrder = baseSortOrder + attempt;
-    const nextSequence = nextSortOrder + 1;
+    const nextSequence = (categoryCount ?? 0) + attempt + 1;
     const sequenceLabel = padSequence(nextSequence);
     const title = `${categoryTitleFromSlug(safeCategorySlug)} ${nextSequence}`;
     const path = `${safeCategorySlug}/${safeCategorySlug}-${sequenceLabel}${extension}`;
@@ -109,6 +159,8 @@ export async function POST(req: Request) {
 
     const { error: insertError } = await admin.from("creative_photos").insert(payload);
     if (!insertError) {
+      await randomizeInsertedCreativePhotoOrder(admin, id);
+
       return NextResponse.json({ id, image_path: publicUrl });
     }
 

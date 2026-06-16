@@ -222,6 +222,15 @@ function padSequence(value: number) {
   return String(value).padStart(4, "0");
 }
 
+function randomInt(maxExclusive: number) {
+  if (maxExclusive <= 0) return 0;
+
+  const values = new Uint32Array(1);
+  crypto.getRandomValues(values);
+
+  return values[0] % maxExclusive;
+}
+
 async function optimizeImageUpload(file: File) {
   const arrayBuffer = await file.arrayBuffer();
   const input = Buffer.from(arrayBuffer);
@@ -375,6 +384,94 @@ async function resolveSortOrder(table: CmsTable, formData: FormData) {
 
   const maxSortOrder = typeof data?.sort_order === "number" ? data.sort_order : -1;
   return maxSortOrder + 1;
+}
+
+async function getNextCreativePhotoSortOrder(
+  admin: Awaited<ReturnType<typeof requireAdmin>>,
+  categoryId: string,
+) {
+  const { data, error } = await admin
+    .from("creative_photos")
+    .select("sort_order")
+    .eq("category_id", categoryId)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+
+  return typeof data?.sort_order === "number" ? data.sort_order + 1 : 0;
+}
+
+async function getNextCreativePhotoCategorySequence(
+  admin: Awaited<ReturnType<typeof requireAdmin>>,
+  categoryId: string,
+) {
+  const { count, error } = await admin
+    .from("creative_photos")
+    .select("*", { count: "exact", head: true })
+    .eq("category_id", categoryId);
+
+  if (error) throw error;
+
+  return count ?? 0;
+}
+
+async function getExistingCreativePhotoSortOrder(
+  admin: Awaited<ReturnType<typeof requireAdmin>>,
+  id: string,
+) {
+  const { data, error } = await admin
+    .from("creative_photos")
+    .select("sort_order")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) throw error;
+
+  return typeof data?.sort_order === "number" ? data.sort_order : 0;
+}
+
+async function randomizeInsertedCreativePhotoOrder(
+  admin: Awaited<ReturnType<typeof requireAdmin>>,
+  categoryId: string,
+  insertedIds: string[],
+) {
+  if (insertedIds.length === 0) return;
+
+  const { data, error } = await admin
+    .from("creative_photos")
+    .select("id,sort_order,created_at")
+    .eq("category_id", categoryId)
+    .order("sort_order", { ascending: true, nullsFirst: false })
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: true });
+
+  if (error) throw error;
+
+  const inserted = new Set(insertedIds);
+  const orderedIds = (data ?? [])
+    .map((photo) => String(photo.id))
+    .filter((id) => !inserted.has(id));
+
+  for (const id of insertedIds) {
+    orderedIds.splice(randomInt(orderedIds.length + 1), 0, id);
+  }
+
+  const results = await Promise.all(
+    orderedIds.map((id, index) =>
+      admin
+        .from("creative_photos")
+        .update({ sort_order: index })
+        .eq("category_id", categoryId)
+        .eq("id", id),
+    ),
+  );
+  const failed = results.find((result) => result.error);
+
+  if (failed?.error) {
+    throw failed.error;
+  }
 }
 
 function parseCsvRows(source: string) {
@@ -1232,9 +1329,10 @@ export async function seedDefaultCreativeCategories() {
 }
 
 export async function saveCreativePhoto(formData: FormData) {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
-  const id = optionalText(formData, "id") ?? crypto.randomUUID();
+  const existingId = optionalText(formData, "id");
+  const id = existingId ?? crypto.randomUUID();
   const categoryId = requiredText(formData, "category_id", "Category");
   const existingImagePath = optionalText(formData, "existing_image_path");
 
@@ -1249,21 +1347,31 @@ export async function saveCreativePhoto(formData: FormData) {
     throw new Error("Photo image is required.");
   }
 
-  await mutateAndRefresh(
-    "creative_photos",
-    {
-      id,
-      category_id: categoryId,
-      title: requiredText(formData, "title", "Title"),
-      image_path: uploadedPhoto?.imagePath ?? existingImagePath,
-      aspect_ratio: uploadedPhoto?.aspectRatio ?? assertAllowedPhotoAspect(optionalText(formData, "aspect_ratio")),
-      featured: bool(formData, "featured"),
-      sort_order: await resolveSortOrder("creative_photos", formData),
-      published: bool(formData, "published"),
-    },
-    undefined,
-    mutationOptionsForForm(formData),
-  );
+  const payload = {
+    id,
+    category_id: categoryId,
+    title: requiredText(formData, "title", "Title"),
+    image_path: uploadedPhoto?.imagePath ?? existingImagePath,
+    aspect_ratio: uploadedPhoto?.aspectRatio ?? assertAllowedPhotoAspect(optionalText(formData, "aspect_ratio")),
+    featured: bool(formData, "featured"),
+    sort_order: existingId
+      ? await getExistingCreativePhotoSortOrder(admin, existingId)
+      : await getNextCreativePhotoSortOrder(admin, categoryId),
+    published: bool(formData, "published"),
+  };
+
+  const { error } = await admin.from("creative_photos").upsert(payload);
+  if (error) throw error;
+
+  if (!existingId) {
+    await randomizeInsertedCreativePhotoOrder(admin, categoryId, [id]);
+  }
+
+  revalidatePortfolioContent();
+
+  if (shouldRedirectAfterAction(formData)) {
+    redirect("/admin");
+  }
 }
 
 
@@ -1279,18 +1387,10 @@ export async function uploadCreativePhotos(formData: FormData) {
   // Process large uploads in sequential batches to avoid request failures
   // (client may attempt to upload entire folders — handle them gracefully).
 
-  const { data: sortData, error: sortError } = await admin
-    .from("creative_photos")
-    .select("sort_order")
-    .eq("category_id", categoryId)
-    .order("sort_order", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (sortError) throw sortError;
-
-  const nextSortOrder = typeof sortData?.sort_order === "number" ? sortData.sort_order + 1 : 0;
+  const nextSortOrder = await getNextCreativePhotoSortOrder(admin, categoryId);
+  const nextCategorySequence = await getNextCreativePhotoCategorySequence(admin, categoryId);
   const uploaded: Array<Record<string, unknown>> = [];
+  const uploadedIds: string[] = [];
   // Choose a batch size equal to MAX_CREATIVE_UPLOAD_FILES to limit memory and
   // processing concurrency on the server. Process batches sequentially.
   for (let offset = 0; offset < files.length; offset += MAX_CREATIVE_UPLOAD_FILES) {
@@ -1299,7 +1399,7 @@ export async function uploadCreativePhotos(formData: FormData) {
       batch.map(async (file, batchIndex) => {
         const overallIndex = offset + batchIndex;
         const id = crypto.randomUUID();
-        const sequence = nextSortOrder + overallIndex + 1;
+        const sequence = nextCategorySequence + overallIndex + 1;
         const sequenceLabel = padSequence(sequence);
         const extension = extensionFromFilename(file.name);
         const uploadedPhoto = await uploadImageFile(
@@ -1320,11 +1420,14 @@ export async function uploadCreativePhotos(formData: FormData) {
       }),
     );
 
+    uploadedIds.push(...batchUploaded.map((photo) => String(photo.id)));
     uploaded.push(...batchUploaded);
   }
 
   const { error } = await admin.from("creative_photos").insert(uploaded);
   if (error) throw error;
+
+  await randomizeInsertedCreativePhotoOrder(admin, categoryId, uploadedIds);
 
   revalidateTag("portfolio-content", "max");
   redirect("/admin#creative-portfolio");

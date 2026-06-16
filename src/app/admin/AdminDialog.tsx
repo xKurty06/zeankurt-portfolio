@@ -5,6 +5,8 @@ import { createPortal } from "react-dom";
 import SaveButton from "@/components/ui/SaveButton";
 import { SavingScopeProvider, useSaving } from "@/lib/saving";
 
+const DIALOG_TRANSITION_MS = 180;
+
 type UploadDialogState = "idle" | "uploading" | "complete";
 
 type AdminDialogProps = {
@@ -18,20 +20,38 @@ type AdminDialogProps = {
   children: React.ReactNode;
 };
 
-type ScrollLockSnapshot = {
-  scrollY: number;
-  bodyOverflow: string;
-  bodyOverscrollBehavior: string;
-  bodyPosition: string;
-  bodyTop: string;
-  bodyLeft: string;
-  bodyRight: string;
-  bodyWidth: string;
-  bodyScrollBehavior: string;
-  htmlOverflow: string;
-  htmlOverscrollBehavior: string;
-  htmlScrollBehavior: string;
-};
+const ADMIN_DIALOG_STACK: string[] = [];
+
+function pushAdminDialog(id: string) {
+  const existingIndex = ADMIN_DIALOG_STACK.indexOf(id);
+
+  if (existingIndex >= 0) {
+    ADMIN_DIALOG_STACK.splice(existingIndex, 1);
+  }
+
+  ADMIN_DIALOG_STACK.push(id);
+}
+
+function removeAdminDialog(id: string) {
+  const index = ADMIN_DIALOG_STACK.indexOf(id);
+
+  if (index >= 0) {
+    ADMIN_DIALOG_STACK.splice(index, 1);
+  }
+}
+
+function isTopAdminDialog(id: string) {
+  return ADMIN_DIALOG_STACK[ADMIN_DIALOG_STACK.length - 1] === id;
+}
+
+function stopNativeEvent(event: Event) {
+  event.preventDefault();
+  event.stopPropagation();
+
+  if ("stopImmediatePropagation" in event) {
+    event.stopImmediatePropagation();
+  }
+}
 
 export function AdminDialog({
   title,
@@ -44,6 +64,8 @@ export function AdminDialog({
   children,
 }: AdminDialogProps) {
   const [open, setOpen] = useState(false);
+  const [present, setPresent] = useState(false);
+  const [entered, setEntered] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [hasForm, setHasForm] = useState(false);
   const [hasFileInput, setHasFileInput] = useState(false);
@@ -53,12 +75,15 @@ export function AdminDialog({
   const titleId = useId();
   const descriptionId = useId();
   const savingKey = useId();
+  const dialogStackId = useId();
 
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const initialSnapshotRef = useRef<string>("");
   const portalNodeRef = useRef<HTMLDivElement | null>(null);
   const submitIntentRef = useRef<"save" | "upload" | null>(null);
-  const scrollLockRef = useRef<ScrollLockSnapshot | null>(null);
+  const closeTimeoutRef = useRef<number | null>(null);
 
   const [mounted, setMounted] = useState(false);
 
@@ -70,90 +95,6 @@ export function AdminDialog({
     hasForm && /\bedit\b/i.test(`${triggerLabel} ${title}`) && !uploadIntent;
 
   const { cancelSaving, canCancel, setSaving } = useSaving(savingKey);
-
-  const lockPageScroll = () => {
-    if (scrollLockRef.current) return;
-
-    const scrollY = window.scrollY;
-    const bodyStyle = document.body.style;
-    const htmlStyle = document.documentElement.style;
-
-    scrollLockRef.current = {
-      scrollY,
-      bodyOverflow: bodyStyle.overflow,
-      bodyOverscrollBehavior: bodyStyle.overscrollBehavior,
-      bodyPosition: bodyStyle.position,
-      bodyTop: bodyStyle.top,
-      bodyLeft: bodyStyle.left,
-      bodyRight: bodyStyle.right,
-      bodyWidth: bodyStyle.width,
-      bodyScrollBehavior: bodyStyle.scrollBehavior,
-      htmlOverflow: htmlStyle.overflow,
-      htmlOverscrollBehavior: htmlStyle.overscrollBehavior,
-      htmlScrollBehavior: htmlStyle.scrollBehavior,
-    };
-
-    htmlStyle.scrollBehavior = "auto";
-    htmlStyle.overflow = "hidden";
-    htmlStyle.overscrollBehavior = "none";
-
-    bodyStyle.scrollBehavior = "auto";
-    bodyStyle.overflow = "hidden";
-    bodyStyle.overscrollBehavior = "none";
-    bodyStyle.position = "fixed";
-    bodyStyle.top = `-${scrollY}px`;
-    bodyStyle.left = "0";
-    bodyStyle.right = "0";
-    bodyStyle.width = "100%";
-  };
-
-  const unlockPageScroll = () => {
-    const snapshot = scrollLockRef.current;
-    if (!snapshot) return;
-
-    const bodyStyle = document.body.style;
-    const htmlStyle = document.documentElement.style;
-    const targetScrollY = snapshot.scrollY;
-
-    htmlStyle.scrollBehavior = "auto";
-    bodyStyle.scrollBehavior = "auto";
-
-    window.scrollTo({
-      top: targetScrollY,
-      left: 0,
-      behavior: "instant",
-    });
-
-    bodyStyle.overflow = snapshot.bodyOverflow;
-    bodyStyle.overscrollBehavior = snapshot.bodyOverscrollBehavior;
-    bodyStyle.position = snapshot.bodyPosition;
-    bodyStyle.top = snapshot.bodyTop;
-    bodyStyle.left = snapshot.bodyLeft;
-    bodyStyle.right = snapshot.bodyRight;
-    bodyStyle.width = snapshot.bodyWidth;
-
-    htmlStyle.overflow = snapshot.htmlOverflow;
-    htmlStyle.overscrollBehavior = snapshot.htmlOverscrollBehavior;
-
-    window.scrollTo({
-      top: targetScrollY,
-      left: 0,
-      behavior: "instant",
-    });
-
-    requestAnimationFrame(() => {
-      window.scrollTo({
-        top: targetScrollY,
-        left: 0,
-        behavior: "instant",
-      });
-
-      bodyStyle.scrollBehavior = snapshot.bodyScrollBehavior;
-      htmlStyle.scrollBehavior = snapshot.htmlScrollBehavior;
-    });
-
-    scrollLockRef.current = null;
-  };
 
   const syncFormState = () => {
     const form = contentRef.current?.querySelector("form") ?? null;
@@ -202,6 +143,14 @@ export function AdminDialog({
   };
 
   useEffect(() => {
+    return () => {
+      if (closeTimeoutRef.current !== null) {
+        window.clearTimeout(closeTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     const portalNode = document.createElement("div");
     portalNode.dataset.adminDialogPortal = "true";
     portalNodeRef.current = portalNode;
@@ -209,30 +158,79 @@ export function AdminDialog({
     setMounted(true);
 
     return () => {
-      unlockPageScroll();
       portalNode.remove();
       portalNodeRef.current = null;
     };
   }, []);
 
   useEffect(() => {
-    if (!open) return;
+    if (closeTimeoutRef.current !== null) {
+      window.clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
 
-    const siblings = Array.from(document.body.children).filter(
-      (element) => element !== portalNodeRef.current,
-    );
+    if (open) {
+      setPresent(true);
+      setEntered(false);
 
-    lockPageScroll();
+      const frame = window.requestAnimationFrame(() => {
+        setEntered(true);
+      });
+
+      return () => {
+        window.cancelAnimationFrame(frame);
+      };
+    }
+
+    if (!present) {
+      setEntered(false);
+      return;
+    }
+
+    setEntered(false);
+    closeTimeoutRef.current = window.setTimeout(() => {
+      setPresent(false);
+      closeTimeoutRef.current = null;
+    }, DIALOG_TRANSITION_MS);
+
+    return () => {
+      if (closeTimeoutRef.current !== null) {
+        window.clearTimeout(closeTimeoutRef.current);
+        closeTimeoutRef.current = null;
+      }
+    };
+  }, [open, present]);
+
+  useEffect(() => {
+    if (!present) return;
+
+    pushAdminDialog(dialogStackId);
 
     initialSnapshotRef.current = snapshotFields();
     setDirty(false);
     setUploadDialogState("idle");
     syncFormState();
 
-    siblings.forEach((element) => {
-      element.setAttribute("inert", "");
-      element.setAttribute("aria-hidden", "true");
-    });
+    const shouldBlockBackdropEvent = (event: Event) => {
+      const target = event.target;
+
+      if (!(target instanceof Node)) return false;
+      if (!overlayRef.current?.contains(target)) return false;
+      if (dialogRef.current?.contains(target)) return false;
+
+      return true;
+    };
+
+    const handleBackdropNativeEvent = (event: Event) => {
+      if (shouldBlockBackdropEvent(event)) {
+        stopNativeEvent(event);
+      }
+    };
+
+    window.addEventListener("pointerdown", handleBackdropNativeEvent, true);
+    window.addEventListener("mousedown", handleBackdropNativeEvent, true);
+    window.addEventListener("touchstart", handleBackdropNativeEvent, true);
+    window.addEventListener("click", handleBackdropNativeEvent, true);
 
     const observer = new MutationObserver(() => {
       syncFormState();
@@ -245,36 +243,39 @@ export function AdminDialog({
       });
     }
 
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && document.querySelector('[data-preview-overlay="true"]')) {
-        return;
-      }
-
-      if (event.key === "Escape") {
-        setOpen(false);
-      }
-    };
-
-    window.addEventListener("keydown", onKeyDown);
-
     return () => {
       setSaving(false);
       observer.disconnect();
-
-      unlockPageScroll();
-
-      siblings.forEach((element) => {
-        element.removeAttribute("inert");
-        element.removeAttribute("aria-hidden");
-      });
+      removeAdminDialog(dialogStackId);
 
       setHasForm(false);
       setHasFileInput(false);
       setUploadDialogState("idle");
 
-      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("pointerdown", handleBackdropNativeEvent, true);
+      window.removeEventListener("mousedown", handleBackdropNativeEvent, true);
+      window.removeEventListener("touchstart", handleBackdropNativeEvent, true);
+      window.removeEventListener("click", handleBackdropNativeEvent, true);
+
     };
-  }, [open, setSaving]);
+  }, [dialogStackId, present, setSaving]);
+
+  const handleOverlayKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== "Escape") return;
+
+    if (document.querySelector('[data-preview-overlay="true"]')) {
+      return;
+    }
+
+    if (!isTopAdminDialog(dialogStackId)) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.nativeEvent.stopImmediatePropagation();
+    setOpen(false);
+  };
 
   const handleFieldChange = () => {
     setDirty(snapshotFields() !== initialSnapshotRef.current);
@@ -436,12 +437,16 @@ export function AdminDialog({
         {triggerContent ?? triggerLabel}
       </button>
 
-      {open && mounted && portalNodeRef.current
+      {present && mounted && portalNodeRef.current
         ? createPortal(
             <SavingScopeProvider value={savingKey}>
               <div
+                ref={overlayRef}
                 aria-hidden="false"
-                className="animate-fade-in fixed inset-0 z-[1000] flex items-center justify-center overflow-hidden overscroll-none bg-[rgba(3,7,18,0.76)] p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))] md:p-6"
+                tabIndex={-1}
+                className={`fixed inset-0 z-[1100] flex items-center justify-center overflow-hidden overscroll-none bg-[rgba(3,7,18,0.76)] p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))] opacity-0 backdrop-blur-0 transition-[opacity,backdrop-filter] duration-200 ease-out md:p-6 ${
+                  entered ? "opacity-100 backdrop-blur-sm" : ""
+                }`}
                 onWheel={(event) => {
                   if (event.target === event.currentTarget) {
                     event.preventDefault();
@@ -452,19 +457,34 @@ export function AdminDialog({
                     event.preventDefault();
                   }
                 }}
+                onClick={(event) => {
+                  if (event.target === event.currentTarget) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    event.nativeEvent.stopImmediatePropagation();
+                  }
+                }}
+                onKeyDownCapture={handleOverlayKeyDown}
                 onPointerDown={(event) => {
-                  event.preventDefault();
+                  if (event.target === event.currentTarget) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    event.nativeEvent.stopImmediatePropagation();
+                  }
                 }}
                 onDragStart={(event) => event.preventDefault()}
                 onDragOver={(event) => event.preventDefault()}
                 onDrop={(event) => event.preventDefault()}
               >
                 <div
+                  ref={dialogRef}
                   role="dialog"
                   aria-modal="true"
                   aria-labelledby={titleId}
                   aria-describedby={description || showSaveStatus ? descriptionId : undefined}
-                  className="animate-modal-in flex max-h-[calc(100dvh-1.5rem)] w-full max-w-3xl flex-col rounded-[1.25rem] border border-[var(--border-strong)] bg-[var(--background-elevated)] shadow-[0_20px_80px_rgba(0,0,0,0.45)] sm:rounded-[1.75rem] md:max-h-[calc(100dvh-3rem)]"
+                  className={`flex max-h-[calc(100dvh-1.5rem)] w-full max-w-3xl translate-y-3 scale-[0.985] flex-col rounded-[1.25rem] border border-[var(--border-strong)] bg-[var(--background-elevated)] opacity-0 shadow-[0_20px_80px_rgba(0,0,0,0.45)] transition-[opacity,transform] duration-200 ease-out sm:rounded-[1.75rem] md:max-h-[calc(100dvh-3rem)] ${
+                    entered ? "translate-y-0 scale-100 opacity-100" : ""
+                  }`}
                   onClick={(event) => event.stopPropagation()}
                   onPointerDown={(event) => event.stopPropagation()}
                   onWheel={(event) => event.stopPropagation()}

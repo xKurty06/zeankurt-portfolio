@@ -4,6 +4,28 @@ import { AnimatePresence, motion } from "framer-motion";
 import { LoaderCircle, Upload, X } from "lucide-react";
 import { useSaving } from "@/lib/saving";
 
+function formatRemainingTime(ms: number | null | undefined) {
+  if (typeof ms !== "number" || !Number.isFinite(ms) || ms <= 0) {
+    return null;
+  }
+
+  const totalSeconds = Math.max(1, Math.round(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  if (minutes >= 60) {
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    return remainingMinutes === 0 ? `${hours}h left` : `${hours}h ${remainingMinutes}m left`;
+  }
+
+  if (minutes >= 1) {
+    return seconds === 0 ? `${minutes}m left` : `${minutes}m ${seconds}s left`;
+  }
+
+  return `${seconds}s left`;
+}
+
 export function SavingIndicator() {
   const { tasks, setSaving } = useSaving();
   const activeTasks = [...tasks].reverse();
@@ -15,6 +37,7 @@ export function SavingIndicator() {
           const isUpload = (task.savingLabel ?? "").toLowerCase().includes("upload");
           const hasProgress = isUpload && typeof task.progressPercent === "number" && typeof task.totalCount === "number";
           const totalUploaded = task.totalCount ?? 0;
+          const remainingLabel = formatRemainingTime(task.estimatedRemainingMs);
 
           return (
             <motion.aside
@@ -56,6 +79,11 @@ export function SavingIndicator() {
                       <p className="mt-2 text-[11px] text-[var(--foreground-muted)]">
                         {Math.min(task.completedCount ?? 0, totalUploaded)} of {totalUploaded} uploaded
                       </p>
+                      {remainingLabel ? (
+                        <p className="mt-1 text-[11px] text-[var(--foreground-muted)]">
+                          Estimated time remaining: {remainingLabel}
+                        </p>
+                      ) : null}
                     </>
                   ) : null}
                   {isUpload ? (

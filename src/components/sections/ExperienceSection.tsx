@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useGSAP } from "@gsap/react";
+import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft, ArrowRight, MapPin, Sparkles, Users, X } from "lucide-react";
 import { RevealOnScroll } from "@/components/animation/RevealOnScroll";
 import { GlowCard } from "@/components/animation/GlowCard";
@@ -156,11 +157,9 @@ function MobileExperienceCarousel({
       }
     };
 
-    document.body.style.overflow = "hidden";
     window.addEventListener("keydown", onKeyDown);
 
     return () => {
-      document.body.style.overflow = "";
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [activeItem]);
@@ -287,14 +286,25 @@ function MobileExperienceCarousel({
         </>
       ) : null}
 
+      <AnimatePresence>
       {activeItem ? (
-        <div
-          className="animate-fade-in fixed inset-0 z-[100] flex items-center justify-center bg-black/88 p-4 backdrop-blur-sm"
+        <motion.div
+          initial={{ opacity: 0, backdropFilter: "blur(0px)" }}
+          animate={{ opacity: 1, backdropFilter: "blur(4px)" }}
+          exit={{ opacity: 0, backdropFilter: "blur(0px)" }}
+          transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/88 p-4"
           role="dialog"
           aria-modal="true"
           aria-label={`${activeItem.organization} details`}
         >
-          <div className="animate-modal-in max-h-[82dvh] w-full max-w-lg overflow-y-auto rounded-3xl border border-white/10 bg-[var(--background-elevated)] p-4 shadow-[0_24px_120px_rgba(0,0,0,0.45)]">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.975, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.975, y: 20 }}
+            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+            className="max-h-[82dvh] w-full max-w-lg overflow-y-auto rounded-3xl border border-white/10 bg-[var(--background-elevated)] p-4 shadow-[0_24px_120px_rgba(0,0,0,0.45)]"
+          >
             <div className="mb-4 flex items-start justify-between gap-4">
               <div className="min-w-0">
                 <div className="mb-2">
@@ -327,9 +337,10 @@ function MobileExperienceCarousel({
             <p className="text-sm leading-7 text-[var(--foreground-muted)]">
               {activeItem.description}
             </p>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       ) : null}
+      </AnimatePresence>
     </div>
   );
 }
@@ -404,11 +415,9 @@ export function ExperienceSection({
       }
     };
 
-    document.body.style.overflow = "hidden";
     window.addEventListener("keydown", onKeyDown);
 
     return () => {
-      document.body.style.overflow = "";
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [activeCert]);
@@ -615,8 +624,25 @@ export function ExperienceSection({
         <RevealOnScroll>
           <SectionHeading
             eyebrow="Experience"
-            title="Work, events, and community builds."
-            description="From Studio Nomads and WebX to campus hackathons and blockchain communities, this is the work behind the portfolio."
+            titleClassName="lg:max-w-none lg:whitespace-nowrap"
+            title={
+              <>
+                Work,{" "}
+                <span className="emphasis-glow-gold">events</span>, and{" "}
+                <span className="emphasis-glow-blue">community builds</span>.
+              </>
+            }
+            description={
+              <>
+                From{" "}
+                <span className="emphasis-glow-rose font-medium">Studio Nomads</span>{" "}
+                and{" "}
+                <span className="emphasis-glow-white font-medium">WebX</span>{" "}
+                to campus hackathons and{" "}
+                <span className="emphasis-glow-blue font-medium">blockchain communities</span>
+                , this is the work behind the portfolio.
+              </>
+            }
           />
         </RevealOnScroll>
 
@@ -866,14 +892,25 @@ export function ExperienceSection({
         </div>
       </Container>
 
+      <AnimatePresence>
       {activeCert ? (
-        <div
-          className="animate-fade-in fixed inset-0 z-[100] flex items-center justify-center bg-black/88 p-4 backdrop-blur-sm"
+        <motion.div
+          initial={{ opacity: 0, backdropFilter: "blur(0px)" }}
+          animate={{ opacity: 1, backdropFilter: "blur(4px)" }}
+          exit={{ opacity: 0, backdropFilter: "blur(0px)" }}
+          transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/88 p-4"
           role="dialog"
           aria-modal="true"
           aria-label={activeCert.name}
         >
-          <div className="animate-modal-in w-full max-w-5xl rounded-3xl border border-white/10 bg-[var(--background-elevated)] p-4 shadow-[0_24px_120px_rgba(0,0,0,0.45)] md:p-5">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.975, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.975, y: 20 }}
+            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+            className="w-full max-w-5xl rounded-3xl border border-white/10 bg-[var(--background-elevated)] p-4 shadow-[0_24px_120px_rgba(0,0,0,0.45)] md:p-5"
+          >
             <div className="mb-4 flex items-start justify-between gap-4">
               <div className="min-w-0">
                 <p className="break-words text-lg font-semibold text-white">
@@ -913,9 +950,10 @@ export function ExperienceSection({
                 />
               </div>
             )}
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       ) : null}
+      </AnimatePresence>
     </Section>
   );
 }

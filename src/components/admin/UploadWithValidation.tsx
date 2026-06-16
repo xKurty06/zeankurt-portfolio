@@ -17,6 +17,40 @@ type DirectoryPickerWindow = Window & {
   showDirectoryPicker?: () => Promise<unknown>;
 };
 
+function formatRemainingTime(ms: number | null | undefined) {
+  if (typeof ms !== "number" || !Number.isFinite(ms) || ms <= 0) {
+    return null;
+  }
+
+  const totalSeconds = Math.max(1, Math.round(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  if (minutes >= 60) {
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    return remainingMinutes === 0 ? `${hours}h left` : `${hours}h ${remainingMinutes}m left`;
+  }
+
+  if (minutes >= 1) {
+    return seconds === 0 ? `${minutes}m left` : `${minutes}m ${seconds}s left`;
+  }
+
+  return `${seconds}s left`;
+}
+
+const ESTIMATED_UPLOAD_BYTES_PER_SECOND = 350 * 1024;
+const ESTIMATED_UPLOAD_OVERHEAD_MS_PER_FILE = 1800;
+
+function estimateUploadDurationMs(totalBytes: number, fileCount: number) {
+  if (fileCount <= 0 || totalBytes <= 0) return null;
+
+  return Math.round(
+    (totalBytes / ESTIMATED_UPLOAD_BYTES_PER_SECOND) * 1000 +
+    fileCount * ESTIMATED_UPLOAD_OVERHEAD_MS_PER_FILE,
+  );
+}
+
 async function collectFilesFromDirectoryHandle(handle: any): Promise<File[]> {
   const files: File[] = [];
 
@@ -65,7 +99,10 @@ export default function UploadWithValidation({
   const [uploadNotice, setUploadNotice] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<Record<string, { originalBytes: number; optimizedBytes: number | null }>>({});
   const [directoryPickerActive, setDirectoryPickerActive] = useState(false);
+  const [estimatedRemainingMs, setEstimatedRemainingMs] = useState<number | null>(null);
+  const [lastUploadDurationMs, setLastUploadDurationMs] = useState<number | null>(null);
   const directoryPickerActiveRef = useRef(false);
+  const uploadStartedAtRef = useRef<number | null>(null);
   const { setSaving } = useSaving();
 
   const fileCount = selectedFiles.length;
@@ -128,10 +165,13 @@ export default function UploadWithValidation({
       setProgress({});
       setUploadErrors([]);
       setUploadNotice(null);
+      setEstimatedRemainingMs(null);
+      setLastUploadDurationMs(null);
       setSubmitting(false);
       setSaving(false);
       submittingRef.current = false;
       cancelRequestedRef.current = false;
+      uploadStartedAtRef.current = null;
       emitUploadState("idle");
       input.value = "";
       input.setCustomValidity("");
@@ -154,10 +194,13 @@ export default function UploadWithValidation({
       setProgress({});
       setUploadErrors([]);
       setUploadNotice(null);
+      setEstimatedRemainingMs(null);
+      setLastUploadDurationMs(null);
       setSubmitting(false);
       setSaving(false);
       currentRequestRef.current = null;
       cancelRequestedRef.current = false;
+      uploadStartedAtRef.current = null;
       emitUploadState("idle");
       if (inputRef.current) {
         inputRef.current.value = "";
@@ -188,13 +231,17 @@ export default function UploadWithValidation({
       setSubmitting(true);
       setUploadErrors([]);
       setUploadNotice(null);
+      setEstimatedRemainingMs(null);
+      setLastUploadDurationMs(null);
       emitUploadState("uploading");
+      uploadStartedAtRef.current = Date.now();
       setSaving(
         true,
         `Uploading ${filesList.length} photo${filesList.length === 1 ? "" : "s"}. You can close this modal and keep working.`,
         {
           cancelAction: cancelUpload,
           completedCount: 0,
+          estimatedRemainingMs: null,
           progressPercent: 0,
           totalCount: filesList.length,
         },
@@ -340,17 +387,24 @@ export default function UploadWithValidation({
         submittingRef.current = false;
         cancelRequestedRef.current = false;
         setSubmitting(false);
+        setEstimatedRemainingMs(null);
         setSaving(false);
+        const completedDurationMs =
+          uploadStartedAtRef.current !== null ? Math.max(0, Date.now() - uploadStartedAtRef.current) : null;
+        uploadStartedAtRef.current = null;
         if (cancelled) {
+          setLastUploadDurationMs(null);
           setSelectedFiles(remainingFiles);
           setProgress({});
           setUploadErrors([]);
           setUploadNotice(`Upload cancelled. ${remainingFiles.length} photo${remainingFiles.length === 1 ? "" : "s"} remaining.`);
           emitUploadState("idle");
         } else if (allSucceeded) {
+          setLastUploadDurationMs(completedDurationMs);
           setUploadNotice(null);
           emitUploadState("complete");
         } else {
+          setLastUploadDurationMs(null);
           setSelectedFiles(remainingFiles);
           setProgress({});
           setUploadNotice("Some uploads failed. Fix the issue and upload the remaining files again.");
@@ -383,15 +437,39 @@ export default function UploadWithValidation({
     }, 0);
     const completedCount = trackedEntries.filter((item) => item.status === "done").length;
     const processingCount = trackedEntries.filter((item) => item.status === "processing").length;
+    const remainingCount = trackedEntries.filter(
+      (item) => item.status !== "done" && item.status !== "cancelled" && item.status !== "error",
+    ).length;
     const progressPercent = Math.min(100, Math.max(0, Math.round((loadedBytes / Math.max(1, totalBytes)) * 100)));
+    const startedAt = uploadStartedAtRef.current;
+    const elapsedMs = startedAt ? Math.max(1, Date.now() - startedAt) : 0;
+    const remainingBytes = Math.max(0, totalBytes - loadedBytes);
+    const bytesPerMs = elapsedMs > 0 ? loadedBytes / elapsedMs : 0;
+    const byteBasedRemainingMs =
+      bytesPerMs > 0 && remainingBytes > 0 && progressPercent < 100
+        ? Math.round(remainingBytes / bytesPerMs)
+        : null;
+    const completedPerMs = elapsedMs > 0 ? completedCount / elapsedMs : 0;
+    const fallbackEstimateMs = estimateUploadDurationMs(remainingBytes, remainingCount);
+    const fileBasedRemainingMs =
+      completedPerMs > 0 && remainingCount > 0
+        ? Math.round(remainingCount / completedPerMs)
+        : fallbackEstimateMs;
+    const floorRemainingMs =
+      remainingCount > 0 ? remainingCount * Math.round(ESTIMATED_UPLOAD_OVERHEAD_MS_PER_FILE * 0.75) : null;
+    const nextEstimatedRemainingMs = [byteBasedRemainingMs, fileBasedRemainingMs, floorRemainingMs]
+      .filter((value): value is number => typeof value === "number" && Number.isFinite(value) && value > 0)
+      .reduce<number | null>((maxValue, value) => (maxValue === null ? value : Math.max(maxValue, value)), null);
     const uploadIndicatorLabel =
       processingCount > 0
         ? `Uploading ${selectedFiles.length} photo${selectedFiles.length === 1 ? "" : "s"}. You can close this modal and keep working.`
         : `Uploading ${selectedFiles.length} photo${selectedFiles.length === 1 ? "" : "s"}. You can close this modal and keep working.`;
 
+    setEstimatedRemainingMs(nextEstimatedRemainingMs);
     setSaving(true, uploadIndicatorLabel, {
       cancelAction: cancelUpload,
       completedCount,
+      estimatedRemainingMs: nextEstimatedRemainingMs,
       progressPercent,
       totalCount: selectedFiles.length,
     });
@@ -403,10 +481,13 @@ export default function UploadWithValidation({
     setProgress({});
     setUploadErrors([]);
     setUploadNotice(null);
+    setEstimatedRemainingMs(null);
+    setLastUploadDurationMs(null);
     setSubmitting(false);
     setSaving(false);
     submittingRef.current = false;
     cancelRequestedRef.current = false;
+    uploadStartedAtRef.current = null;
     emitUploadState("idle");
   };
 
@@ -415,6 +496,10 @@ export default function UploadWithValidation({
     const metric = metrics[getFileKey(file)];
     return sum + (metric?.optimizedBytes ?? file.size);
   }, 0);
+  const estimatedPreUploadMs =
+    fileCount > 0 && !submitting && Object.keys(metrics).length === fileCount
+      ? estimateUploadDurationMs(totalOptimizedBytes, fileCount)
+      : null;
 
   const handleDirectoryPick = async () => {
     if (directoryPickerActiveRef.current) return;
@@ -509,10 +594,13 @@ export default function UploadWithValidation({
               setProgress({});
               setUploadErrors([]);
               setUploadNotice(null);
+              setEstimatedRemainingMs(null);
+              setLastUploadDurationMs(null);
               setSubmitting(false);
               setSaving(false);
               submittingRef.current = false;
               cancelRequestedRef.current = false;
+              uploadStartedAtRef.current = null;
               emitUploadState("idle");
             }}
             className="inline-flex items-center gap-2 rounded-full border border-red-400/20 px-3 py-2 text-xs font-medium text-red-200 transition hover:bg-red-500/10"
@@ -527,6 +615,15 @@ export default function UploadWithValidation({
         <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-[var(--foreground-muted)]">
           <span>Total original: {formatBytes(totalOriginalBytes)}</span>
           <span>Total optimized: {Object.keys(metrics).length === fileCount ? formatBytes(totalOptimizedBytes) : "Estimating..."}</span>
+          {submitting && estimatedRemainingMs ? (
+            <span>Estimated time remaining: {formatRemainingTime(estimatedRemainingMs)}</span>
+          ) : null}
+          {!submitting && !lastUploadDurationMs && estimatedPreUploadMs ? (
+            <span>Estimated upload time: {formatRemainingTime(estimatedPreUploadMs)}</span>
+          ) : null}
+          {!submitting && lastUploadDurationMs ? (
+            <span>Actual upload time: {formatRemainingTime(lastUploadDurationMs)}</span>
+          ) : null}
         </div>
       ) : null}
 
@@ -560,10 +657,12 @@ export default function UploadWithValidation({
                     setProgress({});
                     setUploadErrors([]);
                     setUploadNotice(null);
+                    setEstimatedRemainingMs(null);
                     setSubmitting(false);
                     setSaving(false);
                     submittingRef.current = false;
                     cancelRequestedRef.current = false;
+                    uploadStartedAtRef.current = null;
                     emitUploadState("idle");
                   }}
                   className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] px-3 py-2 text-xs font-medium text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white"
@@ -647,8 +746,13 @@ export default function UploadWithValidation({
               <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" opacity="0.2" />
               <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
             </svg>
-            Uploading. Large folders may take a while.
+            Uploading... many files may take a while.
           </div>
+          {estimatedRemainingMs ? (
+            <div className="text-[11px] text-[var(--foreground-muted)]">
+              Estimated time remaining: {formatRemainingTime(estimatedRemainingMs)}
+            </div>
+          ) : null}
           <button
             type="button"
             onClick={cancelUpload}

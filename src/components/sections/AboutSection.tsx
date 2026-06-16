@@ -134,8 +134,24 @@ export function AboutSection({
         <div className="relative z-10 grid min-w-0 gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-start lg:gap-12">
           <SectionHeading
             eyebrow="About"
-            title="Building digital products and visual stories."
-            description="I turn ideas into usable web products, creative systems, and visual stories that connect technology with real communities."
+            title={
+              <>
+                Building{" "}
+                <span className="emphasis-glow-blue">digital products</span>{" "}
+                and{" "}
+                <span className="emphasis-glow-rose">visual stories</span>.
+              </>
+            }
+            description={
+              <>
+                I turn ideas into{" "}
+                <span className="emphasis-glow-blue font-medium">usable web products</span>
+                , creative systems, and{" "}
+                <span className="emphasis-glow-gold font-medium">visual stories</span>{" "}
+                that connect technology with{" "}
+                <span className="emphasis-glow-white font-medium">real communities</span>.
+              </>
+            }
           />
 
           <div className="min-w-0">
@@ -156,7 +172,7 @@ export function AboutSection({
                 className="text-base leading-8 text-[var(--foreground-muted)] sm:text-[1.05rem] sm:leading-8 lg:border-l lg:border-[rgba(72,202,228,0.32)] lg:pl-5"
                 style={{ perspective: 600 }}
               >
-                Recent work includes <AboutAccent>portfolio systems</AboutAccent>,{" "}
+                Recent work includes <AboutAccent>portfolio designs</AboutAccent>, <AboutAccent>campus projects,</AboutAccent>{" "}
                 <WarmAccent>hackathon builds</WarmAccent>, blockchain community projects,{" "}
                 <RoseAccent>event coverage</RoseAccent>, and branded visual assets for teams that
                 need both technical execution and stronger presentation.

@@ -95,7 +95,19 @@ export function mapCreativeCategory(row: CmsCreativeCategoryRow): CreativeCatego
   const photos = (row.creative_photos ?? [])
     .filter((photo) => photo.published)
     .slice()
-    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+    .sort((a, b) => {
+      const sortOrderA = a.sort_order ?? Number.MAX_SAFE_INTEGER;
+      const sortOrderB = b.sort_order ?? Number.MAX_SAFE_INTEGER;
+
+      if (sortOrderA !== sortOrderB) return sortOrderA - sortOrderB;
+
+      const createdAtA = new Date(a.created_at).getTime();
+      const createdAtB = new Date(b.created_at).getTime();
+
+      if (createdAtA !== createdAtB) return createdAtB - createdAtA;
+
+      return a.id.localeCompare(b.id);
+    })
     .map((photo) => ({
       id: photo.id,
       title: photo.title,
@@ -105,6 +117,8 @@ export function mapCreativeCategory(row: CmsCreativeCategoryRow): CreativeCatego
       image: photo.image_path,
       aspectRatio: photo.aspect_ratio,
       featured: photo.featured,
+      sortOrder: photo.sort_order ?? Number.MAX_SAFE_INTEGER,
+      createdAt: photo.created_at,
     }));
 
   return {

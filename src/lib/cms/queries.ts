@@ -107,7 +107,20 @@ async function fetchPortfolioContent(): Promise<PortfolioContent> {
       .from("creative_categories")
       .select("*, creative_photos(*)")
       .eq("published", true)
-      .order("sort_order", { ascending: true }),
+      .order("sort_order", { ascending: true })
+      .order("sort_order", {
+        ascending: true,
+        nullsFirst: false,
+        foreignTable: "creative_photos",
+      })
+      .order("created_at", {
+        ascending: false,
+        foreignTable: "creative_photos",
+      })
+      .order("id", {
+        ascending: true,
+        foreignTable: "creative_photos",
+      }),
 
     supabase.from("site_content").select("key,value").eq("key", "site_config"),
   ]);

@@ -287,13 +287,16 @@ function DeleteButton({
 function RowForm({
   children,
   action,
+  refreshOnSuccess = true,
 }: {
   children: React.ReactNode;
   action: (formData: FormData) => void | Promise<void>;
+  refreshOnSuccess?: boolean;
 }) {
   return (
     <AdminActionForm
       action={action}
+      refreshOnSuccess={refreshOnSuccess}
       className="rounded-2xl border border-[var(--border)] bg-white/[0.02] p-4"
     >
       <div className="flex min-w-0 flex-col gap-3">{children}</div>
@@ -1262,7 +1265,7 @@ export default async function AdminPage() {
                               triggerContent={<SquarePen className="h-3.5 w-3.5" />}
                               triggerClassName="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/45 text-white transition hover:border-[var(--border-strong)] hover:text-white sm:h-8 sm:w-8"
                             >
-                              <RowForm action={saveCreativePhoto}>
+                              <RowForm action={saveCreativePhoto} refreshOnSuccess={false}>
                                 <input type="hidden" name="id" value={value(photo, "id")} />
                                 <input type="hidden" name="category_id" value={value(category, "id")} />
                                 <input type="hidden" name="category_slug" value={value(category, "slug")} />

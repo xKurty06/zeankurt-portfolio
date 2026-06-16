@@ -72,6 +72,8 @@ const PAGE_SIZE_DROPDOWN_OPTIONS = PAGE_SIZE_OPTIONS.map((option) => ({
   value: String(option),
 }));
 
+const PHOTO_MANAGER_TRANSITION_MS = 220;
+
 function PickerButton<T extends string>({
   ariaLabel,
   options,
@@ -271,6 +273,8 @@ function PhotoManagerModal({
   onClose: () => void;
   onCategoryChange: (category: PhotoBrowserCategory) => void;
 }) {
+  const [present, setPresent] = useState(open);
+  const [entered, setEntered] = useState(false);
   const [mode, setMode] = useState<BrowserMode>("edit");
   const [query, setQuery] = useState("");
   const [sortField, setSortField] = useState<SortField>("custom");
@@ -286,6 +290,7 @@ function PhotoManagerModal({
   const titleId = useId();
   const descriptionId = useId();
   const portalNodeRef = useRef<HTMLDivElement | null>(null);
+  const closeTimeoutRef = useRef<number | null>(null);
   const [mounted, setMounted] = useState(false);
   const photoGridRef = useRef<HTMLDivElement>(null);
   const [imageRatios, setImageRatios] = useState<Record<string, number>>({});
@@ -322,6 +327,14 @@ function PhotoManagerModal({
   }, []);
 
   useEffect(() => {
+    return () => {
+      if (closeTimeoutRef.current !== null) {
+        window.clearTimeout(closeTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     const portalNode = document.createElement("div");
     portalNode.dataset.adminPhotoManagerPortal = "true";
     portalNodeRef.current = portalNode;
@@ -335,14 +348,45 @@ function PhotoManagerModal({
   }, []);
 
   useEffect(() => {
-    if (!open) return;
+    if (closeTimeoutRef.current !== null) {
+      window.clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
 
-    const siblings = Array.from(document.body.children).filter(
-      (element) => element !== portalNodeRef.current,
-    );
+    if (open) {
+      setPresent(true);
+      setEntered(false);
 
-    document.body.style.overflow = "hidden";
-    document.body.style.overscrollBehavior = "none";
+      const frame = window.requestAnimationFrame(() => {
+        setEntered(true);
+      });
+
+      return () => {
+        window.cancelAnimationFrame(frame);
+      };
+    }
+
+    if (!present) {
+      setEntered(false);
+      return;
+    }
+
+    setEntered(false);
+    closeTimeoutRef.current = window.setTimeout(() => {
+      setPresent(false);
+      closeTimeoutRef.current = null;
+    }, PHOTO_MANAGER_TRANSITION_MS);
+
+    return () => {
+      if (closeTimeoutRef.current !== null) {
+        window.clearTimeout(closeTimeoutRef.current);
+        closeTimeoutRef.current = null;
+      }
+    };
+  }, [open, present]);
+
+  useEffect(() => {
+    if (!present) return;
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape" && document.querySelector('[data-preview-overlay="true"]')) {
@@ -352,28 +396,15 @@ function PhotoManagerModal({
       if (event.key === "Escape") onClose();
     };
 
-    siblings.forEach((element) => {
-      element.setAttribute("inert", "");
-      element.setAttribute("aria-hidden", "true");
-    });
-
     window.addEventListener("keydown", onKeyDown);
 
     return () => {
-      document.body.style.overflow = "";
-      document.body.style.overscrollBehavior = "";
-
-      siblings.forEach((element) => {
-        element.removeAttribute("inert");
-        element.removeAttribute("aria-hidden");
-      });
-
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [onClose, open]);
+  }, [onClose, present]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!present) return;
 
     setMode("edit");
     setQuery("");
@@ -386,7 +417,7 @@ function PhotoManagerModal({
     setDeleteError(null);
     setIsDeleting(false);
     setRemovingIds([]);
-  }, [category.id, open]);
+  }, [category.id, present]);
 
   const featuredCount = useMemo(
     () => category.photos.filter((photo) => photo.featured).length,
@@ -429,10 +460,10 @@ function PhotoManagerModal({
   const rangeStart = filteredPhotos.length === 0 ? 0 : startIndex + 1;
   const rangeEnd = Math.min(startIndex + pageSize, filteredPhotos.length);
   useEffect(() => {
-    if (!open) return;
+    if (!present) return;
 
     scrollModalToTop("auto");
-  }, [currentPage, pageSize, sortField, sortDirection, deferredQuery, open, scrollModalToTop]);
+  }, [currentPage, pageSize, sortField, sortDirection, deferredQuery, present, scrollModalToTop]);
 
   const allFilteredSelected =
     filteredPhotos.length > 0 && filteredPhotos.every((photo) => selectedIds.includes(photo.id));
@@ -443,7 +474,7 @@ function PhotoManagerModal({
   useEffect(() => {
     const element = photoGridRef.current;
 
-    if (!open || !element) return;
+    if (!present || !element) return;
 
     const updateGridMetrics = () => {
       const nextMetrics = readPhotoGridMetrics(element);
@@ -472,7 +503,7 @@ function PhotoManagerModal({
       observer.disconnect();
       window.removeEventListener("resize", updateGridMetrics);
     };
-  }, [open, visiblePhotos.length]);
+  }, [present, visiblePhotos.length]);
   const toggleSelected = (id: string) => {
     setSelectedIds((current) =>
       current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
@@ -531,18 +562,40 @@ function PhotoManagerModal({
     }
   };
 
-  if (!open || !mounted || !portalNodeRef.current) return null;
+  if (!present || !mounted || !portalNodeRef.current) return null;
   return createPortal(
-    <div
-      className="fixed inset-0 z-[1000] flex items-center justify-center bg-[rgba(3,7,18,0.82)] p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))] md:p-6"
-      onClick={onClose}
+    <motion.div
+      initial={false}
+      animate={{
+        backdropFilter: entered ? "blur(3px)" : "blur(0px)",
+        opacity: entered ? 1 : 0,
+      }}
+      transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+      className={cn(
+        "fixed inset-0 z-[1000] flex items-center justify-center bg-[rgba(3,7,18,0.82)] p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))] md:p-6",
+      )}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+      }}
     >
-      <div
+      <motion.div
+        initial={false}
+        animate={{
+          opacity: entered ? 1 : 0,
+          scale: entered ? 1 : 0.975,
+          y: entered ? 0 : 20,
+        }}
+        transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={descriptionId}
-        className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-7xl flex-col overflow-hidden rounded-[1.25rem] border border-[var(--border-strong)] bg-[var(--background-elevated)] shadow-[0_20px_80px_rgba(0,0,0,0.45)] sm:rounded-[1.75rem]"
+        className={cn(
+          "flex max-h-[calc(100dvh-1.5rem)] w-full max-w-7xl flex-col overflow-hidden rounded-[1.25rem] border border-[var(--border-strong)] bg-[var(--background-elevated)] shadow-[0_20px_80px_rgba(0,0,0,0.45)] will-change-transform sm:rounded-[1.75rem] md:max-h-[calc(100dvh-3rem)]",
+        )}
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4 border-b border-[var(--border)] px-4 py-4 sm:px-5">
@@ -919,8 +972,8 @@ function PhotoManagerModal({
           onClose={() => setLightboxIndex(null)}
           onNavigate={setLightboxIndex}
         />
-      </div>
-    </div>,
+      </motion.div>
+    </motion.div>,
     portalNodeRef.current,
   );
 }

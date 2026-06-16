@@ -17,6 +17,7 @@ type AdminActionState = {
 
 type AdminActionFormProps = Omit<React.FormHTMLAttributes<HTMLFormElement>, "action"> & {
     action: AdminFormAction;
+    refreshOnSuccess?: boolean;
     successMessage?: string;
 };
 
@@ -125,6 +126,7 @@ export function AdminActionForm({
     action,
     children,
     className,
+    refreshOnSuccess = true,
     successMessage = "Saved successfully. You can continue editing.",
     ...props
 }: AdminActionFormProps) {
@@ -175,10 +177,6 @@ export function AdminActionForm({
 
         if (state.status === "success") {
             syncFormDefaults(form, state.values);
-
-            startTransition(() => {
-                router.refresh();
-            });
         }
 
         form.dispatchEvent(
@@ -187,7 +185,15 @@ export function AdminActionForm({
                 detail: state,
             }),
         );
-    }, [router, state, startTransition]);
+
+        if (state.status === "success" && refreshOnSuccess) {
+            window.setTimeout(() => {
+                startTransition(() => {
+                    router.refresh();
+                });
+            }, 0);
+        }
+    }, [refreshOnSuccess, router, state, startTransition]);
 
     return (
         <form ref={formRef} action={formAction} className={cn(className)} {...props}>
