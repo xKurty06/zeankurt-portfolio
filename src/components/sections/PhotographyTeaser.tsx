@@ -290,7 +290,7 @@ export function PhotographyTeaser({
       />
 
       <Container className="relative z-10">
-        <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <RevealOnScroll>
             <SectionHeading
               eyebrow="Photography"
@@ -298,11 +298,14 @@ export function PhotographyTeaser({
               description="Event coverage, portraits, and editorial frames — produced solo and with Studio Nomads."
             />
           </RevealOnScroll>
+
           <RevealOnScroll delay={0.08}>
-            <Button href="/photography" variant="secondary">
-              View full gallery
-              <ArrowUpRight className="h-4 w-4" />
-            </Button>
+            <div className="flex justify-end lg:block">
+              <Button href="/photography" variant="secondary">
+                View full gallery
+                <ArrowUpRight className="h-4 w-4" />
+              </Button>
+            </div>
           </RevealOnScroll>
         </div>
 
@@ -310,7 +313,7 @@ export function PhotographyTeaser({
           ref={marqueeViewportRef}
           className={
             enableInteractiveMarquee
-              ? "photo-marquee-viewport mt-10 max-w-full overflow-x-auto overflow-y-hidden"
+              ? "photo-marquee-viewport mt-4 max-w-full overflow-x-auto overflow-y-hidden"
               : "mt-10 max-w-full overflow-hidden"
           }
         >

@@ -28,27 +28,15 @@ const ABOUT_HIGHLIGHTS: Array<{ label: CounterLabel; value: string }> = [
 ];
 
 function AboutAccent({ children }: { children: ReactNode }) {
-  return (
-    <strong className="emphasis-glow-blue font-semibold">
-      {children}
-    </strong>
-  );
+  return <strong className="emphasis-glow-blue font-semibold">{children}</strong>;
 }
 
 function WarmAccent({ children }: { children: ReactNode }) {
-  return (
-    <strong className="emphasis-glow-gold font-semibold">
-      {children}
-    </strong>
-  );
+  return <strong className="emphasis-glow-gold font-semibold">{children}</strong>;
 }
 
 function RoseAccent({ children }: { children: ReactNode }) {
-  return (
-    <strong className="emphasis-glow-rose font-semibold">
-      {children}
-    </strong>
-  );
+  return <strong className="emphasis-glow-rose font-semibold">{children}</strong>;
 }
 
 interface AboutSectionProps {
@@ -144,13 +132,11 @@ export function AboutSection({
 
       <Container>
         <div className="relative z-10 grid min-w-0 gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-start lg:gap-12">
-          <RevealOnScroll>
-            <SectionHeading
-              eyebrow="About"
-              title="Building digital products and visual stories."
-              description="I turn ideas into usable web products, creative systems, and visual stories that connect technology with real communities."
-            />
-          </RevealOnScroll>
+          <SectionHeading
+            eyebrow="About"
+            title="Building digital products and visual stories."
+            description="I turn ideas into usable web products, creative systems, and visual stories that connect technology with real communities."
+          />
 
           <div className="min-w-0">
             <div className="mx-auto max-w-3xl space-y-5 text-center sm:space-y-6 lg:mx-0 lg:max-w-none lg:text-left">
@@ -170,9 +156,10 @@ export function AboutSection({
                 className="text-base leading-8 text-[var(--foreground-muted)] sm:text-[1.05rem] sm:leading-8 lg:border-l lg:border-[rgba(72,202,228,0.32)] lg:pl-5"
                 style={{ perspective: 600 }}
               >
-                Recent work includes <AboutAccent>portfolio systems</AboutAccent>, <WarmAccent>hackathon builds</WarmAccent>,
-                blockchain community projects, <RoseAccent>event coverage</RoseAccent>, and branded visual assets
-                for teams that need both technical execution and stronger presentation.
+                Recent work includes <AboutAccent>portfolio systems</AboutAccent>,{" "}
+                <WarmAccent>hackathon builds</WarmAccent>, blockchain community projects,{" "}
+                <RoseAccent>event coverage</RoseAccent>, and branded visual assets for teams that
+                need both technical execution and stronger presentation.
               </p>
 
               <p
@@ -181,21 +168,23 @@ export function AboutSection({
                 style={{ perspective: 600 }}
               >
                 Outside the code editor, I shoot and edit photos and videos through{" "}
-                <span className="emphasis-glow-rose font-semibold">Studio Nomads</span>, which keeps my
-                frontend work grounded in composition, pacing, contrast, and how people scan
-                a story on screen.
+                <span className="emphasis-glow-rose font-semibold">Studio Nomads</span>, which keeps
+                my frontend work grounded in composition, pacing, contrast, and how people scan a
+                story on screen.
               </p>
             </div>
+          </div>
 
+          <div className="lg:col-span-2">
             <RevealOnScroll delay={0.16}>
-              <dl className="mx-auto mt-7 grid max-w-3xl grid-cols-2 gap-3 sm:mt-9 sm:gap-4 lg:mx-0 lg:max-w-none">
+              <dl className="mx-auto mt-3 grid max-w-6xl grid-cols-2 gap-3 sm:mt-5 sm:gap-4 lg:grid-cols-4">
                 {ABOUT_HIGHLIGHTS.map((item) => {
                   const counter = counterMap[item.label as CounterLabel];
 
                   return (
                     <GlowCard
                       key={item.label}
-                      className="min-w-0 rounded-2xl border border-[var(--border)] bg-white/[0.02] p-3 text-center sm:p-5 lg:text-left"
+                      className="min-w-0 rounded-2xl border border-[var(--border)] bg-white/[0.02] p-3 text-center sm:p-5 lg:p-5"
                       intensity={lowMotion ? 0.16 : 0.28}
                     >
                       <dt className="font-mono text-[9px] font-semibold uppercase tracking-[0.18em] text-[var(--blue-400)] sm:text-[10px]">

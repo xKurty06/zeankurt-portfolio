@@ -1,5 +1,7 @@
 "use client";
 
+"use client";
+
 import { useRef } from "react";
 import { Mail } from "lucide-react";
 import { useGSAP } from "@gsap/react";
@@ -9,6 +11,7 @@ import { MagneticButton } from "@/components/animation/MagneticButton";
 import { Button } from "@/components/ui/Button";
 import { SocialLinkGroups } from "@/components/ui/SocialLinks";
 import { Section, Container } from "@/components/ui/Container";
+import { SectionHeading } from "@/components/ui/SectionHeading";
 import { gsap, registerGsapPlugins } from "@/lib/gsap";
 import { useLowMotionDevice } from "@/hooks/useLowMotionDevice";
 
@@ -134,38 +137,49 @@ export function ContactSection({ siteConfig }: ContactSectionProps) {
 
           <div className="relative z-10">
             <RevealOnScroll>
-              <div className="mx-auto max-w-[22rem] text-center sm:max-w-2xl lg:mx-0 lg:max-w-4xl lg:text-left">
-                <div className="inline-flex items-center gap-3 text-[var(--blue-200)]">
-                  <span className="h-px w-10 bg-gradient-to-r from-[rgba(72,202,228,0.8)] to-transparent" />
-                  <p className="font-[family-name:var(--font-syne)] text-[0.78rem] font-medium tracking-[0.18em] sm:text-[0.82rem]">
-                    Contact
-                  </p>
-                </div>
-
-                <h2 className="mt-3 text-balance font-[family-name:var(--font-syne)] text-[clamp(2rem,8vw,3.45rem)] font-semibold leading-[1.04] tracking-[-0.04em] text-white sm:text-5xl lg:text-6xl">
-                  Open to{" "}
-                  <span className="emphasis-glow-gold">
-                    collaborations
-                  </span>
-                  ,{" "}
-                  <span className="emphasis-glow-gradient">
-                    web builds
-                  </span>
-                  , and{" "}
-                  <span className="emphasis-glow-rose">
-                    photo/video
-                  </span>{" "}
-                  work.
-                </h2>
-
-                <p className="mx-auto mt-5 max-w-[20rem] text-sm leading-7 text-[var(--foreground-muted)] sm:max-w-xl sm:text-base sm:leading-8 lg:mx-0">
-                  Reach out for <span className="emphasis-glow-blue font-medium">software projects</span>,
-                  <span className="emphasis-glow-gold font-medium"> hackathon teams</span>,
-                  <span className="emphasis-glow-rose font-medium"> event coverage</span>, or{" "}
-                  <span className="emphasis-glow-white font-medium">Studio Nomads</span> inquiries.
-                </p>
-              </div>
-            </RevealOnScroll>
+  <SectionHeading
+    eyebrow="Contact"
+    className="mx-auto max-w-[22rem] sm:max-w-2xl lg:mx-0 lg:max-w-4xl"
+    title={
+      <>
+        Open to{" "}
+        <span className="emphasis-glow-gold">
+          collaborations
+        </span>
+        ,{" "}
+        <span className="emphasis-glow-gradient">
+          web builds
+        </span>
+        , and{" "}
+        <span className="emphasis-glow-rose">
+          photo/video
+        </span>{" "}
+        work.
+      </>
+    }
+    description={
+      <>
+        Reach out for{" "}
+        <span className="emphasis-glow-blue font-medium">
+          software projects
+        </span>
+        ,{" "}
+        <span className="emphasis-glow-gold font-medium">
+          hackathon teams
+        </span>
+        ,{" "}
+        <span className="emphasis-glow-rose font-medium">
+          event coverage
+        </span>
+        , or{" "}
+        <span className="emphasis-glow-white font-medium">
+          Studio Nomads
+        </span>{" "}
+        inquiries.
+      </>
+    }
+  />
+</RevealOnScroll>
 
             <RevealOnScroll delay={0.1}>
               <div className="mt-6 flex justify-center lg:justify-start">
