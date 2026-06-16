@@ -1,9 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useGSAP } from "@gsap/react";
-import { MapPin, Sparkles, Users, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, MapPin, Sparkles, Users, X } from "lucide-react";
 import { RevealOnScroll } from "@/components/animation/RevealOnScroll";
 import { GlowCard } from "@/components/animation/GlowCard";
 import { Badge } from "@/components/ui/Badge";
@@ -11,6 +11,7 @@ import BackgroundScene from "@/components/ui/AuroraSectionHero";
 import { Container, Section } from "@/components/ui/Container";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { gsap, registerGsapPlugins, ScrollTrigger } from "@/lib/gsap";
+import { cn } from "@/lib/cn";
 import { useLowMotionDevice } from "@/hooks/useLowMotionDevice";
 import type { Certification, EventHighlight, ExperienceItem } from "@/types";
 
@@ -19,6 +20,320 @@ interface ExperienceSectionProps {
   certifications: Certification[];
   eventHighlights: EventHighlight[];
 }
+
+const EXPERIENCE_PREVIEW_LIMIT = 100;
+
+function getExperiencePreview(description: string) {
+  if (description.length <= EXPERIENCE_PREVIEW_LIMIT) {
+    return {
+      text: description,
+      truncated: false,
+    };
+  }
+
+  return {
+    text: `${description
+      .slice(0, EXPERIENCE_PREVIEW_LIMIT)
+      .trimEnd()
+      .replace(/[.,;:\s]+$/, "")}...`,
+    truncated: true,
+  };
+}
+
+function MobileExperienceCarousel({
+  items,
+  emptyMessage = "No experience items available.",
+}: {
+  items: ExperienceItem[];
+  emptyMessage?: string;
+}) {
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [canScrollPrev, setCanScrollPrev] = useState(false);
+  const [canScrollNext, setCanScrollNext] = useState(items.length > 1);
+  const [activeItem, setActiveItem] = useState<ExperienceItem | null>(null);
+
+  const updateState = useCallback(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+
+    const cards = Array.from(
+      scroller.querySelectorAll<HTMLElement>("[data-experience-carousel-card]"),
+    );
+
+    if (cards.length === 0) {
+      setCurrentSlide(0);
+      setCanScrollPrev(false);
+      setCanScrollNext(false);
+      return;
+    }
+
+    const scrollerCenter = scroller.scrollLeft + scroller.clientWidth / 2;
+    let closestIndex = 0;
+    let closestDistance = Number.POSITIVE_INFINITY;
+
+    cards.forEach((card, index) => {
+      const cardCenter = card.offsetLeft + card.offsetWidth / 2;
+      const distance = Math.abs(scrollerCenter - cardCenter);
+
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestIndex = index;
+      }
+    });
+
+    setCurrentSlide(closestIndex);
+    setCanScrollPrev(scroller.scrollLeft > 8);
+    setCanScrollNext(
+      scroller.scrollLeft + scroller.clientWidth < scroller.scrollWidth - 8,
+    );
+  }, []);
+
+  const scrollToIndex = useCallback((index: number) => {
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+
+    const cards = Array.from(
+      scroller.querySelectorAll<HTMLElement>("[data-experience-carousel-card]"),
+    );
+
+    const target = cards[index];
+    if (!target) return;
+
+    const left =
+      target.offsetLeft - (scroller.clientWidth - target.offsetWidth) / 2;
+
+    scroller.scrollTo({ left, behavior: "smooth" });
+  }, []);
+
+  const scrollPrev = () => {
+    scrollToIndex(Math.max(0, currentSlide - 1));
+  };
+
+  const scrollNext = () => {
+    scrollToIndex(Math.min(items.length - 1, currentSlide + 1));
+  };
+
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+
+    setCurrentSlide(0);
+    setCanScrollPrev(false);
+    setCanScrollNext(items.length > 1);
+
+    if (scroller) {
+      scroller.scrollTo({ left: 0, behavior: "auto" });
+    }
+
+    window.requestAnimationFrame(updateState);
+  }, [items, updateState]);
+
+  useEffect(() => {
+    updateState();
+
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+
+    const handleScroll = () => {
+      window.requestAnimationFrame(updateState);
+    };
+
+    scroller.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("resize", updateState);
+
+    return () => {
+      scroller.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", updateState);
+    };
+  }, [items, updateState]);
+
+  useEffect(() => {
+    if (!activeItem) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setActiveItem(null);
+      }
+    };
+
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [activeItem]);
+
+  if (items.length === 0) {
+    return (
+      <p className="py-8 text-center text-sm text-[var(--foreground-subtle)]">
+        {emptyMessage}
+      </p>
+    );
+  }
+
+  const isSingleItem = items.length === 1;
+
+  return (
+    <div className="relative md:hidden">
+      <div
+        ref={scrollerRef}
+        className={cn(
+          "-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-4 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+          isSingleItem && "justify-center overflow-hidden",
+        )}
+      >
+        {items.map((item, index) => {
+          const preview = getExperiencePreview(item.description);
+
+          return (
+            <div
+              key={item.id}
+              data-experience-carousel-card
+              className={cn(
+                "shrink-0 snap-center transform-gpu transition-all duration-500 ease-out motion-reduce:transform-none motion-reduce:opacity-100",
+                currentSlide === index
+                  ? "scale-100 opacity-100"
+                  : "scale-[0.96] opacity-70",
+                isSingleItem
+                  ? "w-[calc(100vw-2rem)] max-w-none"
+                  : "w-[82vw] max-w-[21rem]",
+              )}
+            >
+              <article className="flex h-full min-h-[15.5rem] min-w-0 flex-col rounded-2xl border border-[rgba(72,202,228,0.14)] bg-[linear-gradient(180deg,rgba(6,12,24,0.92),rgba(8,15,30,0.9))] p-4 shadow-[0_16px_44px_rgba(0,0,0,0.24)] transition-transform duration-300 active:scale-[0.985] min-[390px]:p-5">
+              <div className="min-w-0">
+                <div className="flex min-w-0 items-start justify-between gap-3">
+                  <h3 className="min-w-0 flex-1 break-words text-base font-semibold leading-snug text-white">
+                    {item.organization}
+                  </h3>
+
+                  <span className="shrink-0 pt-0.5">
+                    <Badge>{item.type}</Badge>
+                  </span>
+                </div>
+
+                <p className="mt-1 break-words text-sm leading-relaxed text-[var(--blue-300)]">
+                  {item.role}
+                </p>
+              </div>
+
+              <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.16em] text-[var(--foreground-subtle)]">
+                {item.period}
+              </p>
+
+              <p className="mt-3 text-sm leading-7 text-[var(--foreground-muted)]">
+                {preview.text}
+                {preview.truncated ? (
+                  <>
+                    {" "}
+                    <button
+                      type="button"
+                      data-interactive
+                      onClick={() => setActiveItem(item)}
+                      className="inline cursor-pointer font-medium text-[var(--blue-300)] underline-offset-4 transition hover:text-white hover:underline"
+                    >
+                      See more
+                    </button>
+                  </>
+                ) : null}
+              </p>
+            </article>
+          </div>
+        );
+        })}
+      </div>
+
+      {items.length > 1 ? (
+        <>
+          <button
+            type="button"
+            aria-label="Previous experience"
+            onClick={scrollPrev}
+            disabled={!canScrollPrev}
+            className="absolute left-0 top-1/2 z-10 inline-flex h-9 w-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-[var(--border)] bg-[rgba(8,14,28,0.82)] text-white shadow-[0_12px_30px_rgba(0,0,0,0.32)] backdrop-blur-xl transition enabled:hover:border-[var(--border-strong)] disabled:cursor-not-allowed disabled:opacity-35"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+
+          <button
+            type="button"
+            aria-label="Next experience"
+            onClick={scrollNext}
+            disabled={!canScrollNext}
+            className="absolute right-0 top-1/2 z-10 inline-flex h-9 w-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-[var(--border)] bg-[rgba(8,14,28,0.82)] text-white shadow-[0_12px_30px_rgba(0,0,0,0.32)] backdrop-blur-xl transition enabled:hover:border-[var(--border-strong)] disabled:cursor-not-allowed disabled:opacity-35"
+          >
+            <ArrowRight className="h-4 w-4" />
+          </button>
+
+          <div className="mt-5 flex items-center justify-center gap-3">
+            <span className="min-w-6 text-right font-mono text-[10px] text-[var(--blue-300)]">
+              {String(currentSlide + 1).padStart(2, "0")}
+            </span>
+
+            <div className="relative h-1.5 w-28 overflow-hidden rounded-full bg-white/10">
+              <div
+                className="h-full rounded-full bg-[var(--blue-300)] shadow-[0_0_12px_rgba(72,202,228,0.45)] transition-all duration-500 ease-out"
+                style={{
+                  width: `${((currentSlide + 1) / items.length) * 100}%`,
+                }}
+              />
+            </div>
+
+            <span className="min-w-6 font-mono text-[10px] text-[var(--foreground-subtle)]">
+              {String(items.length).padStart(2, "0")}
+            </span>
+          </div>
+        </>
+      ) : null}
+
+      {activeItem ? (
+        <div
+          className="animate-fade-in fixed inset-0 z-[100] flex items-center justify-center bg-black/88 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${activeItem.organization} details`}
+        >
+          <div className="animate-modal-in max-h-[82dvh] w-full max-w-lg overflow-y-auto rounded-3xl border border-white/10 bg-[var(--background-elevated)] p-4 shadow-[0_24px_120px_rgba(0,0,0,0.45)]">
+            <div className="mb-4 flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <div className="mb-2">
+                  <Badge>{activeItem.type}</Badge>
+                </div>
+
+                <h3 className="break-words text-lg font-semibold leading-snug text-white">
+                  {activeItem.organization}
+                </h3>
+
+                <p className="mt-1 break-words text-sm leading-relaxed text-[var(--blue-300)]">
+                  {activeItem.role}
+                </p>
+
+                <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.16em] text-[var(--foreground-subtle)]">
+                  {activeItem.period}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setActiveItem(null)}
+                className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-white transition hover:bg-white/10"
+                aria-label="Close experience details"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <p className="text-sm leading-7 text-[var(--foreground-muted)]">
+              {activeItem.description}
+            </p>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 
 export function ExperienceSection({
   experience,
@@ -327,7 +642,9 @@ export function ExperienceSection({
               }}
             />
 
-            <div className="space-y-3 sm:space-y-4 md:pl-6">
+            <MobileExperienceCarousel items={experience} />
+
+            <div className="hidden space-y-3 sm:space-y-4 md:block md:pl-6">
               {experience.map((item) => (
                 <article
                   key={item.id}
