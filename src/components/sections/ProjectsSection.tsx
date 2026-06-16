@@ -449,19 +449,31 @@ function MobileProjectCarousel({
     );
   }
 
+  const isSingleProject = projects.length === 1;
+
   return (
     <div className="relative md:hidden">
       <div
         ref={scrollerRef}
-        className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-4 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className={cn(
+          "-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-4 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+          isSingleProject && "justify-center overflow-hidden",
+        )}
       >
-        {projects.map((project) => (
+        {projects.map((project, index) => (
           <div
             key={project.slug}
             data-carousel-card
             className={cn(
-              "shrink-0 snap-center",
-              showImage ? "w-[82vw] max-w-[21rem]" : "w-[80vw] max-w-[20rem]",
+              "shrink-0 snap-center transform-gpu transition-all duration-500 ease-out motion-reduce:transform-none motion-reduce:opacity-100",
+              currentSlide === index
+                ? "scale-100 opacity-100"
+                : "scale-[0.96] opacity-70",
+              isSingleProject
+                ? "w-[calc(100vw-2rem)] max-w-none"
+                : showImage
+                  ? "w-[82vw] max-w-[21rem]"
+                  : "w-[80vw] max-w-[20rem]",
             )}
           >
             <MobileProjectCard project={project} showImage={showImage} />
@@ -497,21 +509,23 @@ function MobileProjectCarousel({
             <ArrowRight className="h-4 w-4" />
           </button>
 
-          <div className="mt-5 flex justify-center gap-2">
-            {projects.map((project, index) => (
-              <button
-                key={project.slug}
-                type="button"
-                aria-label={`Go to project ${index + 1}`}
-                onClick={() => scrollToIndex(index)}
-                className={cn(
-                  "h-2 cursor-pointer rounded-full transition-all duration-300",
-                  currentSlide === index
-                    ? "w-6 bg-[var(--blue-300)] shadow-[0_0_12px_rgba(72,202,228,0.45)]"
-                    : "w-2 bg-white/20 hover:bg-white/40",
-                )}
+          <div className="mt-5 flex items-center justify-center gap-3">
+            <span className="min-w-6 text-right font-mono text-[10px] text-[var(--blue-300)]">
+              {String(currentSlide + 1).padStart(2, "0")}
+            </span>
+
+            <div className="relative h-1.5 w-28 overflow-hidden rounded-full bg-white/10">
+              <div
+                className="h-full rounded-full bg-[var(--blue-300)] shadow-[0_0_12px_rgba(72,202,228,0.45)] transition-all duration-500 ease-out"
+                style={{
+                  width: `${((currentSlide + 1) / projects.length) * 100}%`,
+                }}
               />
-            ))}
+            </div>
+
+            <span className="min-w-6 font-mono text-[10px] text-[var(--foreground-subtle)]">
+              {String(projects.length).padStart(2, "0")}
+            </span>
           </div>
         </>
       ) : null}
@@ -529,8 +543,8 @@ function MobileProjectCard({
   return (
     <article
       className={cn(
-        "h-full overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--background-elevated)] shadow-[0_16px_44px_rgba(0,0,0,0.24)]",
-        !showImage && "p-4 text-left",
+        "h-full overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--background-elevated)] shadow-[0_16px_44px_rgba(0,0,0,0.24)] transition-transform duration-300 active:scale-[0.985]",
+        !showImage && "p-4 text-left min-[390px]:p-5",
       )}
     >
       {showImage ? (
@@ -856,6 +870,7 @@ interface ProjectsSectionProps {
 export function ProjectsSection({ projects }: ProjectsSectionProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const allProjectsGridRef = useRef<HTMLDivElement>(null);
+  const gridHeightBeforeToggleRef = useRef<number | null>(null);
   const lowMotion = useLowMotionDevice();
   const [activeRole, setActiveRole] = useState(ALL_FILTER);
   const [expanded, setExpanded] = useState(false);
@@ -892,6 +907,16 @@ export function ProjectsSection({ projects }: ProjectsSectionProps) {
     setExpanded(false);
   };
 
+  const handleToggleExpanded = () => {
+    const grid = allProjectsGridRef.current;
+
+    if (grid) {
+      gridHeightBeforeToggleRef.current = grid.getBoundingClientRect().height;
+    }
+
+    setExpanded((value) => !value);
+  };
+
   useGSAP(
     () => {
       if (lowMotion) return;
@@ -900,6 +925,40 @@ export function ProjectsSection({ projects }: ProjectsSectionProps) {
     },
     { dependencies: [lowMotion], revertOnUpdate: true, scope: sectionRef },
   );
+
+  useLayoutEffect(() => {
+    const grid = allProjectsGridRef.current;
+    const previousHeight = gridHeightBeforeToggleRef.current;
+
+    if (!grid || previousHeight == null) return;
+
+    gridHeightBeforeToggleRef.current = null;
+
+    if (lowMotion) {
+      grid.style.height = "";
+      grid.style.overflow = "";
+      return;
+    }
+
+    registerGsapPlugins();
+
+    const nextHeight = grid.scrollHeight;
+
+    gsap.killTweensOf(grid);
+    gsap.fromTo(
+      grid,
+      {
+        height: previousHeight,
+        overflow: "hidden",
+      },
+      {
+        height: nextHeight,
+        duration: 0.48,
+        ease: "power2.out",
+        clearProps: "height,overflow",
+      },
+    );
+  }, [visible.length, lowMotion]);
 
   useGSAP(
     () => {
@@ -924,13 +983,13 @@ export function ProjectsSection({ projects }: ProjectsSectionProps) {
 
       gsap.fromTo(
         items,
-        { autoAlpha: 0, y: 8, scale: 0.99 },
+        { autoAlpha: 0, y: 14, scale: 0.985 },
         {
           autoAlpha: 1,
           y: 0,
           scale: 1,
-          duration: 0.24,
-          stagger: 0.018,
+          duration: 0.36,
+          stagger: 0.035,
           ease: "power2.out",
           clearProps: "filter",
         },
@@ -984,17 +1043,18 @@ export function ProjectsSection({ projects }: ProjectsSectionProps) {
         {nonFeatured.length > 0 ? (
           <div className="relative z-20 mt-10 overflow-visible sm:mt-14">
             <RevealOnScroll>
-              <div className="relative z-[80] flex flex-col gap-4 overflow-visible text-center lg:flex-row lg:items-start lg:justify-between lg:text-left">
-                <div className="min-w-0">
-                  <h3 className="font-[family-name:var(--font-syne)] text-lg font-semibold text-white sm:text-xl">
-                    All projects
+              <div className="relative z-[80] flex items-center justify-between gap-3 overflow-visible text-left lg:items-start">
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-[family-name:var(--font-syne)] text-base font-semibold text-white min-[390px]:text-lg sm:text-xl">
+                    <span className="lg:hidden">More projects</span>
+                    <span className="hidden lg:inline">All projects</span>
                     <span className="ml-2 align-middle font-mono text-sm font-normal text-[var(--foreground-subtle)]">
                       {filtered.length}
                     </span>
                   </h3>
                 </div>
 
-                <div className="flex justify-center lg:justify-end">
+                <div className="flex shrink-0 justify-end">
                   <ProjectFilter
                     roles={nonFeaturedProjectRoles}
                     projects={nonFeatured}
@@ -1005,20 +1065,12 @@ export function ProjectsSection({ projects }: ProjectsSectionProps) {
               </div>
             </RevealOnScroll>
 
-            <div className="relative z-0 mt-5 grid min-w-0 grid-cols-1 gap-4 md:hidden">
-              {visible.length > 0 ? (
-                visible.map((project) => (
-                  <MobileProjectCard
-                    key={project.slug}
-                    project={project}
-                    showImage={false}
-                  />
-                ))
-              ) : (
-                <p className="py-8 text-center text-sm text-[var(--foreground-subtle)]">
-                  No projects match that role.
-                </p>
-              )}
+            <div className="relative z-0 mt-5 md:hidden">
+              <MobileProjectCarousel
+                projects={filtered}
+                showImage={false}
+                emptyMessage="No projects match that role."
+              />
             </div>
 
             <div
@@ -1040,21 +1092,22 @@ export function ProjectsSection({ projects }: ProjectsSectionProps) {
 
             {hasMore ? (
               <RevealOnScroll>
-                <div className="mt-6 flex justify-center">
+                <div className="mt-6 hidden justify-center md:flex">
                   <button
                     type="button"
                     data-interactive
-                    onClick={() => setExpanded((value) => !value)}
-                    className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-full border border-[var(--border)] px-5 py-2 text-sm text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white"
+                    aria-expanded={expanded}
+                    onClick={handleToggleExpanded}
+                    className="group inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-full border border-[var(--border)] bg-white/[0.02] px-5 py-2 text-sm text-[var(--foreground-muted)] shadow-[0_0_0_rgba(72,202,228,0)] transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-[var(--border-strong)] hover:bg-white/[0.04] hover:text-white hover:shadow-[0_0_20px_rgba(72,202,228,0.1)] active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none"
                   >
                     {expanded ? (
                       <>
-                        <ChevronUp className="h-4 w-4" />
+                        <ChevronUp className="h-4 w-4 transition-transform duration-300 group-hover:-translate-y-0.5" />
                         Show less
                       </>
                     ) : (
                       <>
-                        <ChevronDown className="h-4 w-4" />
+                        <ChevronDown className="h-4 w-4 transition-transform duration-300 group-hover:translate-y-0.5" />
                         Show {filtered.length - INITIAL_SHOW} more
                       </>
                     )}
