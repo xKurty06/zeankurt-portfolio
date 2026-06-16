@@ -228,9 +228,11 @@ export function HeroSection({ siteConfig }: HeroSectionProps) {
             <div className="mx-auto max-w-3xl lg:mx-0">
               <div
                 data-hero="tagline"
-                className="mx-auto mb-4 inline-flex max-w-full items-center py-1.5 text-[0.7rem] font-medium uppercase tracking-[0.16em] text-[var(--blue-100)] backdrop-blur-sm sm:text-xs lg:mx-0"
+                className="mx-auto mb-4 inline-flex max-w-[22rem] items-center justify-center py-1.5 text-center text-[0.68rem] font-medium uppercase leading-relaxed tracking-[0.13em] text-[var(--blue-100)] backdrop-blur-sm sm:max-w-full sm:text-xs sm:tracking-[0.16em] lg:mx-0 lg:justify-start lg:text-left"
               >
-                <span className="truncate">{siteConfig.headline}</span>
+                <span className="whitespace-normal break-words">
+                  {siteConfig.headline}
+                </span>
               </div>
 
               <h1 className="max-w-full font-[family-name:var(--font-syne)] text-[clamp(2.3rem,8vw,4.15rem)] font-semibold leading-[0.98] tracking-[-0.045em] text-white sm:text-6xl md:text-7xl lg:max-w-[13ch]">
@@ -253,10 +255,10 @@ export function HeroSection({ siteConfig }: HeroSectionProps) {
                 data-hero="copy"
                 className="mx-auto mt-5 max-w-2xl text-base leading-8 text-[var(--foreground-muted)] sm:text-[1.05rem] sm:leading-8 lg:mx-0"
               >
-                <span className="font-medium text-[var(--gold-300)]">Co-Founder at Studio Nomads</span>,{" "}
-                <span className="font-medium text-[var(--blue-100)]">Co-Founder at WebX</span>, aspiring
+                <span className="emphasis-glow-gold font-medium">Co-Founder at Studio Nomads</span>,{" "}
+                <span className="emphasis-glow-blue font-medium">Co-Founder at WebX</span>, aspiring
                 full-stack developer, Web3 community contributor, {" "}
-                <span className="font-medium text-[var(--rose-300)]">photographer, videographer</span> and <span className="font-medium text-[var(--rose-300)]">editor</span>{" "}
+                <span className="emphasis-glow-rose font-medium">photographer, videographer</span> and <span className="emphasis-glow-rose font-medium">editor</span>{" "}
                 based in Cavite, Philippines.
               </p>
 

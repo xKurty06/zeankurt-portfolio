@@ -300,8 +300,8 @@ export function ExperienceSection({
         <RevealOnScroll>
           <SectionHeading
             eyebrow="Experience"
-            title="Building in public - work, events, and hackathons."
-            description="From co-founding NameThat and Studio Nomads to contributing across Team1 Philippines, Base Philippines, and campus blockchain events."
+            title="Work, events, and community builds."
+            description="From Studio Nomads and WebX to campus hackathons and blockchain communities, this is the work behind the portfolio."
           />
         </RevealOnScroll>
 

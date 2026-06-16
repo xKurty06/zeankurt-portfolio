@@ -958,8 +958,8 @@ export function ProjectsSection({ projects }: ProjectsSectionProps) {
         <RevealOnScroll>
           <SectionHeading
             eyebrow="Projects"
-            title="Selected software work."
-            description="Building modern web systems, blockchain-driven products, and creative visuals for communities, startups, and real-world digital experiences."
+            title="Software built for real use."
+            description="A selection of web systems, product builds, and blockchain work shaped by client needs, community projects, and practical delivery."
           />
         </RevealOnScroll>
 
@@ -984,33 +984,24 @@ export function ProjectsSection({ projects }: ProjectsSectionProps) {
         {nonFeatured.length > 0 ? (
           <div className="relative z-20 mt-10 overflow-visible sm:mt-14">
             <RevealOnScroll>
-              <div className="relative z-[80] flex flex-col items-center gap-4 overflow-visible text-center lg:flex-row lg:items-start lg:justify-between lg:text-left">
-                {/* 1. Added w-full here to let the container expand */}
-                <div className="shrink-0 w-full">
-                  {/* 2. Added w-full block here so the heading takes up the whole line */}
-                  <h3 className="font-[family-name:var(--font-syne)] text-lg font-semibold text-white w-full block">
-                    {/* 3. Added w-full here to push the children to the edges */}
-                    <div className="flex items-center justify-between w-full">
-                      <div className="flex justify-start ">
-                        All projects
-                        <span className="ml-2 font-mono text-sm font-normal text-[var(--foreground-subtle)]">
-                          {filtered.length}
-                        </span>
-                      </div>
-                      <div className="flex items-end gap-2">
-                        <ProjectFilter
-                          roles={nonFeaturedProjectRoles}
-                          projects={nonFeatured}
-                          activeRole={activeRole}
-                          onChange={handleFilterChange}
-                        />
-                      </div>
-                    </div>
+              <div className="relative z-[80] flex flex-col gap-4 overflow-visible text-center lg:flex-row lg:items-start lg:justify-between lg:text-left">
+                <div className="min-w-0">
+                  <h3 className="font-[family-name:var(--font-syne)] text-lg font-semibold text-white sm:text-xl">
+                    All projects
+                    <span className="ml-2 align-middle font-mono text-sm font-normal text-[var(--foreground-subtle)]">
+                      {filtered.length}
+                    </span>
                   </h3>
                 </div>
 
-
-
+                <div className="flex justify-center lg:justify-end">
+                  <ProjectFilter
+                    roles={nonFeaturedProjectRoles}
+                    projects={nonFeatured}
+                    activeRole={activeRole}
+                    onChange={handleFilterChange}
+                  />
+                </div>
               </div>
             </RevealOnScroll>
 

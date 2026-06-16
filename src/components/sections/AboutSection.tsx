@@ -7,6 +7,7 @@ import { AnimatedCounter } from "@/components/animation/AnimatedCounter";
 import { GlowCard } from "@/components/animation/GlowCard";
 import { Container, Section } from "@/components/ui/Container";
 import { FlickeringGrid } from "@/components/ui/FlickeringGridHero";
+import { SectionHeading } from "@/components/ui/SectionHeading";
 import { gsap, registerGsapPlugins } from "@/lib/gsap";
 import { useLowMotionDevice } from "@/hooks/useLowMotionDevice";
 import type { Certification, EventHighlight, SkillCategory } from "@/types";
@@ -28,7 +29,7 @@ const ABOUT_HIGHLIGHTS: Array<{ label: CounterLabel; value: string }> = [
 
 function AboutAccent({ children }: { children: ReactNode }) {
   return (
-    <strong className="font-semibold text-[var(--blue-100)]">
+    <strong className="emphasis-glow-blue font-semibold">
       {children}
     </strong>
   );
@@ -36,7 +37,7 @@ function AboutAccent({ children }: { children: ReactNode }) {
 
 function WarmAccent({ children }: { children: ReactNode }) {
   return (
-    <strong className="font-semibold text-[var(--gold-300)]">
+    <strong className="emphasis-glow-gold font-semibold">
       {children}
     </strong>
   );
@@ -44,7 +45,7 @@ function WarmAccent({ children }: { children: ReactNode }) {
 
 function RoseAccent({ children }: { children: ReactNode }) {
   return (
-    <strong className="font-semibold text-[var(--rose-300)]">
+    <strong className="emphasis-glow-rose font-semibold">
       {children}
     </strong>
   );
@@ -144,47 +145,34 @@ export function AboutSection({
       <Container>
         <div className="relative z-10 grid min-w-0 gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-start lg:gap-12">
           <RevealOnScroll>
-            <div className="relative mx-auto max-w-3xl text-center lg:mx-0 lg:text-left">
-              <div className="inline-flex items-center gap-3 text-[var(--blue-200)]">
-                <span className="h-px w-10 bg-gradient-to-r from-[rgba(72,202,228,0.8)] to-transparent" />
-                <p className="font-[family-name:var(--font-syne)] text-[0.78rem] font-medium tracking-[0.18em] sm:text-[0.82rem]">
-                  About
-                </p>
-              </div>
-
-              <h2 className="mx-auto mt-4 max-w-3xl font-[family-name:var(--font-syne)] text-[clamp(2rem,8vw,3.15rem)] font-semibold leading-[1.12] tracking-[-0.04em] text-white sm:text-5xl lg:mx-0 lg:text-6xl">
-                Developer, builder, and visual storyteller.
-              </h2>
-
-              <p className="mx-auto mt-5 max-w-2xl text-base leading-8 text-[var(--foreground-muted)] sm:text-lg sm:leading-8 lg:mx-0">
-                I turn ideas into <span className="font-medium text-[var(--blue-100)]">usable web products</span>,
-                <span className="font-medium text-[var(--gold-300)]"> creative systems</span>, and visual
-                stories that connect technology with real communities.
-              </p>
-            </div>
+            <SectionHeading
+              eyebrow="About"
+              title="Building digital products and visual stories."
+              description="I turn ideas into usable web products, creative systems, and visual stories that connect technology with real communities."
+            />
           </RevealOnScroll>
 
           <div className="min-w-0">
-            <div className="mx-auto max-w-3xl space-y-5 text-left sm:space-y-6 lg:mx-0 lg:max-w-none">
+            <div className="mx-auto max-w-3xl space-y-5 text-center sm:space-y-6 lg:mx-0 lg:max-w-none lg:text-left">
               <p
                 data-about-para
                 className="text-base leading-8 text-[var(--foreground-muted)] sm:text-[1.05rem] sm:leading-8"
                 style={{ perspective: 600 }}
               >
                 I work across <AboutAccent>full-stack development</AboutAccent>, Web3 experiments,
-                and creative production, building interfaces that feel fast, clear, and useful instead
-                of just decorative. My work usually sits where product thinking, engineering, and
-                visual storytelling need to meet.
+                and creative production, building interfaces that feel fast, clear, and useful.
+                Most of my work sits where product thinking, engineering, and visual storytelling
+                need to meet.
               </p>
 
               <p
                 data-about-para
-                className="border-l border-[rgba(72,202,228,0.32)] pl-4 text-base leading-8 text-[var(--foreground-muted)] sm:pl-5 sm:text-[1.05rem] sm:leading-8"
+                className="text-base leading-8 text-[var(--foreground-muted)] sm:text-[1.05rem] sm:leading-8 lg:border-l lg:border-[rgba(72,202,228,0.32)] lg:pl-5"
                 style={{ perspective: 600 }}
               >
                 Recent work includes <AboutAccent>portfolio systems</AboutAccent>, <WarmAccent>hackathon builds</WarmAccent>,
                 blockchain community projects, <RoseAccent>event coverage</RoseAccent>, and branded visual assets
-                for teams that need both technical execution and a sharper public presence.
+                for teams that need both technical execution and stronger presentation.
               </p>
 
               <p
@@ -193,9 +181,9 @@ export function AboutSection({
                 style={{ perspective: 600 }}
               >
                 Outside the code editor, I shoot and edit photos and videos through{" "}
-                <span className="font-semibold text-[var(--rose-300)]">Studio Nomads</span>, which keeps my
-                frontend work grounded in composition, pacing, contrast, and how people actually
-                scan a story on screen.
+                <span className="emphasis-glow-rose font-semibold">Studio Nomads</span>, which keeps my
+                frontend work grounded in composition, pacing, contrast, and how people scan
+                a story on screen.
               </p>
             </div>
 

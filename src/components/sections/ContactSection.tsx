@@ -144,25 +144,25 @@ export function ContactSection({ siteConfig }: ContactSectionProps) {
 
                 <h2 className="mt-3 text-balance font-[family-name:var(--font-syne)] text-[clamp(2rem,8vw,3.45rem)] font-semibold leading-[1.04] tracking-[-0.04em] text-white sm:text-5xl lg:text-6xl">
                   Open to{" "}
-                  <span className="text-[var(--gold-300)] drop-shadow-[0_0_18px_rgba(230,199,106,0.18)]">
+                  <span className="emphasis-glow-gold">
                     collaborations
                   </span>
                   ,{" "}
-                  <span className="bg-gradient-to-r from-[var(--blue-100)] via-[var(--blue-300)] to-[var(--violet-300)] bg-clip-text text-transparent">
+                  <span className="emphasis-glow-gradient">
                     web builds
                   </span>
                   , and{" "}
-                  <span className="text-[var(--rose-300)] drop-shadow-[0_0_18px_rgba(236,111,168,0.16)]">
+                  <span className="emphasis-glow-rose">
                     photo/video
                   </span>{" "}
                   work.
                 </h2>
 
                 <p className="mx-auto mt-5 max-w-[20rem] text-sm leading-7 text-[var(--foreground-muted)] sm:max-w-xl sm:text-base sm:leading-8 lg:mx-0">
-                  Reach out for <span className="font-medium text-[var(--blue-100)]">software projects</span>,
-                  <span className="font-medium text-[var(--gold-300)]"> hackathon teams</span>,
-                  <span className="font-medium text-[var(--rose-300)]"> event coverage</span>, or{" "}
-                  <span className="font-medium text-white">Studio Nomads</span> inquiries.
+                  Reach out for <span className="emphasis-glow-blue font-medium">software projects</span>,
+                  <span className="emphasis-glow-gold font-medium"> hackathon teams</span>,
+                  <span className="emphasis-glow-rose font-medium"> event coverage</span>, or{" "}
+                  <span className="emphasis-glow-white font-medium">Studio Nomads</span> inquiries.
                 </p>
               </div>
             </RevealOnScroll>

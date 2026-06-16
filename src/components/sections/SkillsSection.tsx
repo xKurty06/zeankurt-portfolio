@@ -116,8 +116,8 @@ export function SkillsSection({ skillCategories }: SkillsSectionProps) {
         <RevealOnScroll>
           <SectionHeading
             eyebrow="Skills"
-            title="Stack, systems, and creative tooling."
-            description="Full-stack development for websites, web systems, and software products, paired with media production work shaped by hackathons, templates, and real client projects."
+            title="Tools for product, web, and creative work."
+            description="Full-stack development for websites and software products, paired with media production shaped by hackathons, client work, and hands-on builds."
           />
         </RevealOnScroll>
 

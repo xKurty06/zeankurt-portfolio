@@ -125,6 +125,56 @@ body {
   color: transparent;
 }
 
+.emphasis-glow-blue {
+  background: linear-gradient(135deg, #f0fbff 0%, var(--blue-100) 42%, var(--blue-300) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow:
+    0 0 10px rgba(72, 202, 228, 0.2),
+    0 0 22px rgba(0, 180, 216, 0.1);
+}
+
+.emphasis-glow-gold {
+  background: linear-gradient(135deg, #fff8d8 0%, var(--gold-300) 48%, var(--gold-400) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow:
+    0 0 10px rgba(230, 199, 106, 0.22),
+    0 0 22px rgba(248, 231, 161, 0.1);
+}
+
+.emphasis-glow-rose {
+  background: linear-gradient(135deg, #ffe4f0 0%, var(--rose-300) 48%, var(--rose-400) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow:
+    0 0 10px rgba(236, 111, 168, 0.22),
+    0 0 22px rgba(245, 163, 199, 0.1);
+}
+
+.emphasis-glow-white {
+  background: linear-gradient(135deg, #ffffff 0%, var(--foreground) 48%, var(--blue-200) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow:
+    0 0 10px rgba(240, 249, 255, 0.14),
+    0 0 22px rgba(72, 202, 228, 0.06);
+}
+
+.emphasis-glow-gradient {
+  background: linear-gradient(135deg, #f0fbff 0%, var(--blue-100) 35%, var(--blue-300) 72%, var(--blue-400) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter:
+    drop-shadow(0 0 10px rgba(72, 202, 228, 0.18))
+    drop-shadow(0 0 18px rgba(0, 180, 216, 0.08));
+}
+
 /* ─── Scan lines — removed (caused eye strain) ──────────────────────────────── */
 
 .scan-line      { display: none; }
