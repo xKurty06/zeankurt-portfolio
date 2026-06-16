@@ -270,9 +270,9 @@ function MobileFluidNav({
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
         className={cn(
-          "relative z-[90] flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border text-white shadow-[0_12px_40px_rgba(0,0,0,0.28)] transition duration-300",
+          "relative z-[90] flex h-12 w-12 cursor-pointer items-center justify-center text-white shadow-[0_12px_40px_rgba(0,0,0,0.28)] transition duration-300 rounded-full",
           open
-            ? "border-[rgba(72,202,228,0.3)] bg-[rgba(20,31,50,0.98)]"
+            ? "border-[rgba(72,202,228,0.3)] bg-[rgba(20,31,50,0.98)] rounded-full border"
             : "border-[var(--border)] bg-[rgba(8,14,28,0.72)] backdrop-blur-xl hover:border-[var(--border-strong)] hover:shadow-[0_0_16px_var(--accent-glow)]",
         )}
       >

@@ -525,11 +525,11 @@ export function AlbumPageContent({ album, photos }: AlbumPageContentProps) {
                   </div>
                 ) : null}
 
-                <h1 className="mt-2 break-words font-[family-name:var(--font-syne)] text-[clamp(1.875rem,8vw,2.5rem)] font-semibold tracking-[-0.03em] text-white sm:text-5xl">
+                <h1 className="mt-0 break-words font-[family-name:var(--font-syne)] text-[clamp(1.875rem,8vw,2.5rem)] font-semibold tracking-[-0.03em] text-white sm:text-5xl">
                   {album.title}
                 </h1>
 
-                <p className="mt-2 max-w-2xl text-base leading-relaxed text-white/65">
+                <p className="mt-0 max-w-2xl text-base leading-relaxed text-white/65">
                   {album.description}
                 </p>
                 {totalPages > 1 ? (

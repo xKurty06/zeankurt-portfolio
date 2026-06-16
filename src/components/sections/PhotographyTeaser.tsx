@@ -63,57 +63,92 @@ export function PhotographyTeaser({
     const viewport = marqueeViewportRef.current;
     if (!viewport) return;
 
-    let intervalId = 0;
+    let animationFrameId = 0;
+    let lastFrameTime = 0;
+
     let isPointerDown = false;
     let isDragging = false;
     let isHovered = false;
+    let ignoreHoverPause = false;
     let startX = 0;
     let startScrollLeft = 0;
     let pointerLastX = 0;
     let pointerLastTime = 0;
+
     let velocity = 0;
     let preventClick = false;
     let loopWidth = 0;
-    const dragThreshold = 8;
-    let autoSpeed = window.innerWidth >= 1024 ? 0.04 : 0.065;
+
+    const dragThreshold = 6;
+    const maxVelocity = 3.2;
+    const friction = 0.965;
+    const inertiaStopThreshold = 0.01;
+
+    let autoSpeed = window.innerWidth >= 1024 ? 0.085 : 0.065;
+
+    const clampVelocity = (value: number) =>
+      Math.max(-maxVelocity, Math.min(maxVelocity, value));
 
     const measure = () => {
       loopWidth = viewport.scrollWidth / 2;
-      autoSpeed = window.innerWidth >= 1024 ? 0.04 : 0.065;
+      autoSpeed = window.innerWidth >= 1024 ? 0.085 : 0.065;
+
       if (loopWidth > viewport.clientWidth && viewport.scrollLeft === 0) {
-        viewport.scrollLeft = loopWidth;
+        viewport.scrollLeft = Math.min(loopWidth / 2, loopWidth - 1);
       }
     };
 
     const syncLoopPosition = () => {
       if (loopWidth <= viewport.clientWidth) return;
+
       if (viewport.scrollLeft >= loopWidth) {
         viewport.scrollLeft -= loopWidth;
+        startScrollLeft -= loopWidth;
       } else if (viewport.scrollLeft <= 0) {
         viewport.scrollLeft += loopWidth;
+        startScrollLeft += loopWidth;
       }
     };
 
-    const step = () => {
-      if (loopWidth <= viewport.clientWidth) {
-        return;
+    const step = (timestamp: number) => {
+      if (!lastFrameTime) {
+        lastFrameTime = timestamp;
       }
 
-      if (!isPointerDown && !isHovered && Math.abs(velocity) > 0.01) {
-        viewport.scrollLeft += velocity * 16;
-        velocity *= 0.94;
-        syncLoopPosition();
-      } else if (!isPointerDown && !isHovered) {
-        viewport.scrollLeft += autoSpeed * 16;
+      const delta = Math.min(32, timestamp - lastFrameTime);
+      lastFrameTime = timestamp;
+
+      const hasInertia = Math.abs(velocity) > inertiaStopThreshold;
+      const shouldPauseForHover = isHovered && !ignoreHoverPause && !hasInertia;
+
+      if (loopWidth > viewport.clientWidth && !isPointerDown && !shouldPauseForHover) {
+        if (hasInertia) {
+          viewport.scrollLeft += velocity * delta;
+          velocity *= friction;
+
+          if (Math.abs(velocity) <= inertiaStopThreshold) {
+            velocity = 0;
+            ignoreHoverPause = false;
+          }
+        } else {
+          velocity = 0;
+          viewport.scrollLeft += autoSpeed * delta;
+        }
+
         syncLoopPosition();
       }
+
+      animationFrameId = window.requestAnimationFrame(step);
     };
 
     const handlePointerDown = (event: PointerEvent) => {
+      if (event.pointerType === "mouse" && event.button !== 0) return;
+
       isPointerDown = true;
       isDragging = false;
       preventClick = false;
       velocity = 0;
+
       startX = event.clientX;
       startScrollLeft = viewport.scrollLeft;
       pointerLastX = event.clientX;
@@ -122,45 +157,76 @@ export function PhotographyTeaser({
 
     const handlePointerMove = (event: PointerEvent) => {
       if (!isPointerDown) return;
+
       const deltaX = event.clientX - startX;
+
       if (!isDragging && Math.abs(deltaX) < dragThreshold) return;
+
       if (!isDragging) {
         isDragging = true;
         preventClick = true;
-        viewport.setPointerCapture(event.pointerId);
+        ignoreHoverPause = true;
+
+        if (viewport.hasPointerCapture(event.pointerId) === false) {
+          viewport.setPointerCapture(event.pointerId);
+        }
       }
+
       event.preventDefault();
+
       viewport.scrollLeft = startScrollLeft - deltaX;
+
       const elapsed = Math.max(1, event.timeStamp - pointerLastTime);
-      velocity = (pointerLastX - event.clientX) / elapsed;
+      const nextVelocity = (pointerLastX - event.clientX) / elapsed;
+
+      velocity = clampVelocity(nextVelocity);
       pointerLastX = event.clientX;
       pointerLastTime = event.timeStamp;
+
       syncLoopPosition();
     };
 
     const releasePointer = (event: PointerEvent) => {
       if (!isPointerDown) return;
+
       isPointerDown = false;
-      if (isDragging && viewport.hasPointerCapture(event.pointerId)) {
+
+      if (viewport.hasPointerCapture(event.pointerId)) {
         viewport.releasePointerCapture(event.pointerId);
       }
+
       if (!isDragging) {
         velocity = 0;
+        ignoreHoverPause = false;
         return;
       }
+
       isDragging = false;
-      velocity = Math.max(-1.25, Math.min(1.25, velocity));
+      velocity = clampVelocity(velocity);
+      ignoreHoverPause = Math.abs(velocity) > inertiaStopThreshold;
+
+      window.setTimeout(() => {
+        preventClick = false;
+      }, 120);
     };
 
-    const handleClickCapture = (event: MouseEvent) => {
-      if (!preventClick) return;
-      preventClick = false;
-      event.preventDefault();
-      event.stopPropagation();
-    };
+    const handleWheel = (event: WheelEvent) => {
+      const horizontalDelta =
+        Math.abs(event.deltaX) > Math.abs(event.deltaY)
+          ? event.deltaX
+          : event.shiftKey
+            ? event.deltaY
+            : 0;
 
-    const handleDragStart = (event: DragEvent) => {
+      if (!horizontalDelta) return;
+
       event.preventDefault();
+
+      viewport.scrollLeft += horizontalDelta;
+      velocity = clampVelocity(horizontalDelta * 0.035);
+      ignoreHoverPause = Math.abs(velocity) > inertiaStopThreshold;
+
+      syncLoopPosition();
     };
 
     const handleMouseEnter = () => {
@@ -171,36 +237,52 @@ export function PhotographyTeaser({
       isHovered = false;
     };
 
+    const handleClickCapture = (event: MouseEvent) => {
+      if (!preventClick) return;
+
+      preventClick = false;
+      event.preventDefault();
+      event.stopPropagation();
+    };
+
+    const handleDragStart = (event: DragEvent) => {
+      event.preventDefault();
+    };
+
     const resetPointerState = () => {
       isPointerDown = false;
       isDragging = false;
       preventClick = false;
+      ignoreHoverPause = false;
     };
 
     measure();
+
     viewport.addEventListener("pointerdown", handlePointerDown);
     viewport.addEventListener("pointermove", handlePointerMove);
+    viewport.addEventListener("wheel", handleWheel, { passive: false });
+    viewport.addEventListener("mouseenter", handleMouseEnter);
+    viewport.addEventListener("mouseleave", handleMouseLeave);
     window.addEventListener("pointerup", releasePointer);
     window.addEventListener("pointercancel", releasePointer);
     viewport.addEventListener("click", handleClickCapture, true);
     viewport.addEventListener("dragstart", handleDragStart);
-    viewport.addEventListener("mouseenter", handleMouseEnter);
-    viewport.addEventListener("mouseleave", handleMouseLeave);
     window.addEventListener("blur", resetPointerState);
     window.addEventListener("resize", measure);
 
-    intervalId = window.setInterval(step, 16);
+    animationFrameId = window.requestAnimationFrame(step);
 
     return () => {
-      window.clearInterval(intervalId);
+      window.cancelAnimationFrame(animationFrameId);
       viewport.removeEventListener("pointerdown", handlePointerDown);
       viewport.removeEventListener("pointermove", handlePointerMove);
+      viewport.removeEventListener("wheel", handleWheel);
+      viewport.removeEventListener("mouseenter", handleMouseEnter);
+      viewport.removeEventListener("mouseleave", handleMouseLeave);
       window.removeEventListener("pointerup", releasePointer);
       window.removeEventListener("pointercancel", releasePointer);
       viewport.removeEventListener("click", handleClickCapture, true);
       viewport.removeEventListener("dragstart", handleDragStart);
-      viewport.removeEventListener("mouseenter", handleMouseEnter);
-      viewport.removeEventListener("mouseleave", handleMouseLeave);
       window.removeEventListener("blur", resetPointerState);
       window.removeEventListener("resize", measure);
     };
@@ -394,7 +476,7 @@ export function PhotographyTeaser({
           .photo-marquee-viewport {
             -ms-overflow-style: none;
             scrollbar-width: none;
-            touch-action: pan-y;
+            touch-action: pan-y pinch-zoom;
             cursor: grab;
             user-select: none;
             -webkit-user-select: none;
@@ -413,7 +495,14 @@ export function PhotographyTeaser({
           }
 
           :global(.photo-card) {
+            pointer-events: auto;
             -webkit-user-drag: none;
+          }
+
+          :global(.photo-card [data-photo-img]),
+          :global(.photo-card [data-photo-overlay]),
+          :global(.photo-card [data-photo-caption]) {
+            pointer-events: none;
           }
 
           @media (prefers-reduced-motion: reduce) {
