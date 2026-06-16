@@ -19,7 +19,6 @@ export default async function HomePage() {
       <HeroSection siteConfig={content.siteConfig} />
 
       <AboutSection
-        aboutContent={content.aboutContent}
         certifications={content.certifications}
         eventHighlights={content.eventHighlights}
         skillCategories={content.skillCategories}

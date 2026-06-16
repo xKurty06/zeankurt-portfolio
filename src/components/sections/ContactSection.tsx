@@ -63,7 +63,7 @@ export function ContactSection({ siteConfig }: ContactSectionProps) {
       );
 
       gsap.to(card, {
-        boxShadow: "0 0 48px rgba(0,180,216,0.12), 0 0 72px rgba(2,62,138,0.08)",
+        boxShadow: "0 0 48px rgba(0,180,216,0.12), 0 0 80px rgba(236,111,168,0.07)",
         duration: 2.5,
         repeat: -1,
         yoyo: true,
@@ -98,17 +98,22 @@ export function ContactSection({ siteConfig }: ContactSectionProps) {
           className="relative mx-auto max-w-[42rem] overflow-hidden rounded-[1.35rem] border border-[var(--border-strong)] px-4 py-7 text-center sm:rounded-[var(--radius-xl)] sm:px-6 sm:py-8 md:px-8 md:py-10 lg:max-w-none lg:px-12 lg:py-12 lg:text-left"
           style={{
             background:
-              "linear-gradient(135deg, rgba(2,62,138,0.22), rgba(3,7,18,0.94))",
+              "linear-gradient(135deg, rgba(2,62,138,0.2), rgba(3,7,18,0.94) 48%, rgba(236,111,168,0.08))",
           }}
         >
           <div
             aria-hidden
-            className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(0,180,216,0.12),transparent_65%)] blur-3xl sm:-right-28 sm:-top-28 sm:h-72 sm:w-72"
+            className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(143,124,255,0.16),transparent_65%)] blur-3xl sm:-right-28 sm:-top-28 sm:h-72 sm:w-72"
           />
 
           <div
             aria-hidden
-            className="pointer-events-none absolute -bottom-20 -left-20 h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(2,62,138,0.22),transparent_65%)] blur-3xl sm:-bottom-28 sm:-left-28 sm:h-72 sm:w-72"
+            className="pointer-events-none absolute -bottom-20 -left-20 h-56 w-56 rounded-full bg-[radial-gradient(circle,rgba(0,180,216,0.18),transparent_65%)] blur-3xl sm:-bottom-28 sm:-left-28 sm:h-72 sm:w-72"
+          />
+
+          <div
+            aria-hidden
+            className="pointer-events-none absolute right-[12%] top-[18%] h-28 w-28 rounded-full bg-[radial-gradient(circle,rgba(230,199,106,0.12),transparent_68%)] blur-2xl sm:h-36 sm:w-36"
           />
 
           {!lowMotion ? (
@@ -129,7 +134,7 @@ export function ContactSection({ siteConfig }: ContactSectionProps) {
 
           <div className="relative z-10">
             <RevealOnScroll>
-              <div className="mx-auto max-w-[22rem] text-center sm:max-w-2xl lg:mx-0 lg:max-w-3xl lg:text-left">
+              <div className="mx-auto max-w-[22rem] text-center sm:max-w-2xl lg:mx-0 lg:max-w-4xl lg:text-left">
                 <div className="inline-flex items-center gap-3 text-[var(--blue-200)]">
                   <span className="h-px w-10 bg-gradient-to-r from-[rgba(72,202,228,0.8)] to-transparent" />
                   <p className="font-[family-name:var(--font-syne)] text-[0.78rem] font-medium tracking-[0.18em] sm:text-[0.82rem]">
@@ -137,13 +142,27 @@ export function ContactSection({ siteConfig }: ContactSectionProps) {
                   </p>
                 </div>
 
-                <h2 className="mt-3 font-[family-name:var(--font-syne)] text-[clamp(1.9rem,8vw,2.55rem)] font-semibold leading-[1.08] tracking-[-0.04em] text-white sm:text-5xl lg:text-6xl">
-                  Open to collaborations, web builds, and photo/video work.
+                <h2 className="mt-3 text-balance font-[family-name:var(--font-syne)] text-[clamp(2rem,8vw,3.45rem)] font-semibold leading-[1.04] tracking-[-0.04em] text-white sm:text-5xl lg:text-6xl">
+                  Open to{" "}
+                  <span className="text-[var(--gold-300)] drop-shadow-[0_0_18px_rgba(230,199,106,0.18)]">
+                    collaborations
+                  </span>
+                  ,{" "}
+                  <span className="bg-gradient-to-r from-[var(--blue-100)] via-[var(--blue-300)] to-[var(--violet-300)] bg-clip-text text-transparent">
+                    web builds
+                  </span>
+                  , and{" "}
+                  <span className="text-[var(--rose-300)] drop-shadow-[0_0_18px_rgba(236,111,168,0.16)]">
+                    photo/video
+                  </span>{" "}
+                  work.
                 </h2>
 
-                <p className="mx-auto mt-4 max-w-[19rem] text-sm leading-7 text-[var(--foreground-muted)] sm:max-w-xl sm:text-base sm:leading-8 lg:mx-0">
-                  Reach out for software projects, hackathon teams, event coverage,
-                  or Studio Nomads inquiries.
+                <p className="mx-auto mt-5 max-w-[20rem] text-sm leading-7 text-[var(--foreground-muted)] sm:max-w-xl sm:text-base sm:leading-8 lg:mx-0">
+                  Reach out for <span className="font-medium text-[var(--blue-100)]">software projects</span>,
+                  <span className="font-medium text-[var(--gold-300)]"> hackathon teams</span>,
+                  <span className="font-medium text-[var(--rose-300)]"> event coverage</span>, or{" "}
+                  <span className="font-medium text-white">Studio Nomads</span> inquiries.
                 </p>
               </div>
             </RevealOnScroll>

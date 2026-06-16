@@ -14,11 +14,3 @@ export interface SiteConfig {
     };
     tone: string[];
 }
-
-export interface AboutContent {
-    paragraphs: string[];
-    highlights: Array<{
-        label: string;
-        value: string;
-    }>;
-}

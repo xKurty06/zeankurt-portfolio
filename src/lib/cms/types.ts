@@ -6,11 +6,10 @@ import type {
   Project,
   SkillCategory,
 } from "@/types";
-import type { AboutContent, SiteConfig } from "@/types/site";
+import type { SiteConfig } from "@/types/site";
 
 export interface PortfolioContent {
   siteConfig: SiteConfig;
-  aboutContent: AboutContent;
   projects: Project[];
   experience: ExperienceItem[];
   certifications: Certification[];

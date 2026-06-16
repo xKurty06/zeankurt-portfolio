@@ -416,7 +416,11 @@ export default async function AdminPage() {
     admin.from("skills").select("*").order("sort_order", { ascending: true }),
     admin.from("creative_categories").select("*").order("sort_order", { ascending: true }),
     admin.from("creative_photos").select("*").order("sort_order", { ascending: true }),
-    admin.from("site_content").select("*").order("key", { ascending: true }),
+    admin
+      .from("site_content")
+      .select("*")
+      .neq("key", "about_content")
+      .order("key", { ascending: true }),
   ]);
 
   if (projectsResult.error) throw projectsResult.error;
@@ -447,7 +451,9 @@ export default async function AdminPage() {
   const skills = (skillsResult.data ?? []) as Row[];
   const creativeCategories = creativeCategoriesMissing ? [] : (creativeCategoriesResult.data ?? []) as Row[];
   const creativePhotos = creativePhotosMissing ? [] : (creativePhotosResult.data ?? []) as Row[];
-  const siteRows = (siteContentResult.data ?? []) as Row[];
+  const siteRows = ((siteContentResult.data ?? []) as Row[]).filter(
+    (row) => value(row, "key") !== "about_content",
+  );
   const creativeSidebarItems = creativeCategories.map((category) => {
     const slug = value(category, "slug");
     const name = value(category, "name");

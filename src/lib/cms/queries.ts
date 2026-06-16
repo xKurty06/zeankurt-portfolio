@@ -109,7 +109,7 @@ async function fetchPortfolioContent(): Promise<PortfolioContent> {
       .eq("published", true)
       .order("sort_order", { ascending: true }),
 
-    supabase.from("site_content").select("key,value"),
+    supabase.from("site_content").select("key,value").eq("key", "site_config"),
   ]);
 
   if (projectsResult.error) throw projectsResult.error;
@@ -136,11 +136,8 @@ async function fetchPortfolioContent(): Promise<PortfolioContent> {
   const siteConfig = siteRows.find((row) => row.key === "site_config")
     ?.value as PortfolioContent["siteConfig"] | undefined;
 
-  const aboutContent = siteRows.find((row) => row.key === "about_content")
-    ?.value as PortfolioContent["aboutContent"] | undefined;
-
-  if (!siteConfig || !aboutContent) {
-    throw new Error("Required site content keys are missing from Supabase.");
+  if (!siteConfig) {
+    throw new Error("Required site_config content is missing from Supabase.");
   }
 
   const projects = uniqueBy(
@@ -183,7 +180,6 @@ async function fetchPortfolioContent(): Promise<PortfolioContent> {
 
   return {
     siteConfig,
-    aboutContent,
     projects,
     experience,
     certifications,

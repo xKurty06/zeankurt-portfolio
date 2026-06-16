@@ -397,7 +397,7 @@ export function ExperienceSection({
                 <div className="events-scroll mt-5 max-h-[60dvh] space-y-5 overflow-y-auto pr-2 md:max-h-[28rem]">
                   {certificationGroups.map(([issuer, items]) => (
                     <section key={issuer}>
-                      <div className="sticky top-0 z-10 mb-3 flex items-center justify-center gap-3 py-2">
+                      <div className="relative z-10 mb-3 flex items-center justify-center gap-3 py-2">
                         <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[rgba(72,202,228,0.22)] to-[rgba(72,202,228,0.08)]" />
 
                         <div className="flex shrink-0 items-center gap-2 rounded-full border border-[rgba(72,202,228,0.16)] bg-[rgba(72,202,228,0.06)] px-3 py-1 shadow-[0_0_20px_rgba(0,180,216,0.06)]">
@@ -478,7 +478,7 @@ export function ExperienceSection({
                 <div className="events-scroll mt-5 max-h-[60dvh] min-w-0 space-y-5 overflow-y-auto overflow-x-hidden pr-2 lg:max-h-[42rem]">
                   {eventsByYear.map(([year, events]) => (
                     <section key={year}>
-                      <div className="sticky top-0 z-10 mb-3 flex items-center gap-3 py-2">
+                      <div className="relative z-10 mb-3 flex items-center gap-3 py-2">
                         <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[rgba(72,202,228,0.22)] to-[rgba(72,202,228,0.08)]" />
 
                         <div className="flex items-center gap-2 rounded-full border border-[rgba(72,202,228,0.16)] bg-[rgba(72,202,228,0.06)] px-3 py-1 shadow-[0_0_20px_rgba(0,180,216,0.06)]">

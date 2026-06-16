@@ -110,7 +110,7 @@ const {
   eventHighlights,
   skillCategories,
 } = loadTsModule("src/data/skills.ts");
-const { siteConfig, aboutContent } = loadTsModule("src/data/site.ts");
+const { siteConfig } = loadTsModule("src/data/site.ts");
 
 const defaultCreativeCategories = [
   {
@@ -278,7 +278,6 @@ await upsert(
   "site_content",
   [
     { key: "site_config", value: siteConfig },
-    { key: "about_content", value: aboutContent },
   ],
   "key",
 );

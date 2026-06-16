@@ -78,7 +78,7 @@ function ShatterName({ name }: { name: string }) {
       onClick={handleClick}
       data-interactive
       title="Click me"
-      className="text-gradient block max-w-full cursor-pointer select-none break-words [overflow-wrap:anywhere]"
+      className="hero-name-glow text-gradient block max-w-full cursor-pointer select-none break-words [overflow-wrap:anywhere]"
       style={{ perspective: 600 }}
     >
       {name}
@@ -166,7 +166,6 @@ export function HeroSection({ siteConfig }: HeroSectionProps) {
       tl.from("[data-hero='role']", { autoAlpha: 0, y: 12, duration: 0.45 }, "-=0.25");
       tl.from("[data-hero='tagline']", { autoAlpha: 0, y: 8, duration: 0.3 }, "-=0.2");
       tl.from("[data-hero='copy']", { autoAlpha: 0, y: 12, duration: 0.45 }, "-=0.25");
-
       tl.from(
         "[data-hero='actions'] > *",
         {
@@ -216,82 +215,94 @@ export function HeroSection({ siteConfig }: HeroSectionProps) {
         <AnimatedBackground />
       </div>
 
+      <div aria-hidden className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(3,7,18,0.82)_0%,rgba(3,7,18,0.38)_45%,rgba(3,7,18,0.74)_100%)]" />
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-[linear-gradient(180deg,rgba(3,7,18,0.92),transparent)]" />
+
       <Container
         className="relative z-10 py-10 text-center sm:py-14 md:py-20 lg:text-left"
         data-hero-content=""
       >
-        <div className="mx-auto max-w-3xl lg:mx-0">
-          <h1 className="max-w-full font-[family-name:var(--font-syne)] text-[clamp(1.875rem,9vw,3rem)] font-semibold leading-[1.05] tracking-tight text-white sm:text-6xl md:text-7xl">
-            <span data-hero="name">
-              <ShatterName name={siteConfig.name} />
-            </span>
+        <div className="relative mx-auto grid max-w-6xl items-center gap-10 lg:mx-0 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.64fr)] lg:gap-14">
+          <div className="relative min-w-0">
 
-            <span
-              data-hero="role"
-              className="mt-1 block max-w-full text-[clamp(1.25rem,6vw,1.75rem)] font-normal text-[var(--blue-300)] sm:text-3xl md:text-4xl"
-            >
-              <TypewriterCycle
-                phrases={ROLES}
-                className="inline-block max-w-full overflow-hidden text-ellipsis whitespace-nowrap font-[family-name:var(--font-syne)] align-bottom"
-              />
-            </span>
+            <div className="mx-auto max-w-3xl lg:mx-0">
+              <div
+                data-hero="tagline"
+                className="mx-auto mb-4 inline-flex max-w-full items-center py-1.5 text-[0.7rem] font-medium uppercase tracking-[0.16em] text-[var(--blue-100)] backdrop-blur-sm sm:text-xs lg:mx-0"
+              >
+                <span className="truncate">{siteConfig.headline}</span>
+              </div>
 
-            <span
-              data-hero="tagline"
-              className="mt-2 block text-sm font-light tracking-wide text-white/50"
-            >
-              {siteConfig.headline}
-            </span>
-          </h1>
+              <h1 className="max-w-full font-[family-name:var(--font-syne)] text-[clamp(2.3rem,8vw,4.15rem)] font-semibold leading-[0.98] tracking-[-0.045em] text-white sm:text-6xl md:text-7xl lg:max-w-[13ch]">
+                <span data-hero="name">
+                  <ShatterName name={siteConfig.name} />
+                </span>
 
-          <p
-            data-hero="copy"
-            className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-[var(--foreground-muted)] sm:text-base lg:mx-0"
-          >
-            {siteConfig.description}
-          </p>
+                <span
+                  data-hero="role"
+                  className="mt-3 block max-w-full text-[clamp(1.25rem,5vw,2rem)] font-medium leading-tight tracking-[-0.035em] text-[var(--blue-200)] sm:text-3xl md:text-4xl"
+                >
+                  <TypewriterCycle
+                    phrases={ROLES}
+                    className="inline-block max-w-full overflow-hidden text-ellipsis whitespace-nowrap font-[family-name:var(--font-syne)] align-bottom"
+                  />
+                </span>
+              </h1>
+
+              <p
+                data-hero="copy"
+                className="mx-auto mt-5 max-w-2xl text-base leading-8 text-[var(--foreground-muted)] sm:text-[1.05rem] sm:leading-8 lg:mx-0"
+              >
+                <span className="font-medium text-[var(--gold-300)]">Co-Founder at Studio Nomads</span>,{" "}
+                <span className="font-medium text-[var(--blue-100)]">Co-Founder at WebX</span>, aspiring
+                full-stack developer, Web3 community contributor, {" "}
+                <span className="font-medium text-[var(--rose-300)]">photographer, videographer</span> and <span className="font-medium text-[var(--rose-300)]">editor</span>{" "}
+                based in Cavite, Philippines.
+              </p>
+
+              <div
+                data-hero="actions"
+                className="mt-5 flex flex-wrap items-center justify-center gap-3 lg:justify-start"
+              >
+                <MagneticButton>
+                  <RippleButton>
+                    <Button href="/#projects" className="min-h-12 px-5">
+                      View projects <ArrowUpRight className="h-4 w-4" />
+                    </Button>
+                  </RippleButton>
+                </MagneticButton>
+
+                <MagneticButton>
+                  <RippleButton>
+                    <Button href="/photography" variant="secondary" className="min-h-12 px-5">
+                      Creatives
+                    </Button>
+                  </RippleButton>
+                </MagneticButton>
+              </div>
+
+              <div data-hero="meta" className="mt-7">
+                <SocialLinks
+                  links={socialGroups.personal}
+                  size="sm"
+                  className="justify-center lg:justify-start"
+                />
+              </div>
+            </div>
+          </div>
 
           <div
-            data-hero="actions"
-            className="mt-4 flex flex-wrap items-center justify-center gap-3 lg:justify-start"
+            data-hero="network"
+            aria-hidden
+            className="hero-network-panel pointer-events-none relative hidden min-h-[20rem] lg:block"
           >
-            <MagneticButton>
-              <RippleButton>
-                <Button href="/#projects">
-                  View projects <ArrowUpRight className="h-4 w-4" />
-                </Button>
-              </RippleButton>
-            </MagneticButton>
-
-            <MagneticButton>
-              <RippleButton>
-                <Button href="/photography" variant="secondary">
-                  Creatives
-                </Button>
-              </RippleButton>
-            </MagneticButton>
-          </div>
-
-          <div data-hero="meta" className="mt-6">
-            <SocialLinks
-              links={socialGroups.personal}
-              size="sm"
-              className="justify-center lg:justify-start"
-            />
-          </div>
-        </div>
-
-        <div
-          data-hero="network"
-          aria-hidden
-          className="hero-network-panel pointer-events-none absolute right-0 top-1/2 hidden w-[18rem] -translate-y-1/2 lg:block"
-        >
-          <div className="hero-network-orbit">
-            {HERO_STACK.map((item, index) => (
-              <span key={item} className={`hero-network-node hero-network-node-${index}`}>
-                {item}
-              </span>
-            ))}
+            <div className="hero-network-orbit">
+              {HERO_STACK.map((item, index) => (
+                <span key={item} className={`hero-network-node hero-network-node-${index}`}>
+                  {item}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
       </Container>

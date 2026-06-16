@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, type ReactNode } from "react";
 import { useGSAP } from "@gsap/react";
 import { RevealOnScroll } from "@/components/animation/RevealOnScroll";
 import { AnimatedCounter } from "@/components/animation/AnimatedCounter";
@@ -19,11 +19,38 @@ type CounterData = {
 
 type CounterLabel = "Focus" | "Events" | "Education" | "Creative";
 
+const ABOUT_HIGHLIGHTS: Array<{ label: CounterLabel; value: string }> = [
+  { label: "Focus", value: "Full-stack systems" },
+  { label: "Events", value: "Community work" },
+  { label: "Education", value: "Verified learning" },
+  { label: "Creative", value: "Photo/video sets" },
+];
+
+function AboutAccent({ children }: { children: ReactNode }) {
+  return (
+    <strong className="font-semibold text-[var(--blue-100)]">
+      {children}
+    </strong>
+  );
+}
+
+function WarmAccent({ children }: { children: ReactNode }) {
+  return (
+    <strong className="font-semibold text-[var(--gold-300)]">
+      {children}
+    </strong>
+  );
+}
+
+function RoseAccent({ children }: { children: ReactNode }) {
+  return (
+    <strong className="font-semibold text-[var(--rose-300)]">
+      {children}
+    </strong>
+  );
+}
+
 interface AboutSectionProps {
-  aboutContent: {
-    paragraphs: string[];
-    highlights: Array<{ label: string; value: string }>;
-  };
   skillCategories: SkillCategory[];
   certifications: Certification[];
   eventHighlights: EventHighlight[];
@@ -31,7 +58,6 @@ interface AboutSectionProps {
 }
 
 export function AboutSection({
-  aboutContent,
   skillCategories,
   certifications,
   eventHighlights,
@@ -51,14 +77,9 @@ export function AboutSection({
     () => {
       registerGsapPlugins();
 
-      const sweep = sectionRef.current?.querySelector<HTMLElement>("[data-about-sweep]");
       const paras = sectionRef.current?.querySelectorAll<HTMLElement>("[data-about-para]");
 
       if (lowMotion) {
-        if (sweep) {
-          gsap.set(sweep, { autoAlpha: 0 });
-        }
-
         if (paras?.length) {
           gsap.set(paras, {
             autoAlpha: 1,
@@ -69,23 +90,6 @@ export function AboutSection({
         }
 
         return;
-      }
-
-      if (sweep) {
-        gsap.fromTo(
-          sweep,
-          { x: "-110%" },
-          {
-            x: "110%",
-            duration: 1.2,
-            ease: "power2.inOut",
-            scrollTrigger: {
-              trigger: sweep,
-              start: "top 88%",
-              toggleActions: "play none none reset",
-            },
-          },
-        );
       }
 
       if (paras?.length) {
@@ -141,12 +145,6 @@ export function AboutSection({
         <div className="relative z-10 grid min-w-0 gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-start lg:gap-12">
           <RevealOnScroll>
             <div className="relative mx-auto max-w-3xl text-center lg:mx-0 lg:text-left">
-              <div
-                aria-hidden
-                data-about-sweep
-                className="pointer-events-none absolute inset-y-0 w-14 bg-gradient-to-r from-transparent via-[rgba(0,180,216,0.1)] to-transparent blur-sm sm:w-20"
-              />
-
               <div className="inline-flex items-center gap-3 text-[var(--blue-200)]">
                 <span className="h-px w-10 bg-gradient-to-r from-[rgba(72,202,228,0.8)] to-transparent" />
                 <p className="font-[family-name:var(--font-syne)] text-[0.78rem] font-medium tracking-[0.18em] sm:text-[0.82rem]">
@@ -159,29 +157,51 @@ export function AboutSection({
               </h2>
 
               <p className="mx-auto mt-5 max-w-2xl text-base leading-8 text-[var(--foreground-muted)] sm:text-lg sm:leading-8 lg:mx-0">
-                I build modern web systems, blockchain-driven products, and visual stories that connect technology, creativity, and real communities.
-
+                I turn ideas into <span className="font-medium text-[var(--blue-100)]">usable web products</span>,
+                <span className="font-medium text-[var(--gold-300)]"> creative systems</span>, and visual
+                stories that connect technology with real communities.
               </p>
             </div>
           </RevealOnScroll>
 
           <div className="min-w-0">
             <div className="mx-auto max-w-3xl space-y-5 text-left sm:space-y-6 lg:mx-0 lg:max-w-none">
-              {aboutContent.paragraphs.map((paragraph) => (
-                <p
-                  key={paragraph.slice(0, 24)}
-                  data-about-para
-                  className="text-base leading-8 text-[var(--foreground-muted)] sm:text-[1.05rem] sm:leading-8"
-                  style={{ perspective: 600 }}
-                >
-                  {paragraph}
-                </p>
-              ))}
+              <p
+                data-about-para
+                className="text-base leading-8 text-[var(--foreground-muted)] sm:text-[1.05rem] sm:leading-8"
+                style={{ perspective: 600 }}
+              >
+                I work across <AboutAccent>full-stack development</AboutAccent>, Web3 experiments,
+                and creative production, building interfaces that feel fast, clear, and useful instead
+                of just decorative. My work usually sits where product thinking, engineering, and
+                visual storytelling need to meet.
+              </p>
+
+              <p
+                data-about-para
+                className="border-l border-[rgba(72,202,228,0.32)] pl-4 text-base leading-8 text-[var(--foreground-muted)] sm:pl-5 sm:text-[1.05rem] sm:leading-8"
+                style={{ perspective: 600 }}
+              >
+                Recent work includes <AboutAccent>portfolio systems</AboutAccent>, <WarmAccent>hackathon builds</WarmAccent>,
+                blockchain community projects, <RoseAccent>event coverage</RoseAccent>, and branded visual assets
+                for teams that need both technical execution and a sharper public presence.
+              </p>
+
+              <p
+                data-about-para
+                className="text-base leading-8 text-[var(--foreground-muted)] sm:text-[1.05rem] sm:leading-8"
+                style={{ perspective: 600 }}
+              >
+                Outside the code editor, I shoot and edit photos and videos through{" "}
+                <span className="font-semibold text-[var(--rose-300)]">Studio Nomads</span>, which keeps my
+                frontend work grounded in composition, pacing, contrast, and how people actually
+                scan a story on screen.
+              </p>
             </div>
 
             <RevealOnScroll delay={0.16}>
               <dl className="mx-auto mt-7 grid max-w-3xl grid-cols-2 gap-3 sm:mt-9 sm:gap-4 lg:mx-0 lg:max-w-none">
-                {aboutContent.highlights.map((item) => {
+                {ABOUT_HIGHLIGHTS.map((item) => {
                   const counter = counterMap[item.label as CounterLabel];
 
                   return (

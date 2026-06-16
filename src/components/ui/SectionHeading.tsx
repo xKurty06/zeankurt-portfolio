@@ -32,12 +32,12 @@ export function SectionHeading({
         </div>
       ) : null}
 
-      <h2 className="mt-4 font-[family-name:var(--font-syne)] text-[clamp(2rem,8vw,3.1rem)] font-semibold leading-[1.08] tracking-[-0.03em] text-white sm:mt-5 sm:text-5xl lg:text-6xl">
+      <h2 className="mt-4 text-balance font-[family-name:var(--font-syne)] text-[clamp(2rem,8vw,3.1rem)] font-semibold leading-[1.08] tracking-[-0.03em] text-white sm:mt-5 sm:text-5xl lg:text-6xl">
         {title}
       </h2>
 
       {description ? (
-        <p className="mt-4 text-base leading-8 text-[var(--foreground-muted)] sm:mt-5 sm:text-lg sm:leading-8">
+        <p className="mt-4 max-w-[68ch] text-base leading-8 text-[var(--foreground-muted)] sm:mt-5 sm:text-lg sm:leading-8">
           {description}
         </p>
       ) : null}

@@ -1386,6 +1386,10 @@ export async function saveSiteContent(formData: FormData) {
   const key = requiredText(formData, "key", "Key");
   const rawValue = requiredText(formData, "value", "Value");
 
+  if (key === "about_content") {
+    throw new Error("About content is static in the frontend and is no longer editable from Site Copy.");
+  }
+
   let value: unknown;
 
   try {
