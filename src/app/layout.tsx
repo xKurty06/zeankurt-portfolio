@@ -9,6 +9,7 @@ import { SavingIndicator } from "@/components/ui/SavingIndicator";
 import { SavingProvider } from "@/lib/saving";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { ScrollToTopButton } from "@/components/ui/ScrollToTopButton";
+import { MobileViewingTip } from "@/components/ui/MobileViewingTip";
 import { Analytics } from "@vercel/analytics/next";
 import { getPortfolioContent } from "@/lib/cms/queries";
 import { SpeedInsights } from "@vercel/speed-insights/next"
@@ -69,6 +70,7 @@ export default async function RootLayout({
 
             <Footer siteConfig={siteConfig} />
             <ScrollToTopButton />
+            <MobileViewingTip />
             <SavingIndicator />
           </SavingProvider>
         </ThemeProvider>
