@@ -40,22 +40,84 @@ function isMissingTableError(error: { code?: string; message?: string } | null) 
   return error?.code === "PGRST205" || /Could not find the table/i.test(error?.message ?? "");
 }
 
+const EXPERIENCE_MONTH_INDEX: Record<string, number> = {
+  jan: 0,
+  january: 0,
+  feb: 1,
+  february: 1,
+  mar: 2,
+  march: 2,
+  apr: 3,
+  april: 3,
+  may: 4,
+  jun: 5,
+  june: 5,
+  jul: 6,
+  july: 6,
+  aug: 7,
+  august: 7,
+  sep: 8,
+  sept: 8,
+  september: 8,
+  oct: 9,
+  october: 9,
+  nov: 10,
+  november: 10,
+  dec: 11,
+  december: 11,
+};
+
+function normalizeExperiencePeriodPart(value: string) {
+  return value.replace(/,/g, "").replace(/\s+/g, " ").trim();
+}
+
+function parseExperiencePeriodPart(value: string) {
+  const normalized = normalizeExperiencePeriodPart(value);
+  if (!normalized) return null;
+
+  if (/^present$/i.test(normalized)) {
+    return Number.MAX_SAFE_INTEGER;
+  }
+
+  const yearOnlyMatch = /^(\d{4})$/.exec(normalized);
+  if (yearOnlyMatch) {
+    const year = Number(yearOnlyMatch[1]);
+    return Date.UTC(year, 11, 31);
+  }
+
+  const monthYearMatch = /^([A-Za-z]+)\s+(\d{4})$/.exec(normalized);
+  if (monthYearMatch) {
+    const month = EXPERIENCE_MONTH_INDEX[monthYearMatch[1].toLowerCase()];
+    const year = Number(monthYearMatch[2]);
+
+    if (month == null || !Number.isFinite(year)) return null;
+
+    return Date.UTC(year, month, 1);
+  }
+
+  return null;
+}
+
 function parseExperiencePeriodSortValue(period: string) {
-  const raw = period.trim();
+  const raw = normalizeExperiencePeriodPart(period);
   if (!raw) return 0;
-  if (/present/i.test(raw)) return Number.MAX_SAFE_INTEGER;
 
   const segments = raw
-    .split(/\s*[-–]\s*/)
-    .map((segment) => segment.trim())
+    .split(/\s*[-–—]\s*/)
+    .map(normalizeExperiencePeriodPart)
     .filter(Boolean);
 
-  const candidate = segments.at(-1) ?? raw;
-  const timestamp = Date.parse(`1 ${candidate}`);
-  if (Number.isFinite(timestamp)) return timestamp;
+  const candidates = segments.length > 0 ? [...segments].reverse() : [raw];
 
-  const fallback = Date.parse(candidate);
-  return Number.isFinite(fallback) ? fallback : 0;
+  for (const candidate of candidates) {
+    const parsed = parseExperiencePeriodPart(candidate);
+
+    if (parsed !== null) {
+      return parsed;
+    }
+  }
+
+  return 0;
 }
 
 function value(row: Row | undefined, key: string) {

@@ -111,6 +111,14 @@ function compareValues(
   return String(aValue ?? "").localeCompare(String(bValue ?? "")) * modifier;
 }
 
+function getSortedItems(
+  sourceItems: SortableItem[],
+  field: SortField,
+  direction: SortDirection,
+) {
+  return [...sourceItems].sort((a, b) => compareValues(a, b, field, direction));
+}
+
 function getProjectStatusMeta(status?: string) {
   const normalized = status?.trim().toLowerCase();
 
@@ -164,6 +172,7 @@ export function AdminSortableList({
   } | null>(null);
   const [dirty, setDirty] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -171,17 +180,15 @@ export function AdminSortableList({
     sortOptions.find((option) => option.value === sortField)?.label ?? "Custom";
 
   useEffect(() => {
-    const nextItems =
-      sortField === "custom"
-        ? items
-        : [...items].sort((a, b) => compareValues(a, b, sortField, direction));
-
-    setOrderedItems(nextItems);
+    setOrderedItems(items);
     setDraggedId(null);
     setDropTarget(null);
     setDirty(false);
     setMenuOpen(false);
-  }, [items, sortField, direction]);
+    setSaveError(null);
+    setSortField("custom");
+    setDirection("asc");
+  }, [items]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -208,14 +215,13 @@ export function AdminSortableList({
   }, [menuOpen]);
 
   const applySort = (field: SortField, nextDirection = direction) => {
+    const nextItems = getSortedItems(items, field, nextDirection);
+
     setSortField(field);
-    setOrderedItems((current) => {
-      const nextItems = [...current].sort((a, b) =>
-        compareValues(a, b, field, nextDirection),
-      );
-      setDirty(!hasSameOrder(nextItems, items));
-      return nextItems;
-    });
+    setDirection(nextDirection);
+    setOrderedItems(nextItems);
+    setDirty(!hasSameOrder(nextItems, items));
+    setSaveError(null);
   };
 
   const updateDropTarget = (
@@ -265,24 +271,39 @@ export function AdminSortableList({
 
     setDropTarget(null);
     setSortField("custom");
+    setSaveError(null);
   };
 
   const saveOrder = () => {
+    const ids = orderedItems.map((item) => item.id);
+
+    setSaveError(null);
+
     startTransition(async () => {
-      await updateSortOrder({
-        table,
-        ids: orderedItems.map((item) => item.id),
-      });
+      try {
+        await updateSortOrder({
+          table,
+          ids,
+        });
 
-      setOrderedItems((current) =>
-        current.map((item, index) => ({
-          ...item,
-          sortOrder: index,
-        })),
-      );
+        setOrderedItems((current) =>
+          current.map((item, index) => ({
+            ...item,
+            sortOrder: index,
+          })),
+        );
 
-      setDirty(false);
-      router.refresh();
+        setSortField("custom");
+        setDirection("asc");
+        setDirty(false);
+        router.refresh();
+      } catch (error) {
+        setSaveError(
+          error instanceof Error
+            ? error.message
+            : "Failed to save the custom order. Please try again.",
+        );
+      }
     });
   };
 
@@ -348,7 +369,6 @@ export function AdminSortableList({
             type="button"
             onClick={() => {
               const nextDirection = direction === "asc" ? "desc" : "asc";
-              setDirection(nextDirection);
               applySort(sortField, nextDirection);
             }}
             className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[var(--border)] text-[var(--foreground-muted)] transition hover:border-[var(--border-strong)] hover:text-white sm:h-9 sm:w-9"
@@ -373,6 +393,12 @@ export function AdminSortableList({
           {isPending ? "Saving" : dirty ? "Save custom order" : "Order saved"}
         </button>
       </div>
+
+      {saveError ? (
+        <p className="rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-xs text-red-100">
+          {saveError}
+        </p>
+      ) : null}
 
       <div className="flex flex-col gap-3">
         {orderedItems.map((item) => {
