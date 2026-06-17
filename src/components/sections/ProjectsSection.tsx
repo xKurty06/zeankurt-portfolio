@@ -1003,7 +1003,7 @@ export function ProjectsSection({ projects }: ProjectsSectionProps) {
   );
 
   return (
-    <Section id="projects" ref={sectionRef}>
+    <Section id="projects" ref={sectionRef} className="relative z-20">
       {!lowMotion ? (
         <div aria-hidden className="projects-interactive-bg hidden sm:block">
           <span className="projects-bg-band projects-bg-band-a" />
