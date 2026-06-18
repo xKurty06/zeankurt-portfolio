@@ -10,7 +10,7 @@ import { FlickeringGrid } from "@/components/ui/FlickeringGridHero";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { gsap, registerGsapPlugins } from "@/lib/gsap";
 import { useLowMotionDevice } from "@/hooks/useLowMotionDevice";
-import type { Certification, EventHighlight, SkillCategory } from "@/types";
+import type { Certification, EventHighlight, Project, SkillCategory } from "@/types";
 
 type CounterData = {
   to: number;
@@ -18,10 +18,10 @@ type CounterData = {
   prefix?: string;
 };
 
-type CounterLabel = "Focus" | "Events" | "Education" | "Creative";
+type CounterLabel = "Projects" | "Events" | "Education" | "Creative";
 
 const ABOUT_HIGHLIGHTS: Array<{ label: CounterLabel; value: string }> = [
-  { label: "Focus", value: "Full-stack systems" },
+  { label: "Projects", value: "Featured builds" },
   { label: "Events", value: "Community work" },
   { label: "Education", value: "Verified learning" },
   { label: "Creative", value: "Photo/video sets" },
@@ -40,6 +40,7 @@ function RoseAccent({ children }: { children: ReactNode }) {
 }
 
 interface AboutSectionProps {
+  projects: Project[];
   skillCategories: SkillCategory[];
   certifications: Certification[];
   eventHighlights: EventHighlight[];
@@ -47,6 +48,7 @@ interface AboutSectionProps {
 }
 
 export function AboutSection({
+  projects,
   skillCategories,
   certifications,
   eventHighlights,
@@ -56,7 +58,7 @@ export function AboutSection({
   const lowMotion = useLowMotionDevice();
 
   const counterMap: Record<CounterLabel, CounterData> = {
-    Focus: { to: skillCategories.length, suffix: "+ stacks" },
+    Projects: { to: projects.length, suffix: "+ builds" },
     Events: { to: eventHighlights.length, suffix: "+ events" },
     Education: { to: certifications.length, suffix: "+ certs" },
     Creative: { to: creativePhotoCount, suffix: "+ shoots" },
