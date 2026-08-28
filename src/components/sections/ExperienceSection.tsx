@@ -25,7 +25,6 @@ import {
 import { RevealOnScroll } from "@/components/animation/RevealOnScroll";
 import { GlowCard } from "@/components/animation/GlowCard";
 import { Badge } from "@/components/ui/Badge";
-import BackgroundScene from "@/components/ui/AuroraSectionHero";
 import { Container, Section } from "@/components/ui/Container";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { gsap, registerGsapPlugins, ScrollTrigger } from "@/lib/gsap";
@@ -925,19 +924,10 @@ export function ExperienceSection({
       ref={sectionRef}
       className="relative z-0 !overflow-visible"
     >
-      {!lowMotion ? (
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 z-[1] hidden md:block"
-        >
-          <BackgroundScene beamCount={16} />
-        </div>
-      ) : (
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 z-[1] bg-[radial-gradient(circle_at_50%_0%,rgba(72,202,228,0.08),transparent_42%)]"
-        />
-      )}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 z-[1] bg-[radial-gradient(circle_at_50%_0%,rgba(72,202,228,0.08),transparent_42%)]"
+      />
 
       <Container className="relative z-10">
         <RevealOnScroll>
@@ -968,7 +958,7 @@ export function ExperienceSection({
           />
         </RevealOnScroll>
 
-        <div className="mt-8 grid min-w-0 items-start gap-7 sm:mt-10 sm:gap-8 lg:grid-cols-[minmax(0,1.1fr)_3rem_minmax(0,0.9fr)] lg:gap-7">
+        <div className="mt-8 grid min-w-0 items-start gap-7 sm:mt-10 sm:gap-8 lg:grid-cols-[minmax(0,1fr)_3rem_minmax(0,1fr)] lg:gap-7">
           <div className="relative min-w-0 lg:h-[80rem]">
             <div className="flex min-w-0 flex-col lg:h-full">
               <div className="mb-5 sm:mb-6">
