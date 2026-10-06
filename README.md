@@ -8,7 +8,7 @@
 
 Welcome to my personal portfolio website. This is a showcase of my projects, professional experience, skills, and photography work. Built with modern web technologies and optimized for performance, accessibility, and user experience.
 
-**Live:** [zeankurtbalboa.vercel.app](https://zeankurtbalboa.vercel.app)
+**Live:** [zeankurt.vercel.app](https://zeankurt.vercel.app)
 
 ---
 
@@ -170,6 +170,17 @@ npm run lint      # Run ESLint
 npm i -g vercel
 vercel
 ```
+
+Set these Vercel environment variables for **Production**, **Preview**, and **Development** as appropriate:
+
+- `NEXT_PUBLIC_SITE_URL=https://zeankurt.vercel.app`
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` (or `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`)
+- `SUPABASE_SERVICE_ROLE_KEY` (server-only; never expose it as `NEXT_PUBLIC_*`)
+- `ADMIN_EMAILS` (comma-separated allowlisted admin emails)
+- `PHOTOGRAPHY_BUCKET` (optional; defaults to `photography`)
+
+In Supabase Auth URL Configuration, add `https://zeankurt.vercel.app/auth/callback` to the allowed redirect URLs. Keep the service-role key and admin email list in Vercel Environment Variables only.
 
 ### Docker
 

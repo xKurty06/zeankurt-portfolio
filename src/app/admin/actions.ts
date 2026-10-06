@@ -1,6 +1,5 @@
 "use server";
 
-import { headers } from "next/headers";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import sharp from "sharp";
@@ -9,7 +8,7 @@ import {
   createSupabaseAdminClient,
   createSupabaseServerClient,
 } from "@/lib/supabase/server";
-import { isAllowedAdminEmail, PHOTOGRAPHY_BUCKET, SUPABASE_BUCKET } from "@/lib/supabase/config";
+import { isAllowedAdminEmail, PHOTOGRAPHY_BUCKET, SITE_URL, SUPABASE_BUCKET } from "@/lib/supabase/config";
 import { PORTFOLIO_CACHE_TAG } from "@/lib/cache";
 
 type CmsTable =
@@ -559,11 +558,10 @@ export async function signInWithMagicLink(formData: FormData) {
   if (!supabase) redirect("/admin/login?error=env");
   if (!isAllowedAdminEmail(email)) redirect("/admin/login?error=forbidden");
 
-  const origin = (await headers()).get("origin") ?? "";
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: `${origin}/auth/callback?next=/admin`,
+      emailRedirectTo: `${SITE_URL}/auth/callback?next=/admin`,
     },
   });
 

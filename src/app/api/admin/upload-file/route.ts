@@ -3,6 +3,8 @@ import { createSupabaseAdminClient, createSupabaseServerClient } from "@/lib/sup
 import { optimizePhotographyImage } from "@/lib/photography-image";
 import { isAllowedAdminEmail, PHOTOGRAPHY_BUCKET } from "@/lib/supabase/config";
 
+const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
+
 function extensionFromFilename(value: string) {
   const match = /\.[a-z0-9]+$/i.exec(value);
   return match ? match[0].toLowerCase() : "";
@@ -81,15 +83,6 @@ async function randomizeInsertedCreativePhotoOrder(
 }
 
 export async function POST(req: Request) {
-  const formData = await req.formData();
-  const file = formData.get("file");
-  const categoryId = formData.get("category_id");
-  const categorySlug = formData.get("category_slug");
-
-  if (!(file instanceof File)) {
-    return NextResponse.json({ error: "file is required" }, { status: 400 });
-  }
-
   // Basic auth: ensure request comes from an authenticated admin user
   const server = await createSupabaseServerClient();
   const { data: { user } } = server ? await server.auth.getUser() : { data: { user: null } };
@@ -100,11 +93,32 @@ export async function POST(req: Request) {
   const admin = createSupabaseAdminClient();
   if (!admin) return NextResponse.json({ error: "server not configured" }, { status: 500 });
 
-  const arrayBuffer = await file.arrayBuffer();
-  const input = Buffer.from(arrayBuffer);
-  const processed = file.type.startsWith("image/")
-    ? await optimizePhotographyImage(input, file.type)
-    : { aspectRatio: "landscape" as const, bytes: input, contentType: file.type || "application/octet-stream" };
+  const formData = await req.formData();
+  const file = formData.get("file");
+  const categoryId = formData.get("category_id");
+  const categorySlug = formData.get("category_slug");
+
+  if (!(file instanceof File)) {
+    return NextResponse.json({ error: "file is required" }, { status: 400 });
+  }
+
+  if (file.size === 0 || file.size > MAX_UPLOAD_BYTES) {
+    return NextResponse.json({ error: "file must be between 1 byte and 8MB" }, { status: 413 });
+  }
+  if (!file.type.startsWith("image/")) {
+    return NextResponse.json({ error: "only image uploads are supported" }, { status: 415 });
+  }
+
+  let processed;
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    processed = await optimizePhotographyImage(Buffer.from(arrayBuffer), file.type);
+  } catch {
+    return NextResponse.json({ error: "unable to process image" }, { status: 400 });
+  }
+  if (processed.bytes.byteLength > MAX_UPLOAD_BYTES) {
+    return NextResponse.json({ error: "image is too large after optimization" }, { status: 413 });
+  }
 
   // determine global sort_order
   const { data: sortData, error: sortError } = await admin
@@ -113,13 +127,13 @@ export async function POST(req: Request) {
     .order("sort_order", { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (sortError) return NextResponse.json({ error: sortError.message || sortError }, { status: 500 });
+  if (sortError) return NextResponse.json({ error: "upload unavailable" }, { status: 500 });
   const baseSortOrder = typeof sortData?.sort_order === "number" ? sortData.sort_order + 1 : 0;
   const { count: categoryCount, error: categoryCountError } = await admin
     .from("creative_photos")
     .select("*", { count: "exact", head: true })
     .eq("category_id", String(categoryId));
-  if (categoryCountError) return NextResponse.json({ error: categoryCountError.message || categoryCountError }, { status: 500 });
+  if (categoryCountError) return NextResponse.json({ error: "upload unavailable" }, { status: 500 });
   const safeCategorySlug = safeFilename(String(categorySlug || "creative"));
   const extension = extensionFromFilename(file.name) || "";
 
@@ -140,7 +154,7 @@ export async function POST(req: Request) {
         continue;
       }
 
-      return NextResponse.json({ error: uploadError.message || uploadError }, { status: 500 });
+      return NextResponse.json({ error: "upload failed" }, { status: 500 });
     }
 
     const { data: publicData } = admin.storage.from(PHOTOGRAPHY_BUCKET).getPublicUrl(path);
@@ -170,7 +184,7 @@ export async function POST(req: Request) {
       continue;
     }
 
-    return NextResponse.json({ error: insertError.message || insertError }, { status: 500 });
+    return NextResponse.json({ error: "upload failed" }, { status: 500 });
   }
 
   return NextResponse.json(
