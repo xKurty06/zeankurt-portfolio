@@ -180,7 +180,7 @@ Set these Vercel environment variables for **Production**, **Preview**, and **De
 - `ADMIN_EMAILS` (comma-separated allowlisted admin emails)
 - `PHOTOGRAPHY_BUCKET` (optional; defaults to `photography`)
 
-In Supabase Auth URL Configuration, add `https://zeankurt.vercel.app/auth/callback` to the allowed redirect URLs. Keep the service-role key and admin email list in Vercel Environment Variables only.
+In Supabase Auth URL Configuration, set the **Site URL** to `https://zeankurt.vercel.app` and add `https://zeankurt.vercel.app/auth/callback` to the allowed redirect URLs. Remove any `http://localhost:3000` value from the production Vercel environment. Keep the service-role key and admin email list in Vercel Environment Variables only.
 
 ### Docker
 

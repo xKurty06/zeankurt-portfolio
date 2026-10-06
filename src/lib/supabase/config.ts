@@ -1,6 +1,22 @@
 export const SUPABASE_BUCKET = "portfolio-assets";
 export const PHOTOGRAPHY_BUCKET = process.env.PHOTOGRAPHY_BUCKET || "photography";
-export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://zeankurt.vercel.app").replace(/\/$/, "");
+
+const CANONICAL_SITE_URL = "https://zeankurt.vercel.app";
+const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, "");
+
+function isSafeSiteUrl(value?: string) {
+  if (!value) return false;
+
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && !["localhost", "127.0.0.1", "0.0.0.0"].includes(url.hostname);
+  } catch {
+    return false;
+  }
+}
+
+// Never allow a local development URL to leak into production magic links.
+export const SITE_URL = isSafeSiteUrl(configuredSiteUrl) ? configuredSiteUrl! : CANONICAL_SITE_URL;
 
 export function getSupabaseUrl() {
   return process.env.NEXT_PUBLIC_SUPABASE_URL;
