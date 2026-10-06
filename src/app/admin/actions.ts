@@ -565,7 +565,22 @@ export async function signInWithMagicLink(formData: FormData) {
     },
   });
 
-  if (error) redirect("/admin/login?error=signin");
+  if (error) {
+    console.error("Admin magic-link request failed", {
+      code: error.code,
+      status: error.status,
+      message: error.message,
+    });
+
+    const message = error.message.toLowerCase();
+    const reason = message.includes("redirect")
+      ? "redirect"
+      : message.includes("email") || message.includes("smtp") || message.includes("mail")
+        ? "email"
+        : "provider";
+
+    redirect(`/admin/login?error=signin&reason=${reason}`);
+  }
   redirect("/admin/login?sent=1");
 }
 

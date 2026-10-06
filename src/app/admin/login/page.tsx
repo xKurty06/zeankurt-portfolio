@@ -56,6 +56,10 @@ export default async function AdminLoginPage({ searchParams }: AdminLoginPagePro
                 Unable to complete sign-in.
                 {params.reason ? ` ${params.reason}` : " Please open the magic link in the same browser where you requested it."}
               </>
+            ) : params.error === "signin" && params.reason === "redirect" ? (
+              "Supabase rejected the callback URL. Confirm the Site URL and redirect URL, then redeploy."
+            ) : params.error === "signin" && params.reason === "email" ? (
+              "Supabase could not send the email. Check the Auth email provider and SMTP settings."
             ) : (
               "Unable to sign in with the current Supabase configuration."
             )}
