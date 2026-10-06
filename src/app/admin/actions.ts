@@ -573,7 +573,9 @@ export async function signInWithMagicLink(formData: FormData) {
     });
 
     const message = error.message.toLowerCase();
-    const reason = message.includes("redirect")
+    const reason = error.status === 429
+      ? "rate"
+      : message.includes("redirect")
       ? "redirect"
       : message.includes("email") || message.includes("smtp") || message.includes("mail")
         ? "email"

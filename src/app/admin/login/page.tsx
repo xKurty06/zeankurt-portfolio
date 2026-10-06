@@ -58,6 +58,8 @@ export default async function AdminLoginPage({ searchParams }: AdminLoginPagePro
               </>
             ) : params.error === "signin" && params.reason === "redirect" ? (
               "Supabase rejected the callback URL. Confirm the Site URL and redirect URL, then redeploy."
+            ) : params.error === "signin" && params.reason === "rate" ? (
+              "Too many login links were requested. Please wait before trying again."
             ) : params.error === "signin" && params.reason === "email" ? (
               "Supabase could not send the email. Check the Auth email provider and SMTP settings."
             ) : (
