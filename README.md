@@ -45,7 +45,7 @@ Welcome to my personal portfolio website. This is a showcase of my projects, pro
 
 ```bash
 # Clone the repository
-git clone https://github.com/xKurty06/zeankurt-portfolio.git
+git clone https://github.com/zekuuu/zeankurt-portfolio.git
 cd zeankurt-portfolio
 
 # Install dependencies
@@ -208,7 +208,7 @@ This project is open source under the [MIT License](LICENSE).
 
 ## 📞 Connect
 
-- **GitHub** – [@xKurty06](https://github.com/xKurty06)
+- **GitHub** – [@zekuuu](https://github.com/zekuuu)
 - **Email** – [zkg.balboa@gmail.com](mailto:zkg.balboa@gmail.com)
 - **LinkedIn** – [Zean Kurt](https://linkedin.com/in/zeankurt)
 

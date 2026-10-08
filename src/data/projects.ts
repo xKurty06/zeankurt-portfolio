@@ -9,7 +9,7 @@ export const projects: Project[] = [
     longDescription:
       "Built to streamline how student organizations plan and run events at university scale. TypeScript-first architecture designed for maintainability and future CMS integration.",
     tags: ["TypeScript", "Next.js", "Event Management", "Campus"],
-    githubUrl: "https://github.com/xKurty06/Centralized-Campus-Org-Event-Management",
+    githubUrl: "https://github.com/zekuuu/Centralized-Campus-Org-Event-Management",
     imageSeed: "campus-events",
     year: "2026",
     role: "Lead Developer",
@@ -23,7 +23,7 @@ export const projects: Project[] = [
     longDescription:
       "Collaborative BSCS project for Cavite State University. Users can submit found items, search listings, and help return lost property across campus.",
     tags: ["Next.js", "Supabase", "Tailwind CSS", "PostgreSQL"],
-    githubUrl: "https://github.com/xKurty06/Lost-N-Found",
+    githubUrl: "https://github.com/zekuuu/Lost-N-Found",
     image: "",
     imageSeed: "lost-found",
     year: "2025",
@@ -36,7 +36,7 @@ export const projects: Project[] = [
     description:
       "Production-ready starter with TypeScript, Tailwind CSS, Supabase auth/data patterns, and lucide-react icons.",
     tags: ["Next.js", "Supabase", "TypeScript", "Template"],
-    githubUrl: "https://github.com/xKurty06/nextjs-supabase-template",
+    githubUrl: "https://github.com/zekuuu/nextjs-supabase-template",
     image: "",
     imageSeed: "supabase-template",
     year: "2026",
@@ -49,7 +49,7 @@ export const projects: Project[] = [
     description:
       "Full-stack monorepo starter pairing a Next.js client with a Laravel API backend and Sanctum authentication.",
     tags: ["Next.js", "Laravel", "Sanctum", "TypeScript"],
-    githubUrl: "https://github.com/xKurty06/nextjs-laravel-template",
+    githubUrl: "https://github.com/zekuuu/nextjs-laravel-template",
     image: "",
     imageSeed: "laravel-template",
     year: "2026",
@@ -90,7 +90,7 @@ export const projects: Project[] = [
     description:
       "Roblox game project exploring Lua scripting, game systems design, and interactive world-building.",
     tags: ["Roblox", "Lua", "Game Dev"],
-    githubUrl: "https://github.com/xKurty06/Mount-Tala",
+    githubUrl: "https://github.com/zekuuu/Mount-Tala",
     image: "",
     imageSeed: "mount-tala",
     year: "2025",

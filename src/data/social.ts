@@ -5,7 +5,7 @@ export const socialLinks: SocialLink[] = [
     id: "github",
     platform: "github",
     label: "GitHub",
-    href: "https://github.com/xKurty06",
+    href: "https://github.com/zekuuu",
     group: "personal",
     description: "Open source & projects",
   },
